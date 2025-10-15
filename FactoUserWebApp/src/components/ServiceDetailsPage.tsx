@@ -27,7 +27,8 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     email: '',
     phoneNumber: '',
     annualIncome: '',
-    additionalRequirements: ''
+    additionalRequirements: '',
+    selectedFeatures: [] as string[]
   });
   
   // Success popup state
@@ -810,7 +811,8 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
         email: user.email || '',
         phoneNumber: user.phoneNumber || '',
         annualIncome: '', // Annual income is not stored in user profile
-        additionalRequirements: ''
+        additionalRequirements: '',
+        selectedFeatures: []
       });
     }
   };
@@ -1067,7 +1069,8 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       email: '',
       phoneNumber: '',
       annualIncome: '',
-      additionalRequirements: ''
+      additionalRequirements: '',
+      selectedFeatures: []
     });
     setShowQuotationForm(false);
     

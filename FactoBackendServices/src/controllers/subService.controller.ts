@@ -95,7 +95,7 @@ export const getYourServices = bigPromise(
           ...service.toObject(), // Convert to plain object
           purchaseDate: purchase.createdAt,
           selectedFeatures: purchase.selectedFeatures,
-          purchasedPrice: purchase.paymentOrderId ? purchase.paymentOrderId?.amount : null,
+          purchasedPrice: purchase.paymentOrderId && typeof purchase.paymentOrderId === 'object' && 'amount' in purchase.paymentOrderId ? (purchase.paymentOrderId as any).amount : null,
         };
       }).filter(Boolean); // Remove null entries
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { DarkModeProvider } from './components/DarkModeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { Navigation } from './components/Navigation';
@@ -62,7 +62,7 @@ export default function App() {
             <main className="relative">
               <HeroSection onNavigate={handleNavigation} />
               <ServicesSection onNavigate={handleNavigation} />
-              <TestimonialsSection onNavigate={handleNavigation} />
+              <TestimonialsSection />
               <CoursesSection onNavigate={handleNavigation} />
               <FinanceShortsSection onNavigate={handleNavigation} />
               <NewsSection onNavigate={handleNavigation} />

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
@@ -319,7 +319,7 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes gradient-x {
           0%, 100% {
             background-size: 200% 200%;

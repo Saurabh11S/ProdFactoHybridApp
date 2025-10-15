@@ -315,7 +315,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Test backend connectivity first
       try {
-        const healthCheck = await axios.get(`${API_BASE_URL.replace('/api/v1', '')}/health`);
+        await axios.get(`${API_BASE_URL.replace('/api/v1', '')}/health`);
         console.log('✅ Backend is accessible');
       } catch (healthError) {
         console.log('⚠️ Backend health check failed, proceeding with login attempt');

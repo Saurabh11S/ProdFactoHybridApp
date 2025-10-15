@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
-type PageType = 'home' | 'services' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment';
+type PageType = 'home' | 'services' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
 interface UserPurchase {
   _id: string;
@@ -50,7 +50,7 @@ export function ServicesPage({ onNavigate }: ServicesPageProps) {
       } catch (error) {
         console.error('Error fetching user purchases:', error);
         // Don't show error to user if they're not authenticated
-        if (error.response?.status !== 401) {
+        if ((error as any)?.response?.status !== 401) {
           console.error('Non-auth error fetching user purchases:', error);
         }
       } finally {

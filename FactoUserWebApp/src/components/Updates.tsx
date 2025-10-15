@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Footer } from './Footer';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment';
@@ -111,7 +111,7 @@ const updates: Update[] = [
 
 const categories = ['All', 'GST Updates', 'Tax News', 'Security', 'Business', 'Investments', 'Legal'];
 
-export function Updates({ onNavigate }: UpdatesProps) {
+export function Updates({ }: UpdatesProps) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedUpdate, setSelectedUpdate] = useState<Update | null>(null);
   const [updatesData, setUpdatesData] = useState(updates);

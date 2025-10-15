@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
@@ -203,7 +203,7 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes gradient-x {
           0%, 100% {
             background-size: 200% 200%;

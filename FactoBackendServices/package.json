@@ -4,14 +4,14 @@
   "scripts": {
     "start": "set NODE_ENV=dev&& ts-node-dev -r tsconfig-paths/register --respawn --transpile-only ./src/server.ts",
     "start:uat": "npm run build-ts && set NODE_ENV=uat && node ./dist/server.js",
-    "start:prod": "npm run build-ts:prod && NODE_ENV=prod node ./dist/server.js",
+    "start:prod": "npm run build-ts:prod && set NODE_ENV=prod && node ./dist/server.js",
     "test": "jest --forceExit --coverage --verbose",
     "check-format": "npx prettier -c src",
     "format": "npx prettier -w src",
     "build-ts": "tsc -p tsconfig.release.json || npm run copy",
-    "copy": "cp package.json ./dist/ && cp pm2.config.uat.json ./dist/pm2.config.json && cp .env.uat ./dist/",
+    "copy": "copy package.json ./dist/ && copy pm2.config.uat.json ./dist/pm2.config.json && copy .env.uat ./dist/",
     "build-ts:prod": "tsc -p tsconfig.release.json || npm run copy:prod",
-    "copy:prod": "cp package.json ./dist/ && cp pm2.config.prod.json ./dist/pm2.config.json && cp .env.prod ./dist/",
+    "copy:prod": "copy package.json ./dist/ && copy pm2.config.prod.json ./dist/pm2.config.json && copy .env.prod ./dist/",
     "start:production-dummy": "set NODE_ENV=prod&& ts-node-dev --respawn --transpile-only ./src/server.ts",
     "lint": "eslint \"src/**/*.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" --fix"

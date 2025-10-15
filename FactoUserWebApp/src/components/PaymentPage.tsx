@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 type PageType = 'home' | 'services' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment';
 
@@ -16,7 +16,7 @@ export function PaymentPage({ onNavigate, serviceId = 'itr-1' }: PaymentPageProp
 
   // Service data based on serviceId
   const getServiceDetails = (id: string) => {
-    const services = {
+    const services: Record<string, { name: string; category: string; description: string; price: number; originalPrice: number }> = {
       'itr-1': { name: 'ITR-1', category: 'Tax Services', description: 'Salaried + 1 House property Plan', price: 1499, originalPrice: 2499 },
       'itr-2': { name: 'ITR-2', category: 'Tax Services', description: 'Salary + more than 1 House property, Capital gain', price: 1999, originalPrice: 2999 },
       'itr-3': { name: 'ITR-3', category: 'Tax Services', description: 'Business income, Future & option, crypto income', price: 2499, originalPrice: 3999 },

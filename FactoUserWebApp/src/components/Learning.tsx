@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Footer } from './Footer';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment';
@@ -104,7 +104,7 @@ const courses: Course[] = [
 
 const categories = ['All', 'GST', 'Tax Planning', 'Investments', 'Business', 'Finance', 'Technology'];
 
-export function Learning({ onNavigate }: LearningProps) {
+export function Learning({ }: LearningProps) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 

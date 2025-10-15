@@ -68,7 +68,7 @@ export function withSafeWrapper<P extends object>(
   const SafeComponent = React.forwardRef<any, P>((props, ref) => {
     return (
       <SafeWrapper fallback={fallback} name={name || Component.displayName || Component.name}>
-        <Component {...props} ref={ref} />
+        <Component {...(props as any)} ref={ref} />
       </SafeWrapper>
     );
   });

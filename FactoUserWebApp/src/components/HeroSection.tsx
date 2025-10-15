@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { useState, useEffect } from 'react';
 
 type PageType = 'home' | 'services' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment';
 
@@ -226,7 +225,7 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
         </div>
       </div>
 
-      <style jsx="true">{`
+      <style>{`
         @keyframes gradient-x {
           0%, 100% {
             background-size: 200% 200%;

@@ -6,6 +6,7 @@ import { sendSuccessApiResponse } from "@/middlewares/successApiResponse";
 import { db } from "@/models";
 import { UserPurchase } from "@/models/userPurchase.model";
 import { NextFunction, Request, Response } from "express";
+import { AuthRequest } from "@/middlewares/auth";
 
 // Simple test endpoint
 export const testPayment = bigPromise(

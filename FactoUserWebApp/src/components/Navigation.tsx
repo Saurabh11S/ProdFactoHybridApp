@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { useState, useEffect } from 'react';
 import { useDarkMode } from './DarkModeContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -14,7 +13,7 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { isDarkMode, toggleDarkMode } = useDarkMode();
-  const { user, logout, isAuthenticated } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {

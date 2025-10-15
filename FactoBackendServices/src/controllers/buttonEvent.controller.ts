@@ -3,7 +3,7 @@ import { createCustomError } from "@/errors/customAPIError";
 import bigPromise from "@/middlewares/bigPromise";
 import { sendSuccessApiResponse } from "@/middlewares/successApiResponse";
 import { db } from "@/models";
-import { NextFunction, Response } from "express";
+import { NextFunction, Response, Request } from "express";
 import { AuthRequest } from "@/middlewares/auth";
 
 // Track button event

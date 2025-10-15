@@ -123,7 +123,7 @@ export function withPerformanceMonitor<P extends object>(
         <PerformanceMonitor 
           component={componentName || Component.displayName || Component.name} 
         />
-        <Component {...props} ref={ref} />
+        <Component {...(props as any)} ref={ref} />
       </>
     );
   });
@@ -136,10 +136,10 @@ export function withPerformanceMonitor<P extends object>(
 // Performance utilities
 export const performanceUtils = {
   // Measure function execution time
-  measureTime: async <T>(
+  measureTime: async function<T>(
     name: string,
     fn: () => Promise<T> | T
-  ): Promise<T> => {
+  ): Promise<T> {
     const start = performance.now();
     try {
       const result = await fn();
@@ -154,10 +154,10 @@ export const performanceUtils = {
   },
 
   // Throttle function calls
-  throttle: <T extends (...args: any[]) => any>(
+  throttle: function<T extends (...args: any[]) => any>(
     func: T,
     limit: number
-  ): T => {
+  ): T {
     let inThrottle: boolean;
     return ((...args: any[]) => {
       if (!inThrottle) {
@@ -169,11 +169,11 @@ export const performanceUtils = {
   },
 
   // Debounce function calls
-  debounce: <T extends (...args: any[]) => any>(
+  debounce: function<T extends (...args: any[]) => any>(
     func: T,
     delay: number
-  ): T => {
-    let timeoutId: NodeJS.Timeout;
+  ): T {
+    let timeoutId: ReturnType<typeof setTimeout>;
     return ((...args: any[]) => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => func.apply(null, args), delay);

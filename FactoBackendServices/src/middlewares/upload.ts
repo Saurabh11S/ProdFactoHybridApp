@@ -122,7 +122,7 @@ const userDocumentStorage = new CloudinaryStorage({
       public_id: publicId,
       format: extension, // Explicitly set the format to preserve original
       // Remove any transformations to keep file exactly as uploaded
-      transformation: [],
+      transformation: [] as any[],
     };
   },
 } as any);

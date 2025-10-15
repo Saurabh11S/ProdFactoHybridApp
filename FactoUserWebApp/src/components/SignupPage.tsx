@@ -67,7 +67,7 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
       setIsSubmitting(true);
       clearError();
       setLocalError(null);
-      await sendOTP(formData.phoneNumber);
+      await sendOTP(formData.phoneNumber!);
       setShowOTPInput(true);
     } catch (error: any) {
       setLocalError(error.message || 'Failed to send OTP');
@@ -81,7 +81,7 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
       setIsSubmitting(true);
       clearError();
       setLocalError(null);
-      await sendOTP(formData.phoneNumber);
+      await sendOTP(formData.phoneNumber!);
       setOtpValues(['', '', '', '', '', '']);
       const firstInput = document.getElementById('signup-otp-0');
       firstInput?.focus();
@@ -140,7 +140,7 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
       setLocalError(null);
       
       if (signupMethod === 'phone') {
-        await sendOTP(formData.phoneNumber);
+        await sendOTP(formData.phoneNumber!);
         setCurrentStep(2);
       } else {
         // For email signup, proceed directly to signup
@@ -178,7 +178,7 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
       
       // First verify the OTP
       console.log('📱 Verifying OTP for phone:', formData.phoneNumber);
-      await verifyOTP(formData.phoneNumber, otp);
+      await verifyOTP(formData.phoneNumber!, otp);
       console.log('✅ OTP verified successfully');
       
       // Then proceed with signup
