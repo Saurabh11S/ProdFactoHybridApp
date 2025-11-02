@@ -37,6 +37,7 @@ server.listen(port, host, (): void => {
   logger.info(
     ` App is running at http://${host}:${port} in ${app.get("dev")} mode`
   );
+  logger.info(` Server listening on port ${port}`);
   logger.info("  Press CTRL-C to stop");
 });
 

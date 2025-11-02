@@ -7,7 +7,17 @@ export const connectDB = async () => {
   console.log('🔗 MongoDB URI:', process.env.MONGODB_URI);
   
   try {
-    const connect = await mongoose.connect(`${process.env.MONGODB_URI}`);
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+      throw new Error('MONGODB_URI environment variable is not set');
+    }
+    
+    // Ensure connection string has retryWrites for better reliability
+    const uriWithOptions = mongoUri.includes('retryWrites') 
+      ? mongoUri 
+      : `${mongoUri}${mongoUri.includes('?') ? '&' : '?'}retryWrites=true&w=majority`;
+    
+    const connect = await mongoose.connect(uriWithOptions);
     
     console.log('✅ MongoDB connected successfully!');
     console.log('🏠 Host:', connect.connection.host);
