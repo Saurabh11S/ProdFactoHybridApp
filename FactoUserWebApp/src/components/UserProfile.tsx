@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
+import { fetchAllSubServices, SubService } from '../api/services';
 import { ServiceDocumentUpload } from './ServiceDocumentUpload';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
@@ -60,9 +61,42 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedServiceForUpload, setSelectedServiceForUpload] = useState<{id: string, name: string} | null>(null);
   const [serviceDocumentCounts, setServiceDocumentCounts] = useState<{[key: string]: number}>({});
+  const [allServices, setAllServices] = useState<SubService[]>([]);
+  const [_servicesLoading, setServicesLoading] = useState(true);
 
-  // Service data mapping
-  const serviceDataMap: { [key: string]: ServiceData } = {
+  // Fetch all services for mapping
+  useEffect(() => {
+    const loadAllServices = async () => {
+      try {
+        setServicesLoading(true);
+        const data = await fetchAllSubServices();
+        setAllServices(data);
+      } catch (err) {
+        console.error('Error fetching all services:', err);
+      } finally {
+        setServicesLoading(false);
+      }
+    };
+
+    loadAllServices();
+  }, []);
+
+  // Create service data mapping from fetched services
+  const serviceDataMap: { [key: string]: ServiceData } = allServices.reduce((acc, service) => {
+    acc[service._id] = {
+      id: service._id,
+      title: service.title,
+      description: service.description,
+      price: `₹${service.price}`,
+      category: service.serviceId?.title || 'General Services',
+      duration: service.period,
+      features: service.features || []
+    };
+    return acc;
+  }, {} as { [key: string]: ServiceData });
+
+  // Fallback service data mapping for backward compatibility
+  const fallbackServiceDataMap: { [key: string]: ServiceData } = {
     // ITR Services
     'itr-1': {
       id: 'itr-1',
@@ -396,7 +430,7 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
 
   // Helper functions
   const getServiceData = (itemId: string): ServiceData | null => {
-    return serviceDataMap[itemId] || null;
+    return serviceDataMap[itemId] || fallbackServiceDataMap[itemId] || null;
   };
 
   const getPaymentStatus = (purchase: UserPurchase): { status: string; color: string } => {

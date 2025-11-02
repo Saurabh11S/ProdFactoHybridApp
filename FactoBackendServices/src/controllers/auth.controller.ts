@@ -9,7 +9,7 @@ import { NextFunction, Request, RequestHandler, Response } from "express";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h"; // Changed to 1 hour for testing
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "24h"; // Extended to 24 hours for better user experience
 
   
   export const sendOtp: RequestHandler = bigPromise(
@@ -267,12 +267,65 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h"; // Changed to 1 hour 
     }
   );
 
+// Token refresh endpoint
+export const refreshToken: RequestHandler = bigPromise(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const token = req.header('Authorization')?.replace('Bearer ', '');
+      
+      if (!token) {
+        return next(createCustomError('No token provided', StatusCode.UNAUTH));
+      }
+
+      // Verify the existing token (even if expired, we can still decode it)
+      let decoded: any;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string; email: string };
+      } catch (error) {
+        // If token is expired, try to decode without verification
+        try {
+          decoded = jwt.decode(token) as { userId: string; email: string };
+        } catch (decodeError) {
+          return next(createCustomError('Invalid token', StatusCode.UNAUTH));
+        }
+      }
+
+      // Find the user
+      const user = await db.User.findById(decoded.userId);
+      if (!user) {
+        return next(createCustomError('User not found', StatusCode.UNAUTH));
+      }
+
+      // Generate new token
+      const newToken = jwt.sign(
+        { userId: user._id, email: user.email },
+        process.env.JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+
+      // Remove password from response
+      const userResponse = { ...user.toObject() };
+      delete userResponse.password;
+
+      const response = sendSuccessApiResponse("Token refreshed successfully", {
+        user: userResponse,
+        token: newToken,
+      });
+
+      res.status(StatusCode.OK).send(response);
+    } catch (error: any) {
+      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+    }
+  }
+);
+
   // Export all functions as default
   export default {
     sendOtp,
     verifyOtp,
     signup,
     loginWithPassword,
-    createTestUser
+    createTestUser,
+    refreshToken
   };
   

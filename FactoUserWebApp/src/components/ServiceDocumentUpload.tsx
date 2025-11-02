@@ -255,7 +255,7 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
       // Remove from uploaded files after successful upload
       setTimeout(() => {
         setUploadedFiles(prev => prev.filter(f => f.id !== fileData.id));
-      }, 2000);
+      }, 1000);
 
     } catch (error: any) {
       console.error('❌ Upload error details:', {
@@ -271,7 +271,25 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
           : f
       ));
       
-      const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+      let errorMessage = 'Unknown error';
+      
+      // Handle specific error cases
+      if (error.response?.status === 401) {
+        errorMessage = 'Your session has expired. Please log in again to continue uploading.';
+        // Optionally redirect to login or refresh token
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 3000);
+      } else if (error.response?.status === 413) {
+        errorMessage = 'File is too large. Please upload files smaller than 10MB.';
+      } else if (error.response?.status === 415) {
+        errorMessage = 'Invalid file type. Please upload JPG, PNG, PDF, DOC, or DOCX files only.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       alert(`Failed to upload ${fileData.name}: ${errorMessage}`);
     } finally {
       setUploading(false);

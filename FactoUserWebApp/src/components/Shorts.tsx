@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Footer } from './Footer';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment';
@@ -137,7 +137,7 @@ const shorts: Short[] = [
   }
 ];
 
-export function Shorts({ onNavigate }: ShortsProps) {
+export function Shorts({ onNavigate: _onNavigate }: ShortsProps) {
   const [currentShort, setCurrentShort] = useState(0);
   const [shortsData, setShortsData] = useState(shorts);
   const [isPlaying, setIsPlaying] = useState(false);

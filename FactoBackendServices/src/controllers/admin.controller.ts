@@ -25,7 +25,7 @@ export const getAllUsers = bigPromise(
       });
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -76,7 +76,7 @@ export const addUser = bigPromise(
       res.status(StatusCode.OK).send(response);
       // await signup(req, res, next);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -109,7 +109,7 @@ export const addEmployee = bigPromise(
       });
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -129,7 +129,7 @@ export const getEmployee = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -201,7 +201,7 @@ export const addAdmin = bigPromise(
       if (error.name === "ValidationError") {
         return next(createCustomError(error.message, StatusCode.BAD_REQ));
       }
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -247,7 +247,7 @@ export const login = bigPromise(
       // Create token
       const token = jwt.sign(
         { userId: user._id, email: user.email },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET || "your-secret-key",
         { expiresIn: process.env.JWT_EXPIRES_IN || "24h" }
       );
 
@@ -262,7 +262,7 @@ export const login = bigPromise(
 
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -288,7 +288,7 @@ export const getUserById = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -335,7 +335,7 @@ export const updateEmployee = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -360,7 +360,7 @@ export const deleteUserById = bigPromise(
       });
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -412,7 +412,7 @@ export const editUserProfile = bigPromise(
       if (error.name === "ValidationError") {
         return next(createCustomError(error.message, StatusCode.BAD_REQ));
       }
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -442,7 +442,7 @@ export const addNotification = bigPromise(
       if (error.name === "ValidationError") {
         return next(createCustomError(error.message, StatusCode.BAD_REQ));
       }
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -474,7 +474,7 @@ export const deleteNotification = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -513,7 +513,7 @@ export const editNotification = bigPromise(
       if (error.name === "ValidationError") {
         return next(createCustomError(error.message, StatusCode.BAD_REQ));
       }
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -583,7 +583,7 @@ export const addService = bigPromise(
       if (error.name === "ValidationError") {
         return next(createCustomError(error.message, StatusCode.BAD_REQ));
       }
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -618,7 +618,7 @@ export const getServiceById = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -685,7 +685,7 @@ export const updateService = bigPromise(
       if (error.name === "ValidationError") {
         return next(createCustomError(error.message, StatusCode.BAD_REQ));
       }
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -730,7 +730,7 @@ export const deleteService = bigPromise(
       });
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -767,7 +767,7 @@ export const toggleServiceStatus = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -777,6 +777,7 @@ export const createSubService = bigPromise(
     try {
       const { serviceId } = req.params;
       const {
+        serviceCode,
         title,
         description,
         features,
@@ -796,6 +797,7 @@ export const createSubService = bigPromise(
 
       // Create the sub-service with updated data format
       const subService = await db.SubService.create({
+        serviceCode,
         serviceId,
         title,
         description,
@@ -813,7 +815,7 @@ export const createSubService = bigPromise(
       );
       res.status(StatusCode.CREATED).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -859,7 +861,7 @@ export const updateSubService = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -890,7 +892,7 @@ export const deleteSubService = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -927,7 +929,7 @@ export const toggleSubServiceStatus = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -962,7 +964,7 @@ export const createSubServiceRequirement = bigPromise(
       );
       res.status(StatusCode.CREATED).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1004,7 +1006,7 @@ export const getSubServiceRequirementById = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1056,7 +1058,7 @@ export const updateSubServiceRequirement = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1093,7 +1095,7 @@ export const deleteSubServiceRequirement = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1135,7 +1137,7 @@ export const toggleSubServiceRequirementMandatory = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1202,7 +1204,7 @@ export const addCourse = bigPromise(
       if (error.name === "ValidationError") {
         return next(createCustomError(error.message, StatusCode.BAD_REQ));
       }
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1272,7 +1274,7 @@ export const updateCourse = bigPromise(
       if (error.name === "ValidationError") {
         return next(createCustomError(error.message, StatusCode.BAD_REQ));
       }
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1306,7 +1308,7 @@ export const deleteCourse = bigPromise(
       if (error.name === "ValidationError") {
         return next(createCustomError(error.message, StatusCode.BAD_REQ));
       }
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1321,7 +1323,7 @@ export const getCourses = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1336,7 +1338,7 @@ export const getCourseById = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1350,7 +1352,7 @@ export const getLecture = bigPromise(
       });
       res.status(StatusCode.OK).send(response);
     } catch (error) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1433,7 +1435,7 @@ export const addLecture = bigPromise(
         console.log(error);
         return next(createCustomError(error.message, StatusCode.BAD_REQ));
       }
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1524,7 +1526,7 @@ export const updateLecture = bigPromise(
         console.error(error);
         return next(createCustomError(error.message, StatusCode.BAD_REQ));
       }
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1561,7 +1563,7 @@ export const publishCourse = bigPromise(
       });
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1637,7 +1639,7 @@ export const createBlog = bigPromise(
       if (req.file) {
         await deleteUploadedFiles(req.file.path);
       }
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1685,7 +1687,7 @@ export const ListBlogs = bigPromise(
       });
       res.status(StatusCode.OK).send(response);
     } catch (error) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1720,7 +1722,7 @@ export const deleteBlog = bigPromise(
       });
       res.status(StatusCode.OK).send(response);
     } catch (error) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1796,7 +1798,7 @@ export const updateBlog = bigPromise(
       if (req.file) {
         await deleteUploadedFiles(req.file.path);
       }
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1810,7 +1812,7 @@ export const getQuery = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1840,7 +1842,7 @@ export const addCommentToQuery = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1857,7 +1859,7 @@ export const getRequest = bigPromise(
       });
       res.status(StatusCode.OK).send(response);
     } catch (error) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1891,7 +1893,7 @@ export const getAllQuotationRequests = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1952,7 +1954,7 @@ export const createAdminQuotation = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -1983,7 +1985,7 @@ export const updateQuotationPrice = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -2016,7 +2018,7 @@ export const findQuotationsByUserId = bigPromise(
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -2102,7 +2104,7 @@ export const updateApplication = bigPromise(
 
       res.status(StatusCode.OK).send(response);
     } catch (error) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );
@@ -2168,7 +2170,7 @@ export const getAllApplicationsBySubService = bigPromise(
 
       res.status(StatusCode.OK).send(response);
     } catch (error) {
-      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );

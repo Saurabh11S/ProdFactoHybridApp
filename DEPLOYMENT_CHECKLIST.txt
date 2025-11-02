@@ -1,0 +1,202 @@
+═══════════════════════════════════════════════════════════════
+  FACTO APP - DEPLOYMENT CHECKLIST
+═══════════════════════════════════════════════════════════════
+
+PRE-DEPLOYMENT PREPARATION
+─────────────────────────────────────────────────────────────────
+[ ] Accounts created (MongoDB Atlas, Render, Vercel)
+[ ] All API keys obtained (Razorpay, Cloudinary)
+[ ] Code tested locally - backend works
+[ ] Code tested locally - frontend works
+[ ] Environment variables documented
+[ ] GitHub repository is up to date
+
+PHASE 1: MONGODB DATABASE
+─────────────────────────────────────────────────────────────────
+[ ] Create MongoDB Atlas account
+[ ] Create M0 Free cluster
+[ ] Create database user (username + password)
+[ ] Set network access to 0.0.0.0/0 (allow all IPs)
+[ ] Copy connection string
+[ ] Test connection with MongoDB Compass (optional)
+[ ] Save connection string securely
+
+PHASE 2: BACKEND DEPLOYMENT
+─────────────────────────────────────────────────────────────────
+[ ] Create Render.com account
+[ ] Connect GitHub repository
+[ ] Create new Web Service
+[ ] Configure:
+    [ ] Name: facto-backend-api
+    [ ] Root Directory: FactoBackendServices
+    [ ] Build Command: npm install && npm run build-ts:prod
+    [ ] Start Command: npm run start:prod
+[ ] Add environment variables:
+    [ ] MONGODB_URI
+    [ ] PORT=3000
+    [ ] NODE_ENV=prod
+    [ ] JWT_SECRET
+    [ ] JWT_EXPIRES_IN
+    [ ] RAZORPAY_KEY_ID
+    [ ] RAZORPAY_KEY_SECRET
+    [ ] RAZORPAY_WEBHOOK_SECRET
+    [ ] CLOUDINARY_CLOUD_NAME
+    [ ] CLOUDINARY_API_KEY
+    [ ] CLOUDINARY_API_SECRET
+    [ ] MAX_FILE_SIZE_MB
+    [ ] (Optional) TWILIO credentials
+[ ] Save and deploy
+[ ] Wait for deployment to complete (5-10 minutes)
+[ ] Copy backend URL (e.g., https://facto-backend-api.onrender.com)
+[ ] Test backend API health endpoint
+[ ] Verify logs show no errors
+
+PHASE 3: FRONTEND - USER APP
+─────────────────────────────────────────────────────────────────
+[ ] Go to Vercel.com
+[ ] Import project from GitHub
+[ ] Configure User App:
+    [ ] Root Directory: FactoUserWebApp
+    [ ] Framework: Vite
+    [ ] Build Command: npm run build
+    [ ] Output Directory: dist
+[ ] Update API URLs in User App:
+    [ ] src/api/services.ts
+    [ ] src/api/blogs.ts
+    [ ] src/api/courses.ts
+    [ ] Change to production backend URL
+[ ] Commit and push changes
+[ ] Deploy
+[ ] Wait for deployment
+[ ] Copy User App URL
+[ ] Test User App loads correctly
+[ ] Test login functionality
+[ ] Test main features
+
+PHASE 4: FRONTEND - ADMIN APP
+─────────────────────────────────────────────────────────────────
+[ ] Still in Vercel, import project again
+[ ] Configure Admin App:
+    [ ] Root Directory: FactoAdminApp
+    [ ] Framework: Vite
+    [ ] Build Command: npm run build
+    [ ] Output Directory: dist
+[ ] Update API URL in Admin App:
+    [ ] src/utils/apiConstants.ts
+    [ ] Change to production backend URL
+[ ] Commit and push changes
+[ ] Deploy
+[ ] Wait for deployment
+[ ] Copy Admin App URL
+[ ] Test Admin App loads correctly
+[ ] Test admin login
+[ ] Test admin features
+
+POST-DEPLOYMENT TESTING
+─────────────────────────────────────────────────────────────────
+[ ] Test User App:
+    [ ] Home page loads
+    [ ] Services page loads
+    [ ] Can register new user
+    [ ] Can login
+    [ ] Can view services
+    [ ] Can initiate payment (test mode)
+    [ ] Dark mode works
+    
+[ ] Test Admin App:
+    [ ] Login page loads
+    [ ] Can login with admin credentials
+    [ ] Dashboard loads
+    [ ] Can view users
+    [ ] Can view services
+    [ ] Can create new service
+    [ ] Can manage content
+
+[ ] Test Backend API:
+    [ ] Health check endpoint works
+    [ ] Authentication works
+    [ ] Services endpoint returns data
+    [ ] Payment creation works
+    [ ] File upload works (Cloudinary)
+
+[ ] Test Database:
+    [ ] Connection is stable
+    [ ] Can query data
+    [ ] Can insert test data
+    [ ] Data persists correctly
+
+CORS CONFIGURATION
+─────────────────────────────────────────────────────────────────
+[ ] Update backend CORS to allow:
+    [ ] User App URL (Vercel)
+    [ ] Admin App URL (Vercel)
+    [ ] Backend URL (Render)
+[ ] Save and redeploy backend if needed
+[ ] Test API calls from frontend work
+
+FINAL CHECKS
+─────────────────────────────────────────────────────────────────
+[ ] All apps accessible via HTTPS
+[ ] SSL certificates valid
+[ ] No console errors in browsers
+[ ] No backend errors in logs
+[ ] Performance is acceptable
+[ ] Mobile responsive (test on phone)
+[ ] Documentation updated
+[ ] Team informed of URLs
+[ ] Backup credentials stored securely
+
+OPTIONAL: CUSTOM DOMAINS
+─────────────────────────────────────────────────────────────────
+[ ] Buy domain (if desired)
+[ ] Configure domain on Vercel for User App
+[ ] Configure domain on Vercel for Admin App  
+[ ] Configure domain on Render for Backend
+[ ] Update DNS settings
+[ ] Wait for DNS propagation (24-48 hours)
+[ ] Test custom domains work
+
+MONITORING SETUP
+─────────────────────────────────────────────────────────────────
+[ ] Set up Render monitoring alerts (optional)
+[ ] Set up MongoDB Atlas monitoring (optional)
+[ ] Set up error tracking (Sentry, optional)
+[ ] Set up analytics (Google Analytics, optional)
+
+UPGRADE DECISION
+─────────────────────────────────────────────────────────────────
+Free tier working? [ ]
+    Continue with $0/month
+Backend sleeping too much? [ ]
+    Upgrade Render to $7/month
+Need more storage? [ ]
+    Upgrade MongoDB to $7/month
+Have budget and traffic? [ ]
+    Full production tier $25/month
+
+═══════════════════════════════════════════════════════════════
+  DEPLOYMENT URLS
+═══════════════════════════════════════════════════════════════
+
+Backend API:  https://___________________.onrender.com
+User App:     https://___________________.vercel.app
+Admin App:    https://___________________.vercel.app
+
+MongoDB Atlas: https://cloud.mongodb.com
+
+═══════════════════════════════════════════════════════════════
+  COST TRACKING
+═══════════════════════════════════════════════════════════════
+
+Current Tier:    FREE ($0/month)
+Date Started:    __/__/____
+Users:           _____
+Monthly Cost:    $____
+
+When to Upgrade: ____________________________________________
+
+═══════════════════════════════════════════════════════════════
+
+
+
+

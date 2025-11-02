@@ -25,8 +25,17 @@ import router from "@/routes";
 
 // Define CORS options with explicit typing
 const corsOptions: cors.CorsOptions = {
-  origin: process.env.CORS_ORIGIN || "*",
-  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
+  origin: [
+    "http://localhost:3000",
+    "http://localhost:5173", 
+    "http://localhost:8080",
+    "https://admin.facto.org.in",
+    "https://facto.org.in",
+    process.env.CORS_ORIGIN || "*"
+  ],
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  credentials: true,
   preflightContinue: false,
   optionsSuccessStatus: 204,
 };
@@ -50,7 +59,23 @@ app.use(express.urlencoded({ extended: true, limit: "2gb" }));
 
 // CORS configuration
 app.use(cors(corsOptions));
-app.options("*", cors());
+
+// Additional CORS handling for preflight requests
+app.options("*", cors(corsOptions));
+
+// Add CORS headers manually as backup
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+  
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
 app.use(httpContext.middleware as unknown as RequestHandler);
 app.use(generateRequestId as RequestHandler);

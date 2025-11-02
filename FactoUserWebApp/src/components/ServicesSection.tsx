@@ -6,52 +6,103 @@ interface ServicesSectionProps {
   onNavigate: (page: PageType, serviceId?: string) => void;
 }
 
+// Service data for landing page
+interface LandingPageService {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  color: string;
+  bgColor: string;
+  textColor: string;
+  borderColor: string;
+  features: string[];
+}
+
+const landingPageServices: LandingPageService[] = [
+  {
+    id: 'itr',
+    title: 'ITR',
+    description: 'Professional Income Tax Return filing services for individuals and businesses. Expert assistance with ITR-1 to ITR-7.',
+    icon: '📊',
+    color: 'from-blue-500 to-blue-600',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/30',
+    textColor: 'text-blue-600 dark:text-blue-400',
+    borderColor: 'border-blue-200 dark:border-blue-700',
+    features: ['Individual Tax Filing', 'Business Tax Filing', 'Tax Planning', 'Refund Assistance']
+  },
+  {
+    id: 'gst',
+    title: 'GST',
+    description: 'Comprehensive GST registration, filing, and compliance services. Stay compliant with India\'s GST regulations.',
+    icon: '🏢',
+    color: 'from-green-500 to-green-600',
+    bgColor: 'bg-green-50 dark:bg-green-900/30',
+    textColor: 'text-green-600 dark:text-green-400',
+    borderColor: 'border-green-200 dark:border-green-700',
+    features: ['GST Registration', 'Monthly Filing', 'Annual Returns', 'Compliance Support']
+  },
+  {
+    id: 'investment',
+    title: 'Investment',
+    description: 'Expert investment advisory services to help you grow your wealth with smart financial planning and portfolio management.',
+    icon: '📈',
+    color: 'from-purple-500 to-purple-600',
+    bgColor: 'bg-purple-50 dark:bg-purple-900/30',
+    textColor: 'text-purple-600 dark:text-purple-400',
+    borderColor: 'border-purple-200 dark:border-purple-700',
+    features: ['Portfolio Planning', 'Mutual Funds', 'Stocks & ETFs', 'Risk Analysis']
+  },
+  {
+    id: 'tax-consultancy',
+    title: 'Tax Planning Consultancy',
+    description: 'Strategic tax planning to minimize your tax liability and maximize savings. Personalized consulting for individuals and businesses.',
+    icon: '💡',
+    color: 'from-orange-500 to-orange-600',
+    bgColor: 'bg-orange-50 dark:bg-orange-900/30',
+    textColor: 'text-orange-600 dark:text-orange-400',
+    borderColor: 'border-orange-200 dark:border-orange-700',
+    features: ['Tax Strategy', 'Deduction Planning', 'Year-round Support', 'Expert Consultation']
+  },
+  {
+    id: 'notice-scrutiny',
+    title: 'Notice and Scrutiny',
+    description: 'Handle tax notices and scrutiny proceedings with expert guidance. We help resolve all tax department queries and assessments.',
+    icon: '📋',
+    color: 'from-red-500 to-red-600',
+    bgColor: 'bg-red-50 dark:bg-red-900/30',
+    textColor: 'text-red-600 dark:text-red-400',
+    borderColor: 'border-red-200 dark:border-red-700',
+    features: ['Notice Response', 'Scrutiny Support', 'Legal Assistance', 'Documentation Help']
+  },
+  {
+    id: 'registration',
+    title: 'Registration',
+    description: 'Complete business registration services including company incorporation, GST, PAN, and other regulatory compliances.',
+    icon: '🏆',
+    color: 'from-indigo-500 to-indigo-600',
+    bgColor: 'bg-indigo-50 dark:bg-indigo-900/30',
+    textColor: 'text-indigo-600 dark:text-indigo-400',
+    borderColor: 'border-indigo-200 dark:border-indigo-700',
+    features: ['Company Registration', 'LLP Setup', 'Partnership Firms', 'Business Licenses']
+  },
+  {
+    id: 'outsourcing',
+    title: 'Outsourcing',
+    description: 'Professional accounting and bookkeeping outsourcing services to help you focus on your core business operations.',
+    icon: '💼',
+    color: 'from-teal-500 to-teal-600',
+    bgColor: 'bg-teal-50 dark:bg-teal-900/30',
+    textColor: 'text-teal-600 dark:text-teal-400',
+    borderColor: 'border-teal-200 dark:border-teal-700',
+    features: ['Bookkeeping', 'Accounting Services', 'Financial Reporting', 'Payroll Management']
+  }
+];
+
 export function ServicesSection({ onNavigate }: ServicesSectionProps) {
   const [visibleCards, setVisibleCards] = useState<number[]>([]);
   const sectionRef = useRef<HTMLElement>(null);
 
-  const services = [
-    {
-      icon: '📊',
-      title: 'ITR Filing',
-      description: 'Professional income tax return filing for individuals and businesses',
-      features: ['Salaried Employees', 'Freelancers', 'Business Owners', 'NRI Returns'],
-      color: 'from-blue-500 to-blue-600',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/30',
-      textColor: 'text-blue-600 dark:text-blue-400',
-      borderColor: 'border-blue-200 dark:border-blue-700'
-    },
-    {
-      icon: '🏢',
-      title: 'GST Services',
-      description: 'Complete GST registration, filing, and compliance solutions',
-      features: ['GST Registration', 'Monthly Returns', 'Annual Returns', 'Compliance'],
-      color: 'from-green-500 to-green-600',
-      bgColor: 'bg-green-50 dark:bg-green-900/30',
-      textColor: 'text-green-600 dark:text-green-400',
-      borderColor: 'border-green-200 dark:border-green-700'
-    },
-    {
-      icon: '📋',
-      title: 'MSME Registration',
-      description: 'Quick and hassle-free MSME registration for small businesses',
-      features: ['Udyam Registration', 'Benefits Guide', 'Documentation', 'Fast Processing'],
-      color: 'from-purple-500 to-purple-600',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/30',
-      textColor: 'text-purple-600 dark:text-purple-400',
-      borderColor: 'border-purple-200 dark:border-purple-700'
-    },
-    {
-      icon: '💼',
-      title: 'Accounting',
-      description: 'Professional bookkeeping and accounting services',
-      features: ['Monthly Books', 'Financial Reports', 'MIS Reports', 'Audit Support'],
-      color: 'from-orange-500 to-orange-600',
-      bgColor: 'bg-orange-50 dark:bg-orange-900/30',
-      textColor: 'text-orange-600 dark:text-orange-400',
-      borderColor: 'border-orange-200 dark:border-orange-700'
-    }
-  ];
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -99,10 +150,10 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
         </div>
 
         {/* Services Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {services.map((service, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {landingPageServices.map((service, index) => (
             <div
-              key={index}
+              key={service.id}
               data-index={index}
               className={`group relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl p-6 border border-gray-100 dark:border-gray-700 hover:border-[#007AFF]/30 dark:hover:border-blue-400/30 shadow-lg hover:shadow-2xl transition-all duration-700 transform ${
                 visibleCards.includes(index) 
@@ -117,7 +168,7 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent dark:from-white/5 dark:to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
               
               {/* Service Icon */}
-              <div className={`relative w-16 h-16 ${service.bgColor} rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-all duration-300 border ${service.borderColor} shadow-lg`}>
+              <div className={`relative w-16 h-16 ${service.bgColor} rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition-all duration-300 border ${service.borderColor} shadow-lg`}>
                 <span className="relative z-10">{service.icon}</span>
                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </div>
@@ -141,7 +192,7 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                       </div>
-                      <span className="group-hover:text-white dark:group-hover:text-white transition-colors duration-300">{feature}</span>
+                      <span className="group-hover:text-gray-800 dark:group-hover:text-white transition-colors duration-300">{feature}</span>
                     </li>
                   ))}
                 </ul>

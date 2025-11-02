@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Existing Admin Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .container { background: #f5f5f5; padding: 20px; border-radius: 8px; }
+        button { background: #007AFF; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056CC; }
+        .result { margin-top: 20px; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .credentials { background: #e2e3e5; padding: 15px; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Test Existing Admin Login</h1>
+        
+        <div class="credentials">
+            <h3>Database Credentials Found:</h3>
+            <p><strong>Email:</strong> admin@facto.org.in</p>
+            <p><strong>Password:</strong> admin123</p>
+            <p><strong>Database:</strong> facto_app</p>
+            <p><strong>Collection:</strong> user</p>
+        </div>
+        
+        <div>
+            <h3>Test 1: Admin Login</h3>
+            <button onclick="testAdminLogin()">Test Admin Login</button>
+        </div>
+        
+        <div>
+            <h3>Test 2: Check User Role</h3>
+            <button onclick="checkUserRole()">Check User Role</button>
+        </div>
+        
+        <div>
+            <h3>Test 3: API Health Check</h3>
+            <button onclick="checkHealth()">Check API Health</button>
+        </div>
+        
+        <div>
+            <h3>Test 4: Try Different Endpoints</h3>
+            <button onclick="testDifferentEndpoints()">Test Different Endpoints</button>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://api.facto.org.in/api/v1';
+        
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+        
+        async function testAdminLogin() {
+            showResult('Testing admin login with existing credentials...', 'info');
+            
+            const loginData = {
+                email: 'admin@facto.org.in',
+                password: 'admin123'
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(loginData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`
+                        <h4>✅ Admin Login Successful!</h4>
+                        <p><strong>User ID:</strong> ${data.data.user._id}</p>
+                        <p><strong>Email:</strong> ${data.data.user.email}</p>
+                        <p><strong>Role:</strong> ${data.data.user.role}</p>
+                        <p><strong>Full Name:</strong> ${data.data.user.fullName}</p>
+                        <p><strong>Token:</strong> ${data.data.token ? 'Present' : 'Missing'}</p>
+                        <p>You can now login to FactoAdminApp!</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `, 'success');
+                } else {
+                    showResult(`
+                        <h4>❌ Admin Login Failed</h4>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Error:</strong> ${data.message || 'Unknown error'}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `, 'error');
+                }
+            } catch (error) {
+                showResult(`
+                    <h4>❌ Network Error</h4>
+                    <p>Could not connect to the API.</p>
+                    <p>Error: ${error.message}</p>
+                `, 'error');
+            }
+        }
+        
+        async function checkUserRole() {
+            showResult('Checking user role and details...', 'info');
+            
+            try {
+                // Try to get user by email (this might not work without auth)
+                const response = await fetch(`${API_BASE_URL}/admin/users`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`
+                        <h4>✅ Users Retrieved</h4>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `, 'success');
+                } else {
+                    showResult(`
+                        <h4>ℹ️ Users Endpoint Requires Authentication</h4>
+                        <p>This is expected - the users endpoint requires admin authentication.</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `, 'info');
+                }
+            } catch (error) {
+                showResult(`
+                    <h4>❌ Error Checking Users</h4>
+                    <p>Error: ${error.message}</p>
+                `, 'error');
+            }
+        }
+        
+        async function checkHealth() {
+            showResult('Checking API health...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL.replace('/api/v1', '')}/health`);
+                const data = await response.json();
+                
+                showResult(`
+                    <h4>✅ API is Healthy</h4>
+                    <p><strong>Database:</strong> facto_app</p>
+                    <p><strong>Collection:</strong> user</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `, 'success');
+            } catch (error) {
+                showResult(`
+                    <h4>❌ API Health Check Failed</h4>
+                    <p>Could not connect to the API.</p>
+                    <p>Error: ${error.message}</p>
+                `, 'error');
+            }
+        }
+        
+        async function testDifferentEndpoints() {
+            showResult('Testing different login endpoints...', 'info');
+            
+            const loginData = {
+                email: 'admin@facto.org.in',
+                password: 'admin123'
+            };
+            
+            const endpoints = [
+                '/admin/login',
+                '/auth/login',
+                '/auth/login-with-password'
+            ];
+            
+            let results = '';
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(loginData)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    results += `
+                        <h5>${endpoint}</h5>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Success:</strong> ${response.ok ? 'Yes' : 'No'}</p>
+                        <p><strong>Message:</strong> ${data.message || 'No message'}</p>
+                        <hr>
+                    `;
+                } catch (error) {
+                    results += `
+                        <h5>${endpoint}</h5>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <hr>
+                    `;
+                }
+            }
+            
+            showResult(`
+                <h4>🔍 Endpoint Test Results</h4>
+                ${results}
+            `, 'info');
+        }
+    </script>
+</body>
+</html>

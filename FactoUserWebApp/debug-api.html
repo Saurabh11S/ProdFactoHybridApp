@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Debug Tool</title>
+</head>
+<body>
+    <h1>API Debug Tool</h1>
+    <div id="results"></div>
+    
+    <script>
+        const API_BASE_URL = 'https://api.facto.org.in/api/v1';
+        
+        async function testAPI() {
+            const resultsDiv = document.getElementById('results');
+            
+            // Test services endpoint
+            try {
+                console.log('Testing /services endpoint...');
+                const response = await fetch(`${API_BASE_URL}/services`);
+                const data = await response.json();
+                console.log('Services response:', data);
+                
+                resultsDiv.innerHTML += `
+                    <h2>Services Endpoint</h2>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Response:</strong></p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('Services endpoint error:', error);
+                resultsDiv.innerHTML += `
+                    <h2>Services Endpoint</h2>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+            }
+            
+            // Test sub-services endpoint
+            try {
+                console.log('Testing /sub-services/all endpoint...');
+                const response = await fetch(`${API_BASE_URL}/sub-services/all`);
+                const data = await response.json();
+                console.log('Sub-services response:', data);
+                
+                resultsDiv.innerHTML += `
+                    <h2>Sub-Services Endpoint</h2>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Response:</strong></p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('Sub-services endpoint error:', error);
+                resultsDiv.innerHTML += `
+                    <h2>Sub-Services Endpoint</h2>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+            }
+        }
+        
+        // Run the test when page loads
+        window.onload = testAPI;
+    </script>
+</body>
+</html>

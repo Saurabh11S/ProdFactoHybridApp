@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Check if user is authenticated
   const isAuthenticated = !!user && !!token;
 
-  // API base URL - update this to match your backend
+  // API base URL - using local backend
   const API_BASE_URL = 'http://localhost:8080/api/v1';
 
   // Token validation utilities
@@ -118,7 +118,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Configure axios defaults and add response interceptor
   useEffect(() => {
-    const token = sessionStorage.getItem('authToken');
+    const token = localStorage.getItem('authToken');
     if (token && !isTokenExpired(token)) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
@@ -138,8 +138,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setUser(null);
             setToken(null);
             setError(null);
-            sessionStorage.removeItem('authToken');
-            sessionStorage.removeItem('user');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
             delete axios.defaults.headers.common['Authorization'];
           } else {
             console.log('401 Unauthorized on non-auth endpoint - not logging out automatically');
@@ -155,13 +155,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  // Initialize auth state from sessionStorage
+  // Initialize auth state from localStorage
   useEffect(() => {
     const initializeAuth = () => {
       try {
-        console.log('🚀 Initializing auth state from sessionStorage...');
-        const storedToken = sessionStorage.getItem('authToken');
-        const storedUser = sessionStorage.getItem('user');
+        console.log('🚀 Initializing auth state from localStorage...');
+        const storedToken = localStorage.getItem('authToken');
+        const storedUser = localStorage.getItem('user');
         
         console.log('Stored token exists:', !!storedToken);
         console.log('Stored user exists:', !!storedUser);
@@ -172,8 +172,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           if (isExpired) {
             console.log('❌ Token expired, clearing auth data');
-            sessionStorage.removeItem('authToken');
-            sessionStorage.removeItem('user');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
             delete axios.defaults.headers.common['Authorization'];
             setToken(null);
             setUser(null);
@@ -184,14 +184,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
           }
         } else {
-          console.log('No stored auth data found in sessionStorage');
+          console.log('No stored auth data found in localStorage');
           setToken(null);
           setUser(null);
         }
       } catch (error) {
         console.error('❌ Error initializing auth:', error);
-        sessionStorage.removeItem('authToken');
-        sessionStorage.removeItem('user');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
         delete axios.defaults.headers.common['Authorization'];
         setToken(null);
         setUser(null);
@@ -211,17 +211,57 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setSessionWarning({ show: false, timeLeft: 0 });
   };
 
-  const extendSession = () => {
-    // This would typically refresh the token
-    // For now, we'll just dismiss the warning
-    setSessionWarning({ show: false, timeLeft: 0 });
+  const extendSession = async () => {
+    try {
+      console.log('🔄 Attempting to extend session...');
+      
+      // Check if we have a valid token
+      if (!token || isTokenExpired(token)) {
+        console.log('❌ No valid token to refresh');
+        setSessionWarning({ show: false, timeLeft: 0 });
+        return;
+      }
+
+      // Make a request to refresh the token
+      const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.data.success && response.data.data?.token) {
+        const newToken = response.data.data.token;
+        const newUser = response.data.data.user || user;
+        
+        console.log('✅ Token refreshed successfully');
+        
+        // Update token and user
+        setToken(newToken);
+        setUser(newUser);
+        
+        // Store in localStorage
+        localStorage.setItem('authToken', newToken);
+        localStorage.setItem('user', JSON.stringify(newUser));
+        
+        // Update axios default header
+        axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+        
+        setSessionWarning({ show: false, timeLeft: 0 });
+      } else {
+        throw new Error('Token refresh failed');
+      }
+    } catch (error) {
+      console.error('❌ Token refresh failed:', error);
+      // If refresh fails, logout the user
+      logout();
+    }
   };
 
   // Force logout for testing
   const forceLogout = () => {
     console.log('🔄 Force logout triggered');
-    sessionStorage.removeItem('authToken');
-    sessionStorage.removeItem('user');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
     delete axios.defaults.headers.common['Authorization'];
     setToken(null);
     setUser(null);
@@ -242,8 +282,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(null);
       setToken(null);
       setError(null);
-      sessionStorage.removeItem('authToken');
-      sessionStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
       delete axios.defaults.headers.common['Authorization'];
       return;
     }
@@ -270,8 +310,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(null);
       setToken(null);
       setError(null);
-      sessionStorage.removeItem('authToken');
-      sessionStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
       delete axios.defaults.headers.common['Authorization'];
     }, timeUntilExpiry);
 
@@ -283,15 +323,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const handleBeforeUnload = () => {
       console.log('🔄 Browser closing, clearing session...');
-      sessionStorage.removeItem('authToken');
-      sessionStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
     };
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
         console.log('🔄 Tab hidden, clearing session...');
-        sessionStorage.removeItem('authToken');
-        sessionStorage.removeItem('user');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
       }
     };
 
@@ -334,9 +374,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(userData);
         setToken(authToken);
         
-        // Store in sessionStorage
-        sessionStorage.setItem('authToken', authToken);
-        sessionStorage.setItem('user', JSON.stringify(userData));
+        // Store in localStorage
+        localStorage.setItem('authToken', authToken);
+        localStorage.setItem('user', JSON.stringify(userData));
         
         // Set axios default header
         axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
@@ -487,9 +527,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(userData);
         setToken(authToken);
         
-        // Store in sessionStorage
-        sessionStorage.setItem('authToken', authToken);
-        sessionStorage.setItem('user', JSON.stringify(userData));
+        // Store in localStorage
+        localStorage.setItem('authToken', authToken);
+        localStorage.setItem('user', JSON.stringify(userData));
         
         // Set axios default header
         axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
@@ -573,8 +613,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
     setToken(null);
     setError(null);
-    sessionStorage.removeItem('authToken');
-    sessionStorage.removeItem('user');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
     delete axios.defaults.headers.common['Authorization'];
   };
 

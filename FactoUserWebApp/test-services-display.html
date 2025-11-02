@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Services Display</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1e3a8a;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .service-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        .error {
+            color: #ff6b6b;
+            text-align: center;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Services Display</h1>
+        <div id="status">Loading services...</div>
+        <div id="services-container" class="service-grid"></div>
+    </div>
+
+    <script>
+        async function loadServices() {
+            const statusEl = document.getElementById('status');
+            const containerEl = document.getElementById('services-container');
+            
+            try {
+                statusEl.textContent = 'Fetching services...';
+                
+                const response = await fetch('http://localhost:8080/api/v1/sub-services/all');
+                const data = await response.json();
+                
+                console.log('API Response:', data);
+                
+                if (data.success && data.data.subServices) {
+                    const services = data.data.subServices;
+                    statusEl.textContent = `Found ${services.length} services`;
+                    
+                    if (services.length === 0) {
+                        containerEl.innerHTML = '<div class="error">No services found in database</div>';
+                        return;
+                    }
+                    
+                    // Display services
+                    containerEl.innerHTML = services.map(service => `
+                        <div class="service-card">
+                            <h3>${service.title}</h3>
+                            <p><strong>Service Code:</strong> ${service.serviceCode}</p>
+                            <p><strong>Description:</strong> ${service.description}</p>
+                            <p><strong>Price:</strong> ₹${service.price}</p>
+                            <p><strong>Period:</strong> ${service.period}</p>
+                            <p><strong>Active:</strong> ${service.isActive ? 'Yes' : 'No'}</p>
+                            <p><strong>Features:</strong> ${service.features.join(', ')}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    throw new Error('Invalid API response format');
+                }
+                
+            } catch (error) {
+                console.error('Error loading services:', error);
+                statusEl.textContent = `Error: ${error.message}`;
+                containerEl.innerHTML = `<div class="error">Failed to load services: ${error.message}</div>`;
+            }
+        }
+        
+        // Load services when page loads
+        loadServices();
+    </script>
+</body>
+</html>

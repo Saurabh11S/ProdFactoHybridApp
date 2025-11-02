@@ -53,6 +53,24 @@ export const getSubServiceById = bigPromise(
     }
   }
 );
+// Get all sub-services (public endpoint)
+export const getAllSubServices = bigPromise(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const subServices = await db.SubService.find({ isActive: true })
+        .populate('serviceId', 'title category');
+      
+      const response = sendSuccessApiResponse(
+        "All SubServices retrieved successfully",
+        { subServices }
+      );
+      res.status(StatusCode.OK).send(response);
+    } catch (error: any) {
+      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+    }
+  }
+);
+
 export const getYourServices = bigPromise(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
