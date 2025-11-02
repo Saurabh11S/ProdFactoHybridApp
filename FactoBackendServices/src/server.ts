@@ -30,14 +30,17 @@ const logger: winston.Logger = winston.createLogger({
 
 const server: http.Server = http.createServer(app);
 
-const port = app.get("port");
-const host = process.env.HOST || '0.0.0.0';
+// Render sets PORT environment variable automatically
+const port = process.env.PORT || app.get("port") || 8080;
+// Must bind to 0.0.0.0 for Render to detect the port
+const host = '0.0.0.0';
 
 server.listen(port, host, (): void => {
   logger.info(
-    ` App is running at http://${host}:${port} in ${app.get("dev")} mode`
+    `✅ Server is running at http://${host}:${port} in ${process.env.NODE_ENV || app.get("dev")} mode`
   );
-  logger.info(` Server listening on port ${port}`);
+  logger.info(`✅ Server listening on ${host}:${port}`);
+  logger.info(`✅ PORT from environment: ${process.env.PORT || 'not set, using default'}`);
   logger.info("  Press CTRL-C to stop");
 });
 
