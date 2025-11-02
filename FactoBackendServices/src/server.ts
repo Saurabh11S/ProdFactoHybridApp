@@ -30,10 +30,12 @@ const logger: winston.Logger = winston.createLogger({
 
 const server: http.Server = http.createServer(app);
 
-server.listen(app.get("port"), (): void => {
+const port = app.get("port");
+const host = process.env.HOST || '0.0.0.0';
+
+server.listen(port, host, (): void => {
   logger.info(
-    ` App is running at http://${process.env.HOST || 'localhost'}:${app.get("port")} in ${
-      app.get("dev")} mode`
+    ` App is running at http://${host}:${port} in ${app.get("dev")} mode`
   );
   logger.info("  Press CTRL-C to stop");
 });

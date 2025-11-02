@@ -40,8 +40,13 @@ const corsOptions: cors.CorsOptions = {
   optionsSuccessStatus: 204,
 };
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '../.env') });
+// Load environment variables (only if .env exists, Render uses env vars directly)
+try {
+  dotenv.config({ path: path.join(__dirname, '../.env') });
+} catch (error) {
+  // .env file not found, using environment variables from Render
+  console.log('Using environment variables from system');
+}
 
 // Create Express application
 const app: Express = express();
