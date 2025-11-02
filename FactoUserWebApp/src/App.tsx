@@ -41,7 +41,7 @@ export default function App() {
       case 'learning':
         return <Learning onNavigate={handleNavigation} />;
       case 'shorts':
-        return <Shorts onNavigate={handleNavigation} />;
+        return <Shorts />;
       case 'updates':
         return <Updates onNavigate={handleNavigation} />;
       case 'login':
