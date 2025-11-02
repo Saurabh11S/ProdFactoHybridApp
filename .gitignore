@@ -73,6 +73,13 @@ ecosystem.config.js.local
 secrets/
 *.secret
 
+# Archive and zip files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+.git.zip
+
 # Deployment specific
 .vercel
 .netlify
