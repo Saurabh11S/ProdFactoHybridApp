@@ -31,6 +31,11 @@ const corsOptions: cors.CorsOptions = {
     "http://localhost:8080",
     "https://admin.facto.org.in",
     "https://facto.org.in",
+    // Vercel deployment domains
+    /^https:\/\/.*\.vercel\.app$/,
+    /^https:\/\/.*-factouserwebapps-projects\.vercel\.app$/,
+    // Netlify deployment domains (if used)
+    /^https:\/\/.*\.netlify\.app$/,
     process.env.CORS_ORIGIN || "*"
   ],
   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],

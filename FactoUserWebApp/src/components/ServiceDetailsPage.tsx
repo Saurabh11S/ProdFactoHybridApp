@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import SuccessPopup from './SuccessPopup';
+import { API_BASE_URL } from '../config/apiConfig';
 
 // Razorpay types
 declare global {
@@ -928,7 +929,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       
       console.log('📦 Payment Order Data:', paymentOrderData);
 
-      const paymentOrderResponse = await axios.post('http://localhost:8080/api/v1/payment/initiate-payment', paymentOrderData, {
+      const paymentOrderResponse = await axios.post(`${API_BASE_URL}/payment/initiate-payment`, paymentOrderData, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json'
@@ -966,7 +967,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
 
             console.log('Verifying payment:', verifyData);
             
-            const verifyResponse = await axios.post('http://localhost:8080/api/v1/payment/verify-payment', verifyData, {
+            const verifyResponse = await axios.post(`${API_BASE_URL}/payment/verify-payment`, verifyData, {
               headers: {
                 'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
                 'Content-Type': 'application/json'

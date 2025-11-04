@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { fetchAllSubServices, SubService } from '../api/services';
+import { API_BASE_URL } from '../config/apiConfig';
 
 type PageType = 'home' | 'services' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
@@ -67,7 +68,7 @@ export function ServicesPage({ onNavigate }: ServicesPageProps) {
       setLoading(true);
       try {
         console.log('Fetching user purchases for authenticated user');
-        const response = await axios.get('http://localhost:8080/api/v1/user-purchases', {
+        const response = await axios.get(`${API_BASE_URL}/user-purchases`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

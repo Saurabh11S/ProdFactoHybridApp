@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+import { API_BASE_URL } from '../config/apiConfig';
 
 // Blog interfaces based on backend models
 export interface Blog {

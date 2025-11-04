@@ -1,5 +1,6 @@
+// Centralized API configuration
 // Resolve API base URL from env with sensible defaults for dev/prod
-export const BASE_URL =
+export const API_BASE_URL =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL)
     ? import.meta.env.VITE_API_URL
     : (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.PROD)
@@ -8,5 +9,6 @@ export const BASE_URL =
 
 // Log the API URL being used (helpful for debugging)
 if (typeof window !== 'undefined') {
-  console.log('🌐 Admin API Base URL:', BASE_URL);
+  console.log('🌐 API Base URL:', API_BASE_URL);
 }
+

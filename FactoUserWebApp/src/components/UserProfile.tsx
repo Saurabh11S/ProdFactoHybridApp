@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { fetchAllSubServices, SubService } from '../api/services';
 import { ServiceDocumentUpload } from './ServiceDocumentUpload';
+import { API_BASE_URL } from '../config/apiConfig';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
@@ -385,9 +386,9 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
 
         // Fetch user purchases, payment orders, and quotations in parallel
         const [purchasesRes, paymentsRes, quotationsRes] = await Promise.allSettled([
-          axios.get('http://localhost:8080/api/v1/user-purchases', { headers }),
-          axios.get('http://localhost:8080/api/v1/payment-orders', { headers }),
-          axios.get('http://localhost:8080/api/v1/quotations', { headers })
+          axios.get(`${API_BASE_URL}/user-purchases`, { headers }),
+          axios.get(`${API_BASE_URL}/payment-orders`, { headers }),
+          axios.get(`${API_BASE_URL}/quotations`, { headers })
         ]);
 
         if (purchasesRes.status === 'fulfilled') {
@@ -407,7 +408,7 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
         for (const purchase of userPurchases) {
           try {
             const docResponse = await axios.get(
-              `http://localhost:8080/api/v1/document/service/${purchase._id}`,
+              `${API_BASE_URL}/document/service/${purchase._id}`,
               { headers }
             );
             documentCounts[purchase._id] = docResponse.data.data.userDocuments?.length || 0;

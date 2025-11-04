@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
 // User interface based on backend model
 export interface User {
@@ -65,9 +66,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Check if user is authenticated
   const isAuthenticated = !!user && !!token;
-
-  // API base URL - using local backend
-  const API_BASE_URL = 'http://localhost:8080/api/v1';
 
   // Token validation utilities
   const isTokenExpired = (token: string): boolean => {

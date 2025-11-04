@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
 interface ServiceDocumentUploadProps {
   serviceId: string;
@@ -112,7 +113,7 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
         const token = localStorage.getItem('authToken');
         console.log('📥 Fetching documents for service:', serviceId);
         const response = await axios.get(
-          `http://localhost:8080/api/v1/document/service/${serviceId}`,
+          `${API_BASE_URL}/document/service/${serviceId}`,
           {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -221,11 +222,11 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
       formData.append('description', `Uploaded for ${serviceName}`);
 
       const token = localStorage.getItem('authToken');
-      console.log('📤 Uploading to:', `http://localhost:8080/api/v1/document/upload/${serviceId}`);
+      console.log('📤 Uploading to:', `${API_BASE_URL}/document/upload/${serviceId}`);
       console.log('🔑 Token exists:', !!token);
       
       const response = await axios.post(
-        `http://localhost:8080/api/v1/document/upload/${serviceId}`,
+        `${API_BASE_URL}/document/upload/${serviceId}`,
         formData,
         {
           headers: {
@@ -300,7 +301,7 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
     try {
       const token = localStorage.getItem('authToken');
       await axios.delete(
-        `http://localhost:8080/api/v1/document/remove/${documentId}`,
+        `${API_BASE_URL}/document/remove/${documentId}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
