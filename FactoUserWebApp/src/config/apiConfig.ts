@@ -1,9 +1,10 @@
 // Centralized API configuration
 // Resolve API base URL from env with sensible defaults for dev/prod
-const getApiBaseUrl = () => {
+const getApiBaseUrl = (): string => {
   // Priority 1: Explicit environment variable
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  const env = (import.meta as any).env;
+  if (env && env.VITE_API_URL) {
+    return env.VITE_API_URL;
   }
   
   // Priority 2: Check if we're in production (not localhost)
@@ -14,9 +15,7 @@ const getApiBaseUrl = () => {
      !window.location.hostname.includes('localhost'));
   
   // Priority 3: Vite's PROD mode (set during build)
-  const isViteProd = typeof import.meta !== 'undefined' && 
-                     import.meta.env && 
-                     import.meta.env.PROD;
+  const isViteProd = env && env.PROD;
   
   if (isProduction || isViteProd) {
     return 'https://facto-backend-api.onrender.com/api/v1'; // Production backend URL
