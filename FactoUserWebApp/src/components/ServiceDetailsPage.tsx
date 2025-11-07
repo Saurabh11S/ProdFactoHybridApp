@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import SuccessPopup from './SuccessPopup';
@@ -12,23 +12,23 @@ interface ServiceDetailsPageProps {
   serviceId?: string;
 }
 
-// Billing period multipliers
-const BILLING_MULTIPLIERS: Record<string, number> = {
-  monthly: 1,
-  quarterly: 3,
-  half_yearly: 6,
-  yearly: 12,
-  one_time: 1
-};
+// Billing period multipliers (kept for potential future use)
+// const BILLING_MULTIPLIERS: Record<string, number> = {
+//   monthly: 1,
+//   quarterly: 3,
+//   half_yearly: 6,
+//   yearly: 12,
+//   one_time: 1
+// };
 
 export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceDetailsPageProps) {
-  const { isAuthenticated, user, isLoading } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [subService, setSubService] = useState<SubService | null>(null);
   const [loadingService, setLoadingService] = useState(true);
   const [serviceError, setServiceError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('monthly');
   const [selectedRequestOptions, setSelectedRequestOptions] = useState<Record<string, string | string[]>>({});
-  const [showQuotationForm, setShowQuotationForm] = useState(false);
+  const [_showQuotationForm, setShowQuotationForm] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [successPopup, setSuccessPopup] = useState({
@@ -333,10 +333,18 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
   // Handle simple checkbox toggle (for checkbox requests without options)
   const handleCheckboxToggle = (requestName: string, checked: boolean) => {
     setSelectedRequestOptions(prev => {
-      return {
+      const updated = {
         ...prev,
         [requestName]: checked ? requestName : undefined
       };
+      // Remove undefined values to maintain type safety
+      const filtered: Record<string, string | string[]> = {};
+      Object.entries(updated).forEach(([key, value]) => {
+        if (value !== undefined) {
+          filtered[key] = value;
+        }
+      });
+      return filtered;
     });
   };
 
@@ -367,7 +375,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
 
     try {
       const paymentOrderData = {
-        userId: user._id || user.id,
+        userId: user._id,
         items: [{
           itemType: 'service',
           itemId: subService._id,
@@ -729,7 +737,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                       const inputType = (request.inputType || '').toLowerCase();
                       
                       // Debug logging for each request
-                      if (process.env.NODE_ENV === 'development') {
+                      if (import.meta.env.DEV) {
                         console.log(`🎨 Rendering Request ${index} (${request.name}):`, {
                           rawInputType: request.inputType,
                           normalizedInputType: inputType,

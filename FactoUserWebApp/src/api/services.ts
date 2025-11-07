@@ -130,7 +130,7 @@ export const fetchUserServices = async (token: string): Promise<SubService[]> =>
 };
 
 // Fetch a single sub-service by ID
-export const fetchSubServiceById = async (subServiceId: string, forceRefresh: boolean = false): Promise<SubService> => {
+export const fetchSubServiceById = async (subServiceId: string, _forceRefresh: boolean = false): Promise<SubService> => {
   try {
     // Always add cache-busting timestamp to ensure fresh data from database
     // Using query parameters only to avoid CORS header issues
