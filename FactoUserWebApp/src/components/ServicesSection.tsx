@@ -94,23 +94,14 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
         setLoading(true);
         setError(null);
         const data = await fetchServices();
-        // Filter only active main services (categories)
-        // Only show main categories: ITR, GST, Tax Planning, Registration, Outsourcing
-        const mainCategories = ['ITR', 'GST', 'Tax Planning', 'Registration', 'Outsourcing'];
-        const activeServices = data.filter(service => 
-          service.isActive && mainCategories.includes(service.category)
-        );
-        // Sort by category order
-        const categoryOrder = ['ITR', 'GST', 'Tax Planning', 'Registration', 'Outsourcing'];
-        activeServices.sort((a, b) => {
-          const indexA = categoryOrder.indexOf(a.category);
-          const indexB = categoryOrder.indexOf(b.category);
-          return indexA - indexB;
-        });
+        // Filter only active main services (show all active services from database)
+        const activeServices = data.filter(service => service.isActive);
+        // Sort by title alphabetically for consistent display
+        activeServices.sort((a, b) => a.title.localeCompare(b.title));
         setServices(activeServices);
       } catch (err) {
         console.error('Error fetching services:', err);
-        setError('Failed to load services');
+        setError('Failed to load services. Please try again later.');
         setServices([]);
       } finally {
         setLoading(false);
@@ -251,10 +242,10 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
 
                     {/* CTA Button */}
                     <button 
-                      onClick={() => onNavigate('services')}
+                      onClick={() => onNavigate('services', service._id)}
                       className={`relative w-full mt-6 bg-gradient-to-r ${colorScheme.color} text-white py-3 px-4 rounded-lg font-medium transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1 overflow-hidden group-hover:shadow-2xl hover:brightness-110`}
                     >
-                      <span className="relative z-10">Get Started</span>
+                      <span className="relative z-10">Explore Services</span>
                     </button>
                   </div>
 
