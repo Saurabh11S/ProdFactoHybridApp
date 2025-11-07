@@ -138,46 +138,65 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
             </div>
           </div>
 
-          {/* Interactive Demo Card */}
+          {/* Why Choose Facto - Key Features Card */}
           <div className={`relative transform transition-all duration-1000 delay-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
             <div className="relative z-10">
-              {/* Main Demo Card */}
+              {/* Main Features Card */}
               <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20 dark:border-gray-700/20 hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-2">
                 <div className="space-y-6">
                   {/* Header */}
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-800 dark:text-white text-lg">ITR Filing Progress</h3>
+                    <h3 className="font-bold text-gray-800 dark:text-white text-xl">Why Choose Facto?</h3>
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-[#00C897] text-sm font-medium">Live</span>
+                      <span className="text-[#00C897] text-sm font-medium">Trusted</span>
                     </div>
                   </div>
                   
-                  {/* Progress Bar */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600 dark:text-gray-200 text-sm">Completion Status</span>
-                      <span className="text-[#00C897] text-sm font-medium">85% Complete</span>
+                  {/* Key Features Grid */}
+                  <div className="grid grid-cols-1 gap-4">
+                    {/* Feature 1: Expert CA Support */}
+                    <div className="group bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/30 dark:to-blue-800/20 p-4 rounded-xl border border-blue-200/50 dark:border-blue-700/50 transform hover:scale-[1.02] transition-all duration-300 cursor-pointer">
+                      <div className="flex items-start space-x-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-[#007AFF] to-[#0056CC] rounded-xl flex items-center justify-center text-white text-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          👨‍💼
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-800 dark:text-white mb-1">Expert CA Partners</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">Verified Chartered Accountants ensure accurate filing and maximum tax savings</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                      <div className="bg-gradient-to-r from-[#007AFF] via-[#00C897] to-[#007AFF] h-3 rounded-full transition-all duration-2000 ease-out animate-gradient-x" style={{ width: '85%' }}></div>
+
+                    {/* Feature 2: Fast & Easy */}
+                    <div className="group bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-900/30 dark:to-green-800/20 p-4 rounded-xl border border-green-200/50 dark:border-green-700/50 transform hover:scale-[1.02] transition-all duration-300 cursor-pointer">
+                      <div className="flex items-start space-x-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-[#00C897] to-[#00A86B] rounded-xl flex items-center justify-center text-white text-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          ⚡
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-800 dark:text-white mb-1">Fast & Hassle-Free</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">Complete your filing in just 15 minutes with our streamlined process</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Animated Stats */}
-                  <div className="grid grid-cols-2 gap-4 mt-6">
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 p-4 rounded-xl border border-blue-200/50 dark:border-blue-700/50 transform hover:scale-105 transition-all duration-300">
-                      <div className="text-2xl font-bold text-[#007AFF] animate-bounce">₹2.5L</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-200">Tax Saved</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 p-4 rounded-xl border border-green-200/50 dark:border-green-700/50 transform hover:scale-105 transition-all duration-300" style={{ animationDelay: '0.2s' }}>
-                      <div className="text-2xl font-bold text-[#00C897] animate-bounce">15 min</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-200">Time Taken</div>
+
+                    {/* Feature 3: Secure & Compliant */}
+                    <div className="group bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-800/20 p-4 rounded-xl border border-purple-200/50 dark:border-purple-700/50 transform hover:scale-[1.02] transition-all duration-300 cursor-pointer">
+                      <div className="flex items-start space-x-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-[#9333EA] to-[#7C3AED] rounded-xl flex items-center justify-center text-white text-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          🔒
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-800 dark:text-white mb-1">Secure & Compliant</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">Bank-level encryption and 100% compliance with tax regulations</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Dynamic Stat Display */}
-                  <div className="mt-6 p-4 bg-gradient-to-r from-[#007AFF]/10 to-[#00C897]/10 dark:from-[#007AFF]/20 dark:to-[#00C897]/20 rounded-xl border border-[#007AFF]/20 dark:border-[#007AFF]/30">
+                  {/* Quick Stats Banner */}
+                  <div className="mt-6 p-4 bg-gradient-to-r from-[#007AFF]/10 via-[#00C897]/10 to-[#007AFF]/10 dark:from-[#007AFF]/20 dark:via-[#00C897]/20 dark:to-[#007AFF]/20 rounded-xl border border-[#007AFF]/20 dark:border-[#007AFF]/30">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-[#007AFF] to-[#00C897] rounded-full flex items-center justify-center text-white text-lg animate-pulse">
@@ -204,6 +223,17 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
                       </div>
                     </div>
                   </div>
+
+                  {/* CTA Button */}
+                  <button
+                    onClick={() => onNavigate('services')}
+                    className="w-full mt-4 px-6 py-3 bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 flex items-center justify-center group"
+                  >
+                    <span className="mr-2">Explore All Services</span>
+                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
