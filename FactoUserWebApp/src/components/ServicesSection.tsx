@@ -164,6 +164,17 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
     return () => observer.disconnect();
   }, []);
 
+  // Debug: Log component render
+  useEffect(() => {
+    console.log('🎨 ServicesSection component rendered');
+    console.log('📊 Current state:', { 
+      loading, 
+      error, 
+      servicesCount: services.length,
+      visibleCardsCount: visibleCards.length 
+    });
+  }, [loading, error, services.length, visibleCards.length]);
+
   return (
     <section ref={sectionRef} className="py-20 bg-white dark:bg-gray-900 relative overflow-hidden" id="services">
       {/* Background Pattern */}
@@ -186,6 +197,17 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
             tailored for Indian individuals and small businesses.
           </p>
         </div>
+
+        {/* Debug Info - Remove after fixing */}
+        {import.meta.env.DEV && (
+          <div className="mb-4 p-4 bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-400 rounded-lg text-sm">
+            <p><strong>Debug Info:</strong></p>
+            <p>Loading: {loading ? 'Yes' : 'No'}</p>
+            <p>Error: {error || 'None'}</p>
+            <p>Services Count: {services.length}</p>
+            <p>API URL: {import.meta.env.VITE_API_URL || 'Using default'}</p>
+          </div>
+        )}
 
         {/* Services Grid */}
         {loading ? (
