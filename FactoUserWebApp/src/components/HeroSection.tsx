@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
+import { fetchAllSubServices, SubService } from '../api/services';
 
 type PageType = 'home' | 'services' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment';
 
 interface HeroSectionProps {
-  onNavigate: (page: PageType) => void;
+  onNavigate: (page: PageType, serviceId?: string) => void;
 }
 
 export function HeroSection({ onNavigate }: HeroSectionProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [currentStatIndex, setCurrentStatIndex] = useState(0);
+  const [services, setServices] = useState<SubService[]>([]);
+  const [currentServiceIndex, setCurrentServiceIndex] = useState(0);
+  const [loadingServices, setLoadingServices] = useState(true);
 
   const animatedStats = [
     { label: 'Happy Customers', value: '50,000+', icon: '👥' },
@@ -17,15 +21,60 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
     { label: 'Processing Time', value: '24hrs', icon: '⚡' }
   ];
 
+  // Fetch services for carousel
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        setLoadingServices(true);
+        const fetchedServices = await fetchAllSubServices();
+        // Filter only active services and limit to 10 for carousel
+        const activeServices = fetchedServices.filter(s => s.isActive).slice(0, 10);
+        setServices(activeServices);
+      } catch (error) {
+        console.error('Error loading services for carousel:', error);
+        // Fallback to empty array if fetch fails
+        setServices([]);
+      } finally {
+        setLoadingServices(false);
+      }
+    };
+
+    loadServices();
+  }, []);
+
   useEffect(() => {
     setIsVisible(true);
     
-    const interval = setInterval(() => {
+    const statsInterval = setInterval(() => {
       setCurrentStatIndex((prev) => (prev + 1) % animatedStats.length);
     }, 3000);
 
-    return () => clearInterval(interval);
-  }, []);
+    // Auto-rotate services carousel
+    if (services.length > 0) {
+      const servicesInterval = setInterval(() => {
+        setCurrentServiceIndex((prev) => (prev + 1) % services.length);
+      }, 4000);
+
+      return () => {
+        clearInterval(statsInterval);
+        clearInterval(servicesInterval);
+      };
+    }
+
+    return () => clearInterval(statsInterval);
+  }, [services.length, animatedStats.length]);
+
+  const handlePreviousService = () => {
+    setCurrentServiceIndex((prev) => (prev - 1 + services.length) % services.length);
+  };
+
+  const handleNextService = () => {
+    setCurrentServiceIndex((prev) => (prev + 1) % services.length);
+  };
+
+  const handleServiceClick = (service: SubService) => {
+    onNavigate('service-details', service._id);
+  };
 
   return (
     <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F9FAFB] via-white to-[#F0F9FF] dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 overflow-hidden">
@@ -138,62 +187,177 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
             </div>
           </div>
 
-          {/* Why Choose Facto - Key Features Card */}
+          {/* Services Carousel Card */}
           <div className={`relative transform transition-all duration-1000 delay-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
             <div className="relative z-10">
-              {/* Main Features Card */}
+              {/* Main Carousel Card */}
               <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20 dark:border-gray-700/20 hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-2">
                 <div className="space-y-6">
                   {/* Header */}
                   <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-gray-800 dark:text-white text-xl">Why Choose Facto?</h3>
+                    <h3 className="font-bold text-gray-800 dark:text-white text-xl">Our Services</h3>
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-[#00C897] text-sm font-medium">Trusted</span>
+                      <span className="text-[#00C897] text-sm font-medium">
+                        {services.length > 0 ? `${services.length} Available` : 'Loading...'}
+                      </span>
                     </div>
                   </div>
                   
-                  {/* Key Features Grid */}
-                  <div className="grid grid-cols-1 gap-4">
-                    {/* Feature 1: Expert CA Support */}
-                    <div className="group bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/30 dark:to-blue-800/20 p-4 rounded-xl border border-blue-200/50 dark:border-blue-700/50 transform hover:scale-[1.02] transition-all duration-300 cursor-pointer">
-                      <div className="flex items-start space-x-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-[#007AFF] to-[#0056CC] rounded-xl flex items-center justify-center text-white text-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                          👨‍💼
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-800 dark:text-white mb-1">Expert CA Partners</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">Verified Chartered Accountants ensure accurate filing and maximum tax savings</p>
-                        </div>
-                      </div>
+                  {/* Services Carousel */}
+                  {loadingServices ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#007AFF]"></div>
                     </div>
+                  ) : services.length > 0 ? (
+                    <div className="relative">
+                      {/* Carousel Container */}
+                      <div className="relative overflow-hidden rounded-2xl">
+                        <div 
+                          className="flex transition-transform duration-500 ease-in-out"
+                          style={{ transform: `translateX(-${currentServiceIndex * 100}%)` }}
+                        >
+                          {services.map((service) => {
+                            const category = service.serviceId?.title || 'General';
+                            const minPrice = service.pricingStructure && service.pricingStructure.length > 0
+                              ? Math.min(...service.pricingStructure.map(p => p.price))
+                              : service.price || 0;
+                            
+                            return (
+                              <div
+                                key={service._id}
+                                className="min-w-full px-2"
+                              >
+                                <div
+                                  onClick={() => handleServiceClick(service)}
+                                  className="group cursor-pointer bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-blue-900/30 dark:via-gray-800/50 dark:to-green-900/30 p-6 rounded-2xl border-2 border-blue-200/50 dark:border-blue-700/50 hover:border-[#007AFF] dark:hover:border-[#007AFF] transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl"
+                                >
+                                  {/* Service Icon & Category */}
+                                  <div className="flex items-start justify-between mb-4">
+                                    <div className="flex items-center space-x-3">
+                                      <div className="w-14 h-14 bg-gradient-to-br from-[#007AFF] to-[#00C897] rounded-xl flex items-center justify-center text-white text-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                        {category === 'ITR' ? '📊' : category === 'GST' ? '📋' : category === 'Registration' ? '📝' : '💼'}
+                                      </div>
+                                      <div>
+                                        <span className="inline-block px-3 py-1 bg-[#007AFF]/10 dark:bg-[#007AFF]/20 text-[#007AFF] dark:text-blue-400 rounded-full text-xs font-semibold mb-1">
+                                          {category}
+                                        </span>
+                                        {service.serviceCode && (
+                                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                                            {service.serviceCode}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-2xl font-bold text-[#007AFF] dark:text-blue-400">
+                                        {minPrice === 0 ? 'Free' : `₹${minPrice.toLocaleString('en-IN')}`}
+                                      </div>
+                                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        Starting from
+                                      </div>
+                                    </div>
+                                  </div>
 
-                    {/* Feature 2: Fast & Easy */}
-                    <div className="group bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-900/30 dark:to-green-800/20 p-4 rounded-xl border border-green-200/50 dark:border-green-700/50 transform hover:scale-[1.02] transition-all duration-300 cursor-pointer">
-                      <div className="flex items-start space-x-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-[#00C897] to-[#00A86B] rounded-xl flex items-center justify-center text-white text-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                          ⚡
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-800 dark:text-white mb-1">Fast & Hassle-Free</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">Complete your filing in just 15 minutes with our streamlined process</p>
-                        </div>
-                      </div>
-                    </div>
+                                  {/* Service Title */}
+                                  <h4 className="font-bold text-gray-800 dark:text-white text-xl mb-2 group-hover:text-[#007AFF] dark:group-hover:text-blue-400 transition-colors">
+                                    {service.title}
+                                  </h4>
 
-                    {/* Feature 3: Secure & Compliant */}
-                    <div className="group bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-800/20 p-4 rounded-xl border border-purple-200/50 dark:border-purple-700/50 transform hover:scale-[1.02] transition-all duration-300 cursor-pointer">
-                      <div className="flex items-start space-x-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-[#9333EA] to-[#7C3AED] rounded-xl flex items-center justify-center text-white text-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                          🔒
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-800 dark:text-white mb-1">Secure & Compliant</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">Bank-level encryption and 100% compliance with tax regulations</p>
+                                  {/* Service Description */}
+                                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 line-clamp-2">
+                                    {service.description}
+                                  </p>
+
+                                  {/* Features Preview */}
+                                  {service.features && service.features.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-4">
+                                      {service.features.slice(0, 3).map((feature, idx) => (
+                                        <span
+                                          key={idx}
+                                          className="px-2 py-1 bg-white/60 dark:bg-gray-700/60 text-xs text-gray-600 dark:text-gray-300 rounded-lg border border-gray-200 dark:border-gray-600"
+                                        >
+                                          {feature}
+                                        </span>
+                                      ))}
+                                      {service.features.length > 3 && (
+                                        <span className="px-2 py-1 bg-white/60 dark:bg-gray-700/60 text-xs text-gray-600 dark:text-gray-300 rounded-lg border border-gray-200 dark:border-gray-600">
+                                          +{service.features.length - 3} more
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* View Details Button */}
+                                  <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                                    <span className="text-sm font-medium text-[#007AFF] dark:text-blue-400 group-hover:underline">
+                                      View Details →
+                                    </span>
+                                    <div className="flex items-center space-x-1">
+                                      <div className="w-2 h-2 rounded-full bg-[#00C897]"></div>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">Active</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
+
+                      {/* Navigation Arrows */}
+                      {services.length > 1 && (
+                        <>
+                          <button
+                            onClick={handlePreviousService}
+                            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 w-10 h-10 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-[#007AFF] hover:text-white dark:hover:bg-[#007AFF] transition-all duration-300 z-10 group"
+                            aria-label="Previous service"
+                          >
+                            <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={handleNextService}
+                            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 w-10 h-10 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-[#007AFF] hover:text-white dark:hover:bg-[#007AFF] transition-all duration-300 z-10 group"
+                            aria-label="Next service"
+                          >
+                            <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+
+                      {/* Carousel Indicators */}
+                      {services.length > 1 && (
+                        <div className="flex items-center justify-center space-x-2 mt-6">
+                          {services.map((_, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setCurrentServiceIndex(index)}
+                              className={`transition-all duration-300 rounded-full ${
+                                index === currentServiceIndex
+                                  ? 'w-8 h-2 bg-[#007AFF]'
+                                  : 'w-2 h-2 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
+                              }`}
+                              aria-label={`Go to service ${index + 1}`}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-gray-500 dark:text-gray-400 mb-4">No services available at the moment</p>
+                      <button
+                        onClick={() => onNavigate('services')}
+                        className="px-6 py-2 bg-[#007AFF] text-white rounded-lg hover:bg-[#0056CC] transition-colors"
+                      >
+                        Browse All Services
+                      </button>
+                    </div>
+                  )}
 
                   {/* Quick Stats Banner */}
                   <div className="mt-6 p-4 bg-gradient-to-r from-[#007AFF]/10 via-[#00C897]/10 to-[#007AFF]/10 dark:from-[#007AFF]/20 dark:via-[#00C897]/20 dark:to-[#007AFF]/20 rounded-xl border border-[#007AFF]/20 dark:border-[#007AFF]/30">
