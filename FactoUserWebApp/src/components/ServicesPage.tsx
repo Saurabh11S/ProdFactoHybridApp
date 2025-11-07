@@ -99,21 +99,34 @@ export function ServicesPage({ onNavigate }: ServicesPageProps) {
     );
   };
 
-  // Generate categories dynamically from services
+  // Generate categories dynamically from sub-services
+  // Group sub-services by main service category
+  const mainCategories = ['ITR', 'GST', 'Tax Planning', 'Registration', 'Outsourcing'];
+  const categoryMap = new Map<string, number>();
+  
+  services.forEach(service => {
+    const category = service.serviceId?.category || 'Other';
+    categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
+  });
+
+  // Always show all main categories, even if they have 0 sub-services
+  // This ensures all filters are visible
   const categories = [
     { id: 'all', name: 'All Services', count: services.length },
-    ...Array.from(new Set(services.map(service => service.serviceId.category)))
-      .map(category => ({
-        id: category.toLowerCase(),
-        name: category,
-        count: services.filter(service => service.serviceId.category === category).length
-      }))
+    ...mainCategories.map(category => ({
+      id: category.toLowerCase().replace(/\s+/g, '-'),
+      name: category,
+      count: categoryMap.get(category) || 0
+    }))
   ];
 
-  // Filter services based on selected category
+  // Filter sub-services based on selected category
   const filteredServices = selectedCategory === 'all' 
     ? services 
-    : services.filter(service => service.serviceId.category.toLowerCase() === selectedCategory);
+    : services.filter(service => {
+        const serviceCategory = service.serviceId?.category || '';
+        return serviceCategory.toLowerCase().replace(/\s+/g, '-') === selectedCategory;
+      });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 pt-16">
@@ -245,22 +258,12 @@ export function ServicesPage({ onNavigate }: ServicesPageProps) {
                   <div className="grid grid-cols-2 gap-3 pt-4">
                     <div className="relative">
                       <button
-                        onClick={() => !isServicePurchased(service._id) && onNavigate('service-details', service._id)}
-                        disabled={isServicePurchased(service._id)}
-                        className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-200 text-sm ${
-                          isServicePurchased(service._id)
-                            ? 'border border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 cursor-not-allowed'
-                            : 'border border-[#007AFF] text-[#007AFF] dark:text-[#007AFF] hover:bg-[#007AFF] hover:text-white cursor-pointer'
-                        }`}
-                        title={isServicePurchased(service._id) ? 'This service is already purchased' : 'View service details'}
+                        onClick={() => onNavigate('service-details', service._id)}
+                        className="w-full py-2 px-4 rounded-lg font-medium transition-all duration-200 text-sm border border-[#007AFF] text-[#007AFF] dark:text-[#007AFF] hover:bg-[#007AFF] hover:text-white cursor-pointer"
+                        title="View service details"
                       >
-                        {isServicePurchased(service._id) ? 'Already Purchased' : 'View Details'}
+                        View Details
                       </button>
-                      {isServicePurchased(service._id) && (
-                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                          Service already purchased
-                        </div>
-                      )}
                     </div>
                     <div className="relative">
                       {isServicePurchased(service._id) ? (
@@ -272,24 +275,17 @@ export function ServicesPage({ onNavigate }: ServicesPageProps) {
                           View in Profile
                         </button>
                       ) : (
-                        <>
-                          <button
-                            onClick={() => isAuthenticated ? onNavigate('service-details', service._id) : onNavigate('login')}
-                            disabled={!isAuthenticated}
-                            className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-200 text-sm ${
-                              isAuthenticated 
-                                ? 'bg-gradient-to-r from-[#007AFF] to-[#0056CC] text-white hover:shadow-lg cursor-pointer' 
-                                : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                            }`}
-                          >
-                            {isAuthenticated ? 'Get Quotation' : 'Login to Get Quotation'}
-                          </button>
-                          {!isAuthenticated && (
-                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                              Please login to get quotation
-                            </div>
-                          )}
-                        </>
+                        <button
+                          onClick={() => isAuthenticated ? onNavigate('service-details', service._id) : onNavigate('login')}
+                          className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-200 text-sm ${
+                            isAuthenticated 
+                              ? 'bg-gradient-to-r from-[#007AFF] to-[#0056CC] text-white hover:shadow-lg cursor-pointer' 
+                              : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                          }`}
+                          title={isAuthenticated ? 'Get quotation for this service' : 'Please login to get quotation'}
+                        >
+                          {isAuthenticated ? 'Get Quotation' : 'Login to Get Quotation'}
+                        </button>
                       )}
                     </div>
                   </div>

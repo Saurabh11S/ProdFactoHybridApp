@@ -13,12 +13,9 @@ export const SUBSERVICES = {
         ? cancelApiObject.Get.handleRequestCancellation().signal
         : undefined,
     });
-    console.log(response.data);
     return response.data;
   },
   PostSubService: async (id: string, data: any, cancel = false) => {
-    console.log("This is new data", data);
-
     const response = await api.request({
       url: `/admin/sub-service/${id}`,
       method: "POST",
@@ -30,13 +27,11 @@ export const SUBSERVICES = {
         ? cancelApiObject.PostEmployee.handleRequestCancellation().signal
         : undefined,
     });
-    console.log("This is response data", response.data);
 
     return response.data;
   },
 
   DeactivateSubService: async (id: string, cancel = false) => {
-    console.log("toggle", id);
     const response = await api.request({
       url: `/admin/sub-service/toggle/${id}`,
       method: "GET",

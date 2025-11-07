@@ -101,6 +101,50 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
     }
   };
 
+  // Helper function to match documents to required documents
+  const matchDocumentToRequired = (docTitle: string, requiredName: string): boolean => {
+    const docTitleLower = docTitle.toLowerCase().trim();
+    const requiredNameLower = requiredName.toLowerCase().trim();
+    
+    // Exact match
+    if (docTitleLower === requiredNameLower) return true;
+    
+    // Check if document title contains required name or vice versa
+    if (docTitleLower.includes(requiredNameLower) || requiredNameLower.includes(docTitleLower)) return true;
+    
+    // Check for common variations
+    const variations: { [key: string]: string[] } = {
+      'form 16': ['form16', 'form-16', 'form_16'],
+      'pan card': ['pan', 'pan-card', 'pan_card', 'pancard'],
+      'aadhaar card': ['aadhaar', 'aadhar', 'aadhaar-card', 'aadhar-card'],
+      'bank statement': ['bank', 'statement', 'bank-statement', 'bank_statement'],
+      'investment proofs': ['investment', '80c', '80d', 'investment-proof'],
+      'interest certificates': ['interest', 'fd', 'savings', 'interest-certificate'],
+      'rent receipts': ['rent', 'rent-receipt', 'rent_receipt', 'house rent']
+    };
+    
+    // Check variations
+    for (const [key, variants] of Object.entries(variations)) {
+      if (requiredNameLower.includes(key) || key.includes(requiredNameLower)) {
+        if (variants.some(variant => docTitleLower.includes(variant) || variant.includes(docTitleLower))) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  };
+
+  // Update required documents based on current documents
+  const updateRequiredDocumentsStatus = useCallback((currentDocs: UserDocument[]) => {
+    setRequiredDocuments(prev => prev.map(reqDoc => {
+      const isUploaded = currentDocs.some((doc: UserDocument) => 
+        matchDocumentToRequired(doc.title, reqDoc.name)
+      );
+      return { ...reqDoc, uploaded: isUploaded };
+    }));
+  }, []);
+
   // Initialize required documents and fetch existing documents
   useEffect(() => {
     const initializeDocuments = async () => {
@@ -111,7 +155,6 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
 
         // Fetch existing documents for this service
         const token = localStorage.getItem('authToken');
-        console.log('📥 Fetching documents for service:', serviceId);
         const response = await axios.get(
           `${API_BASE_URL}/document/service/${serviceId}`,
           {
@@ -121,28 +164,19 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
             }
           }
         );
-        console.log('📥 Documents fetch response:', response.data);
         const existingDocs = response.data.data.userDocuments || [];
-        console.log('📄 Existing documents:', existingDocs);
         setDocuments(existingDocs);
 
         // Update required documents to show which ones are uploaded
         const updatedRequiredDocs = requiredDocs.map(reqDoc => {
           const isUploaded = existingDocs.some((doc: UserDocument) => 
-            doc.title.toLowerCase().includes(reqDoc.name.toLowerCase()) ||
-            reqDoc.name.toLowerCase().includes(doc.title.toLowerCase())
+            matchDocumentToRequired(doc.title, reqDoc.name)
           );
           return { ...reqDoc, uploaded: isUploaded };
         });
         setRequiredDocuments(updatedRequiredDocs);
 
       } catch (error: any) {
-        console.error('❌ Error fetching documents:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          statusText: error.response?.statusText
-        });
         // Still initialize required documents even if fetch fails
         const requiredDocs = getRequiredDocumentsForService(serviceName);
         setRequiredDocuments(requiredDocs);
@@ -153,6 +187,11 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
 
     initializeDocuments();
   }, [serviceId, serviceName]);
+
+  // Update required documents status whenever documents change
+  useEffect(() => {
+    updateRequiredDocumentsStatus(documents);
+  }, [documents, updateRequiredDocumentsStatus]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -183,14 +222,25 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
     files.forEach((file) => {
       // Validate file type
       const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!allowedTypes.includes(file.type)) {
-        alert(`${file.name} is not a supported file type. Please upload JPG, PNG, PDF, DOC, or DOCX files.`);
+      const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf', '.doc', '.docx'];
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      
+      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+        alert(`❌ Invalid File Type\n\n"${file.name}" is not a supported file type.\n\n✅ Supported formats: JPG, JPEG, PNG, PDF, DOC, DOCX\n\nPlease select a valid file and try again.`);
         return;
       }
 
       // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        alert(`${file.name} is too large. Please upload files smaller than 10MB.`);
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      if (file.size > maxSize) {
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        alert(`❌ File Too Large\n\n"${file.name}" is ${fileSizeMB} MB.\n\n✅ Maximum allowed size: 10 MB per file\n\nPlease compress or select a smaller file and try again.`);
+        return;
+      }
+
+      // Validate file name (check for special characters that might cause issues)
+      if (file.name.length > 255) {
+        alert(`❌ File Name Too Long\n\n"${file.name}" has a very long name.\n\n✅ Please rename the file to be shorter (max 255 characters) and try again.`);
         return;
       }
 
@@ -249,8 +299,13 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
 
       // Add the uploaded document to the documents list
       if (response.data.data.userDocument) {
-        console.log('📄 Adding document to list:', response.data.data.userDocument);
-        setDocuments(prev => [...prev, response.data.data.userDocument]);
+        const newDocument = response.data.data.userDocument;
+        setDocuments(prev => {
+          const updated = [...prev, newDocument];
+          // Update required documents status after adding new document
+          updateRequiredDocumentsStatus(updated);
+          return updated;
+        });
       }
 
       // Remove from uploaded files after successful upload
@@ -310,7 +365,12 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
         }
       );
 
-      setDocuments(prev => prev.filter(doc => doc._id !== documentId));
+      setDocuments(prev => {
+        const updated = prev.filter(doc => doc._id !== documentId);
+        // Update required documents status after removing document
+        updateRequiredDocumentsStatus(updated);
+        return updated;
+      });
     } catch (error) {
       console.error('Error removing document:', error);
       alert('Failed to remove document. Please try again.');
@@ -428,14 +488,22 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Progress</span>
                     <span className="text-sm font-bold text-[#007AFF]">
-                      {requiredDocuments.filter(doc => doc.uploaded).length} / {requiredDocuments.length}
+                      {(() => {
+                        const uploadedCount = requiredDocuments.filter(doc => doc.uploaded).length;
+                        const totalCount = requiredDocuments.length;
+                        return `${uploadedCount} / ${totalCount}`;
+                      })()}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                     <div
                       className="bg-gradient-to-r from-[#00C897] to-[#007AFF] h-2 rounded-full transition-all duration-300"
                       style={{ 
-                        width: `${(requiredDocuments.filter(doc => doc.uploaded).length / requiredDocuments.length) * 100}%` 
+                        width: `${(() => {
+                          const uploadedCount = requiredDocuments.filter(doc => doc.uploaded).length;
+                          const totalCount = requiredDocuments.length;
+                          return totalCount > 0 ? (uploadedCount / totalCount) * 100 : 0;
+                        })()}%` 
                       }}
                     ></div>
                   </div>
@@ -445,6 +513,70 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
 
             {/* Right Column - Upload Area */}
             <div className="space-y-6">
+              {/* Upload Guidelines */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-5">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
+                      Upload Guidelines & Requirements
+                    </h3>
+                    <div className="space-y-2.5 text-sm text-blue-800 dark:text-blue-200">
+                      <div className="flex items-start">
+                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <div>
+                          <span className="font-medium">Supported File Formats:</span>
+                          <span className="ml-1">JPG, JPEG, PNG, PDF, DOC, DOCX</span>
+                        </div>
+                      </div>
+                      <div className="flex items-start">
+                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <div>
+                          <span className="font-medium">Maximum File Size:</span>
+                          <span className="ml-1">10 MB per file</span>
+                        </div>
+                      </div>
+                      <div className="flex items-start">
+                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <div>
+                          <span className="font-medium">File Quality:</span>
+                          <span className="ml-1">Ensure documents are clear, readable, and not corrupted</span>
+                        </div>
+                      </div>
+                      <div className="flex items-start">
+                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <div>
+                          <span className="font-medium">Multiple Files:</span>
+                          <span className="ml-1">You can upload multiple files at once</span>
+                        </div>
+                      </div>
+                      <div className="flex items-start">
+                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <div>
+                          <span className="font-medium">File Naming:</span>
+                          <span className="ml-1">Use descriptive names (e.g., "Bank_Statement_Jan_2024.pdf")</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Upload Area */}
               <div
                 className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
                   isDragOver
@@ -488,9 +620,6 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
                   </svg>
                   {uploading ? 'Uploading...' : 'Choose Files'}
                 </label>
-                <p className="text-sm text-gray-500 mt-2">
-                  Supported: JPG, PNG, PDF, DOC, DOCX • Max size: 10MB per file
-                </p>
               </div>
 
               {/* Uploading Files */}

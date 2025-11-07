@@ -35,12 +35,31 @@ export const getSubServiceById = bigPromise(
         );
       }
 
-      const subService = await db.SubService.findById(subServiceId);
+      const subService = await db.SubService.findById(subServiceId)
+        .populate('serviceId', 'title category');
 
       if (!subService) {
         return next(
           createCustomError("SubService not found", StatusCode.NOT_FOUND)
         );
+      }
+
+      // Log requests data for debugging
+      if (subService.requests && Array.isArray(subService.requests)) {
+        console.log(`[getSubServiceById] SubService ID: ${subServiceId}`);
+        console.log(`[getSubServiceById] Number of requests: ${subService.requests.length}`);
+        subService.requests.forEach((req: any, idx: number) => {
+          console.log(`[getSubServiceById] Request ${idx}:`, {
+            name: req.name,
+            inputType: req.inputType,
+            inputTypeType: typeof req.inputType,
+            optionsCount: req.options?.length || 0,
+            priceModifier: req.priceModifier,
+            needsQuotation: req.needsQuotation
+          });
+        });
+      } else {
+        console.log(`[getSubServiceById] No requests found or requests is not an array`);
       }
 
       const response = sendSuccessApiResponse(

@@ -94,6 +94,7 @@ export function AddSubServices({
     priceModifier: 0,
     needsQuotation: false,
   });
+  const [editingRequestIndex, setEditingRequestIndex] = useState<number | null>(null);
 
   const [isMonthlyBillingChecked, setIsMonthlyBillingChecked] =
     useState<boolean>(false);
@@ -115,6 +116,18 @@ export function AddSubServices({
 
   useEffect(() => {
     if (subServices) {
+      // Ensure requests have inputType field when loading existing data
+      const normalizedRequests = (subServices.requests || []).map((request: any) => ({
+        ...request,
+        inputType: request.inputType || 'checkbox', // Default to checkbox if missing
+        options: (request.options || []).map((option: any) => ({
+          // Ensure options use 'name' field (handle both 'name' and 'title' for backward compatibility)
+          name: option.name || option.title || '',
+          priceModifier: option.priceModifier || 0,
+          needsQuotation: option.needsQuotation || false,
+        })),
+      }));
+
       setFormData({
         serviceCode: subServices.serviceCode || "",
         title: subServices.title || "",
@@ -123,7 +136,7 @@ export function AddSubServices({
         price: subServices.price || 0,
         period: subServices.period || "monthly",
         isActive: subServices.isActive ?? true,
-        requests: subServices.requests || [],
+        requests: normalizedRequests,
         pricingStructure: subServices.pricingStructure || [],
       });
       setIsEdit(true);
@@ -181,6 +194,7 @@ export function AddSubServices({
     setHalfYearlyBillingPrice("");
     setYearlyBillingPrice("");
     setOneTimeBillingPrice("");
+    setEditingRequestIndex(null);
 
     setIsEdit(false);
   };
@@ -257,19 +271,7 @@ export function AddSubServices({
   };
 
   const handleRequestAdd = () => {
-    if (requestInput.name.trim() !== "") {
-      setFormData((prev) => ({
-        ...prev,
-        requests: [...prev.requests, requestInput],
-      }));
-      setRequestInput({
-        name: "",
-        inputType: "checkbox",
-        priceModifier: 0,
-        needsQuotation: false,
-        options: [],
-      });
-    }
+    handleRequestUpdate();
   };
 
   const handleRequestRemove = (index: number) => {
@@ -277,6 +279,56 @@ export function AddSubServices({
       ...prev,
       requests: prev.requests.filter((_, i) => i !== index),
     }));
+  };
+
+  const handleRequestEdit = (index: number) => {
+    const requestToEdit = formData.requests[index];
+    setRequestInput({
+      ...requestToEdit,
+      options: requestToEdit.options || [],
+    });
+    setEditingRequestIndex(index);
+  };
+
+  const handleRequestUpdate = () => {
+    if (requestInput.name.trim() === "") return;
+    if (editingRequestIndex !== null) {
+      setFormData((prev) => {
+        const newRequests = [...prev.requests];
+        newRequests[editingRequestIndex] = { ...requestInput };
+        return { ...prev, requests: newRequests };
+      });
+    } else {
+      // Add new request
+      setFormData((prev) => ({
+        ...prev,
+        requests: [...prev.requests, requestInput],
+      }));
+    }
+    // Reset requestInput and editing state
+    setRequestInput({
+      name: "",
+      inputType: "checkbox",
+      priceModifier: 0,
+      needsQuotation: false,
+      options: [],
+    });
+    setEditingRequestIndex(null);
+  };
+
+  const handleRequestToggleInputType = (index: number) => {
+    setFormData((prev) => {
+      const newRequests = [...prev.requests];
+      const currentRequest = newRequests[index];
+      const newInputType = currentRequest.inputType === "dropdown" ? "checkbox" : "dropdown";
+      newRequests[index] = {
+        ...currentRequest,
+        inputType: newInputType,
+        // Clear options if switching to checkbox, preserve if switching to dropdown
+        options: newInputType === "checkbox" ? [] : (currentRequest.options || []),
+      };
+      return { ...prev, requests: newRequests };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -307,10 +359,28 @@ export function AddSubServices({
     }
 
     try {
-      console.log("form data", formData);
+      // Ensure all requests have inputType and proper structure before sending
+      const formDataToSend = {
+        ...formData,
+        requests: (formData.requests || []).map((request: any) => {
+          const normalizedRequest = {
+            ...request,
+            inputType: request.inputType || 'checkbox', // Ensure inputType is always present
+            // Ensure options array exists and is properly formatted
+            options: request.inputType === 'dropdown' 
+              ? (request.options || []).map((opt: any) => ({
+                  name: opt.name || opt.title || '',
+                  priceModifier: opt.priceModifier || 0,
+                  needsQuotation: opt.needsQuotation || false,
+                }))
+              : [], // Clear options for checkbox type
+          };
+          return normalizedRequest;
+        }),
+      };
       const response = await SUBSERVICES.UpdateSubService({
         _id: subServices._id,
-        ...formData,
+        ...formDataToSend,
       });
 
       if (response.success) {
@@ -603,17 +673,27 @@ export function AddSubServices({
                   }
                   className="w-full"
                 >
-                  Add Request
+                  {editingRequestIndex !== null ? "Update Request" : "Add Request"}
                 </Button>
               </div>
 
               <ul className="list-disc pl-5 space-y-2 mt-4">
                 {formData.requests.map((request, index) => (
-                  <li key={index} className="flex justify-between items-center">
+                  <li key={index} className="flex justify-between items-center border-b pb-2">
                     <div className="w-full">
-                      <p className="font-medium">{request.name}</p>
+                      <div className="flex items-center gap-3 mb-1">
+                        <p className="font-medium">{request.name}</p>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-500">Checkbox</span>
+                          <Switch
+                            checked={request.inputType === "dropdown"}
+                            onCheckedChange={() => handleRequestToggleInputType(index)}
+                          />
+                          <span className="text-xs text-gray-500">Dropdown</span>
+                        </div>
+                      </div>
                       <p className="text-sm text-gray-600">
-                        {`Type: ${request.inputType}`}
+                        {`Type: ${request.inputType || 'checkbox'}`}
                         {request.inputType === "checkbox" &&
                           `, Price Modifier: ${
                             request.priceModifier
@@ -642,14 +722,26 @@ export function AddSubServices({
                           </div>
                         )}
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRequestRemove(index)}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRequestEdit(index)}
+                        title="Edit request"
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRequestRemove(index)}
+                        title="Remove request"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </li>
                 ))}
               </ul>

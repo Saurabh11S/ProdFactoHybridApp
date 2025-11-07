@@ -128,3 +128,50 @@ export const fetchUserServices = async (token: string): Promise<SubService[]> =>
     throw new Error('Failed to fetch user services');
   }
 };
+
+// Fetch a single sub-service by ID
+export const fetchSubServiceById = async (subServiceId: string, forceRefresh: boolean = false): Promise<SubService> => {
+  try {
+    // Always add cache-busting timestamp to ensure fresh data from database
+    // Using query parameters only to avoid CORS header issues
+    const timestamp = Date.now();
+    const random = Math.random();
+    const url = `${API_BASE_URL}/sub-services/${subServiceId}?t=${timestamp}&_=${random}`;
+    
+    const response = await axios.get<{ success: boolean; data: { subService: SubService } }>(
+      url
+    );
+    
+    if (response.data.success && response.data.data && response.data.data.subService) {
+      const subService = response.data.data.subService;
+      
+      // Validate inputType for each request
+      if (subService.requests && Array.isArray(subService.requests)) {
+        subService.requests.forEach((req: any) => {
+          const normalizedType = (req.inputType || '').toLowerCase();
+          if (!req.inputType) {
+            console.warn(`Warning: inputType is missing for request "${req.name}"`);
+          } else if (!['dropdown', 'checkbox'].includes(normalizedType)) {
+            console.warn(`Warning: Unexpected inputType "${req.inputType}" for request "${req.name}"`);
+          }
+        });
+      }
+      
+      return subService;
+    }
+    
+    throw new Error('Sub-service not found in response');
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.error?.message || 
+                        error.response?.data?.message || 
+                        error.message || 
+                        'Failed to fetch sub-service';
+    
+    // Preserve the original error with status code for better error handling
+    const enhancedError: any = new Error(errorMessage);
+    enhancedError.status = error.response?.status;
+    enhancedError.response = error.response;
+    enhancedError.config = error.config;
+    throw enhancedError;
+  }
+};

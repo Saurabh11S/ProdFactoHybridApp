@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { fetchServices, Service } from '../api/services';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
@@ -6,102 +7,118 @@ interface ServicesSectionProps {
   onNavigate: (page: PageType, serviceId?: string) => void;
 }
 
-// Service data for landing page
-interface LandingPageService {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  color: string;
-  bgColor: string;
-  textColor: string;
-  borderColor: string;
-  features: string[];
-}
+// Helper function to get service icon based on title
+const getServiceIcon = (title: string): string => {
+  const titleLower = title.toLowerCase();
+  if (titleLower.includes('itr') || titleLower.includes('income tax')) return '📊';
+  if (titleLower.includes('gst')) return '🏢';
+  if (titleLower.includes('investment')) return '📈';
+  if (titleLower.includes('tax') || titleLower.includes('consultancy')) return '💡';
+  if (titleLower.includes('notice') || titleLower.includes('scrutiny')) return '📋';
+  if (titleLower.includes('registration')) return '🏆';
+  if (titleLower.includes('outsourcing')) return '💼';
+  return '📄';
+};
 
-const landingPageServices: LandingPageService[] = [
-  {
-    id: 'itr',
-    title: 'ITR',
-    description: 'Professional Income Tax Return filing services for individuals and businesses. Expert assistance with ITR-1 to ITR-7.',
-    icon: '📊',
-    color: 'from-blue-500 to-blue-600',
-    bgColor: 'bg-blue-50 dark:bg-blue-900/30',
-    textColor: 'text-blue-600 dark:text-blue-400',
-    borderColor: 'border-blue-200 dark:border-blue-700',
-    features: ['Individual Tax Filing', 'Business Tax Filing', 'Tax Planning', 'Refund Assistance']
-  },
-  {
-    id: 'gst',
-    title: 'GST',
-    description: 'Comprehensive GST registration, filing, and compliance services. Stay compliant with India\'s GST regulations.',
-    icon: '🏢',
-    color: 'from-green-500 to-green-600',
-    bgColor: 'bg-green-50 dark:bg-green-900/30',
-    textColor: 'text-green-600 dark:text-green-400',
-    borderColor: 'border-green-200 dark:border-green-700',
-    features: ['GST Registration', 'Monthly Filing', 'Annual Returns', 'Compliance Support']
-  },
-  {
-    id: 'investment',
-    title: 'Investment',
-    description: 'Expert investment advisory services to help you grow your wealth with smart financial planning and portfolio management.',
-    icon: '📈',
-    color: 'from-purple-500 to-purple-600',
-    bgColor: 'bg-purple-50 dark:bg-purple-900/30',
-    textColor: 'text-purple-600 dark:text-purple-400',
-    borderColor: 'border-purple-200 dark:border-purple-700',
-    features: ['Portfolio Planning', 'Mutual Funds', 'Stocks & ETFs', 'Risk Analysis']
-  },
-  {
-    id: 'tax-consultancy',
-    title: 'Tax Planning Consultancy',
-    description: 'Strategic tax planning to minimize your tax liability and maximize savings. Personalized consulting for individuals and businesses.',
-    icon: '💡',
-    color: 'from-orange-500 to-orange-600',
-    bgColor: 'bg-orange-50 dark:bg-orange-900/30',
-    textColor: 'text-orange-600 dark:text-orange-400',
-    borderColor: 'border-orange-200 dark:border-orange-700',
-    features: ['Tax Strategy', 'Deduction Planning', 'Year-round Support', 'Expert Consultation']
-  },
-  {
-    id: 'notice-scrutiny',
-    title: 'Notice and Scrutiny',
-    description: 'Handle tax notices and scrutiny proceedings with expert guidance. We help resolve all tax department queries and assessments.',
-    icon: '📋',
-    color: 'from-red-500 to-red-600',
-    bgColor: 'bg-red-50 dark:bg-red-900/30',
-    textColor: 'text-red-600 dark:text-red-400',
-    borderColor: 'border-red-200 dark:border-red-700',
-    features: ['Notice Response', 'Scrutiny Support', 'Legal Assistance', 'Documentation Help']
-  },
-  {
-    id: 'registration',
-    title: 'Registration',
-    description: 'Complete business registration services including company incorporation, GST, PAN, and other regulatory compliances.',
-    icon: '🏆',
-    color: 'from-indigo-500 to-indigo-600',
-    bgColor: 'bg-indigo-50 dark:bg-indigo-900/30',
-    textColor: 'text-indigo-600 dark:text-indigo-400',
-    borderColor: 'border-indigo-200 dark:border-indigo-700',
-    features: ['Company Registration', 'LLP Setup', 'Partnership Firms', 'Business Licenses']
-  },
-  {
-    id: 'outsourcing',
-    title: 'Outsourcing',
-    description: 'Professional accounting and bookkeeping outsourcing services to help you focus on your core business operations.',
-    icon: '💼',
+// Helper function to get service color scheme based on title
+const getServiceColorScheme = (title: string) => {
+  const titleLower = title.toLowerCase();
+  if (titleLower.includes('itr') || titleLower.includes('income tax')) {
+    return {
+      color: 'from-blue-500 to-blue-600',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/30',
+      textColor: 'text-blue-600 dark:text-blue-400',
+      borderColor: 'border-blue-200 dark:border-blue-700',
+    };
+  }
+  if (titleLower.includes('gst')) {
+    return {
+      color: 'from-green-500 to-green-600',
+      bgColor: 'bg-green-50 dark:bg-green-900/30',
+      textColor: 'text-green-600 dark:text-green-400',
+      borderColor: 'border-green-200 dark:border-green-700',
+    };
+  }
+  if (titleLower.includes('investment')) {
+    return {
+      color: 'from-purple-500 to-purple-600',
+      bgColor: 'bg-purple-50 dark:bg-purple-900/30',
+      textColor: 'text-purple-600 dark:text-purple-400',
+      borderColor: 'border-purple-200 dark:border-purple-700',
+    };
+  }
+  if (titleLower.includes('tax') || titleLower.includes('consultancy')) {
+    return {
+      color: 'from-orange-500 to-orange-600',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/30',
+      textColor: 'text-orange-600 dark:text-orange-400',
+      borderColor: 'border-orange-200 dark:border-orange-700',
+    };
+  }
+  if (titleLower.includes('notice') || titleLower.includes('scrutiny')) {
+    return {
+      color: 'from-red-500 to-red-600',
+      bgColor: 'bg-red-50 dark:bg-red-900/30',
+      textColor: 'text-red-600 dark:text-red-400',
+      borderColor: 'border-red-200 dark:border-red-700',
+    };
+  }
+  if (titleLower.includes('registration')) {
+    return {
+      color: 'from-indigo-500 to-indigo-600',
+      bgColor: 'bg-indigo-50 dark:bg-indigo-900/30',
+      textColor: 'text-indigo-600 dark:text-indigo-400',
+      borderColor: 'border-indigo-200 dark:border-indigo-700',
+    };
+  }
+  // Default color scheme
+  return {
     color: 'from-teal-500 to-teal-600',
     bgColor: 'bg-teal-50 dark:bg-teal-900/30',
     textColor: 'text-teal-600 dark:text-teal-400',
     borderColor: 'border-teal-200 dark:border-teal-700',
-    features: ['Bookkeeping', 'Accounting Services', 'Financial Reporting', 'Payroll Management']
-  }
-];
+  };
+};
 
 export function ServicesSection({ onNavigate }: ServicesSectionProps) {
   const [visibleCards, setVisibleCards] = useState<number[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
+
+  // Fetch main service categories from database
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await fetchServices();
+        // Filter only active main services (categories)
+        // Only show main categories: ITR, GST, Tax Planning, Registration, Outsourcing
+        const mainCategories = ['ITR', 'GST', 'Tax Planning', 'Registration', 'Outsourcing'];
+        const activeServices = data.filter(service => 
+          service.isActive && mainCategories.includes(service.category)
+        );
+        // Sort by category order
+        const categoryOrder = ['ITR', 'GST', 'Tax Planning', 'Registration', 'Outsourcing'];
+        activeServices.sort((a, b) => {
+          const indexA = categoryOrder.indexOf(a.category);
+          const indexB = categoryOrder.indexOf(b.category);
+          return indexA - indexB;
+        });
+        setServices(activeServices);
+      } catch (err) {
+        console.error('Error fetching services:', err);
+        setError('Failed to load services');
+        setServices([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadServices();
+  }, []);
 
 
   useEffect(() => {
@@ -150,68 +167,105 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
         </div>
 
         {/* Services Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {landingPageServices.map((service, index) => (
-            <div
-              key={service.id}
-              data-index={index}
-              className={`group relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl p-6 border border-gray-100 dark:border-gray-700 hover:border-[#007AFF]/30 dark:hover:border-blue-400/30 shadow-lg hover:shadow-2xl transition-all duration-700 transform ${
-                visibleCards.includes(index) 
-                  ? 'translate-y-0 opacity-100' 
-                  : 'translate-y-10 opacity-0'
-              } hover:-translate-y-4 hover:scale-105`}
-              style={{ 
-                transitionDelay: visibleCards.includes(index) ? `${index * 150}ms` : '0ms' 
-              }}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl p-6 border border-gray-100 dark:border-gray-700 animate-pulse"
+              >
+                <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-2xl mb-6"></div>
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-500 text-lg mb-4">⚠️ {error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="bg-[#007AFF] text-white px-6 py-2 rounded-lg hover:bg-[#0056CC] transition-colors"
             >
-              {/* Glassmorphism overlay on hover */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent dark:from-white/5 dark:to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
-              
-              {/* Service Icon */}
-              <div className={`relative w-16 h-16 ${service.bgColor} rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition-all duration-300 border ${service.borderColor} shadow-lg`}>
-                <span className="relative z-10">{service.icon}</span>
-                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </div>
-
-              {/* Service Content */}
-              <div className="relative space-y-4">
-                <h3 className="text-xl font-bold text-gray-800 dark:text-white group-hover:text-[#007AFF] dark:group-hover:text-blue-400 transition-colors duration-300">
-                  {service.title}
-                </h3>
-                
-                <p className="text-gray-600 dark:text-gray-200 text-sm leading-relaxed">
-                  {service.description}
-                </p>
-
-                {/* Features List */}
-                <ul className="space-y-2">
-                  {service.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center text-sm text-gray-600 dark:text-gray-200 transform translate-x-0 group-hover:translate-x-1 transition-transform duration-300" style={{ transitionDelay: `${featureIndex * 50}ms` }}>
-                      <div className={`w-4 h-4 ${service.textColor} mr-2 flex-shrink-0 transform scale-100 group-hover:scale-110 transition-transform duration-300`}>
-                        <svg fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <span className="group-hover:text-gray-800 dark:group-hover:text-white transition-colors duration-300">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* CTA Button */}
-                <button 
-                  onClick={() => onNavigate('services')}
-                  className={`relative w-full mt-6 bg-gradient-to-r ${service.color} text-white py-3 px-4 rounded-lg font-medium transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1 overflow-hidden group-hover:shadow-2xl hover:brightness-110`}
+              Try Again
+            </button>
+          </div>
+        ) : services.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">No services available at the moment.</p>
+            <p className="text-gray-500 dark:text-gray-500 text-sm">Please check back later.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {services.map((service, index) => {
+              const colorScheme = getServiceColorScheme(service.title);
+              const icon = getServiceIcon(service.title);
+              return (
+                <div
+                  key={service._id}
+                  data-index={index}
+                  className={`group relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl p-6 border border-gray-100 dark:border-gray-700 hover:border-[#007AFF]/30 dark:hover:border-blue-400/30 shadow-lg hover:shadow-2xl transition-all duration-700 transform ${
+                    visibleCards.includes(index) 
+                      ? 'translate-y-0 opacity-100' 
+                      : 'translate-y-10 opacity-0'
+                  } hover:-translate-y-4 hover:scale-105`}
+                  style={{ 
+                    transitionDelay: visibleCards.includes(index) ? `${index * 150}ms` : '0ms' 
+                  }}
                 >
-                  <span className="relative z-10">Get Started</span>
-                </button>
-              </div>
+                  {/* Glassmorphism overlay on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent dark:from-white/5 dark:to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+                  
+                  {/* Service Icon */}
+                  <div className={`relative w-16 h-16 ${colorScheme.bgColor} rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition-all duration-300 border ${colorScheme.borderColor} shadow-lg`}>
+                    <span className="relative z-10">{icon}</span>
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </div>
 
-              {/* Floating particles on hover */}
-              <div className="absolute -top-2 -right-2 w-4 h-4 bg-gradient-to-br from-[#007AFF] to-[#00C897] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 animate-bounce"></div>
-              <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-gradient-to-br from-[#FFD166] to-[#FFA500] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-            </div>
-          ))}
-        </div>
+                  {/* Service Content */}
+                  <div className="relative space-y-4">
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-white group-hover:text-[#007AFF] dark:group-hover:text-blue-400 transition-colors duration-300">
+                      {service.title}
+                    </h3>
+                    
+                    <p className="text-gray-600 dark:text-gray-200 text-sm leading-relaxed line-clamp-3">
+                      {service.description}
+                    </p>
+
+                    {/* Features List */}
+                    {service.features && service.features.length > 0 && (
+                      <ul className="space-y-2">
+                        {service.features.slice(0, 4).map((feature, featureIndex) => (
+                          <li key={featureIndex} className="flex items-center text-sm text-gray-600 dark:text-gray-200 transform translate-x-0 group-hover:translate-x-1 transition-transform duration-300" style={{ transitionDelay: `${featureIndex * 50}ms` }}>
+                            <div className={`w-4 h-4 ${colorScheme.textColor} mr-2 flex-shrink-0 transform scale-100 group-hover:scale-110 transition-transform duration-300`}>
+                              <svg fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <span className="group-hover:text-gray-800 dark:group-hover:text-white transition-colors duration-300">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {/* CTA Button */}
+                    <button 
+                      onClick={() => onNavigate('services')}
+                      className={`relative w-full mt-6 bg-gradient-to-r ${colorScheme.color} text-white py-3 px-4 rounded-lg font-medium transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1 overflow-hidden group-hover:shadow-2xl hover:brightness-110`}
+                    >
+                      <span className="relative z-10">Get Started</span>
+                    </button>
+                  </div>
+
+                  {/* Floating particles on hover */}
+                  <div className="absolute -top-2 -right-2 w-4 h-4 bg-gradient-to-br from-[#007AFF] to-[#00C897] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 animate-bounce"></div>
+                  <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-gradient-to-br from-[#FFD166] to-[#FFA500] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Bottom CTA Section */}
         <div className="mt-16 text-center bg-gradient-to-r from-[#007AFF]/10 to-[#00C897]/10 dark:from-[#007AFF]/20 dark:to-[#00C897]/20 rounded-2xl p-8 border border-[#007AFF]/20 dark:border-blue-400/20 backdrop-blur-lg relative overflow-hidden">

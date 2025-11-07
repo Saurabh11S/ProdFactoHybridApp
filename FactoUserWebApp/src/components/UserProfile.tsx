@@ -30,7 +30,15 @@ interface UserPurchase {
   status: 'active' | 'expired' | 'pending';
   createdAt: string;
   expiryDate?: string;
-  paymentOrderId: string;
+  paymentOrderId: string | {
+    _id: string;
+    amount: number;
+    currency: string;
+    status: string;
+    transactionId: string;
+    createdAt: string;
+    paymentMethod?: string;
+  };
 }
 
 interface PaymentOrder {
@@ -392,10 +400,37 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
         ]);
 
         if (purchasesRes.status === 'fulfilled') {
-          setUserPurchases(purchasesRes.value.data.data || []);
-        }
-
-        if (paymentsRes.status === 'fulfilled') {
+          const purchases = purchasesRes.value.data.data || [];
+          setUserPurchases(purchases);
+          
+          // Extract payment orders from purchases if they're populated
+          const populatedPayments = purchases
+            .map((p: any) => p.paymentOrderId)
+            .filter((p: any) => p && typeof p === 'object' && p._id)
+            .map((p: any) => ({
+              _id: p._id,
+              amount: p.amount,
+              currency: p.currency || 'INR',
+              status: p.status,
+              paymentMethod: p.paymentMethod || 'razorpay',
+              transactionId: p.transactionId || p._id,
+              items: [],
+              createdAt: p.createdAt
+            }));
+          
+          // Merge with directly fetched payment orders
+          if (paymentsRes.status === 'fulfilled') {
+            const directPayments = paymentsRes.value.data.data || [];
+            // Combine and deduplicate by _id
+            const allPayments = [...directPayments, ...populatedPayments];
+            const uniquePayments = Array.from(
+              new Map(allPayments.map((p: any) => [p._id, p])).values()
+            );
+            setPaymentOrders(uniquePayments);
+          } else if (populatedPayments.length > 0) {
+            setPaymentOrders(populatedPayments);
+          }
+        } else if (paymentsRes.status === 'fulfilled') {
           setPaymentOrders(paymentsRes.value.data.data || []);
         }
 
@@ -404,8 +439,10 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
         }
 
         // Fetch document counts for each service
+        // Use purchases from the response, not state (which hasn't updated yet)
+        const purchases = purchasesRes.status === 'fulfilled' ? (purchasesRes.value.data.data || []) : [];
         const documentCounts: {[key: string]: number} = {};
-        for (const purchase of userPurchases) {
+        for (const purchase of purchases) {
           try {
             const docResponse = await axios.get(
               `${API_BASE_URL}/document/service/${purchase._id}`,
@@ -435,10 +472,16 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
   };
 
   const getPaymentStatus = (purchase: UserPurchase): { status: string; color: string } => {
-    const payment = paymentOrders.find(p => p._id === purchase.paymentOrderId);
+    // Check if paymentOrderId is populated (object) or just an ID (string)
+    const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
+      ? purchase.paymentOrderId
+      : paymentOrders.find(p => p._id === purchase.paymentOrderId);
+    
     if (!payment) return { status: 'Unknown', color: 'gray' };
     
-    switch (payment.status) {
+    const status = typeof payment === 'object' && 'status' in payment ? payment.status : 'unknown';
+    
+    switch (status) {
       case 'completed':
         return { status: 'Paid', color: 'green' };
       case 'pending':
@@ -539,9 +582,29 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Spent</p>
                   <p className="text-2xl font-bold text-[#1F2937] dark:text-white">
-                    {loading ? '...' : `₹${paymentOrders
-                      .filter(p => p.status === 'completed')
-                      .reduce((sum, p) => sum + p.amount, 0)}`}
+                    {loading ? '...' : (() => {
+                      // Calculate from payment orders
+                      const fromPayments = paymentOrders
+                        .filter(p => p.status === 'completed')
+                        .reduce((sum, p) => sum + (p.amount || 0), 0);
+                      
+                      // Also calculate from purchases (in case payment orders are missing)
+                      const fromPurchases = userPurchases
+                        .filter(p => {
+                          const payment = typeof p.paymentOrderId === 'object' ? p.paymentOrderId : 
+                            paymentOrders.find(po => po._id === p.paymentOrderId);
+                          return payment && (typeof payment === 'object' && 'status' in payment && payment.status === 'completed');
+                        })
+                        .reduce((sum, p) => {
+                          const payment = typeof p.paymentOrderId === 'object' ? p.paymentOrderId : 
+                            paymentOrders.find(po => po._id === p.paymentOrderId);
+                          const amount = typeof payment === 'object' && payment && 'amount' in payment ? payment.amount : 0;
+                          return sum + amount;
+                        }, 0);
+                      
+                      const total = Math.max(fromPayments, fromPurchases);
+                      return `₹${total.toLocaleString('en-IN')}`;
+                    })()}
                   </p>
                 </div>
               </div>
@@ -851,7 +914,11 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
                           <div className="space-y-3">
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-600 dark:text-gray-400">Price:</span>
-                              <span className="font-medium text-[#1F2937] dark:text-white">{serviceData.price}</span>
+                              <span className="font-medium text-[#1F2937] dark:text-white">
+                                {typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId?.amount 
+                                  ? `₹${purchase.paymentOrderId.amount.toLocaleString('en-IN')}` 
+                                  : serviceData.price}
+                              </span>
                             </div>
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-600 dark:text-gray-400">Duration:</span>

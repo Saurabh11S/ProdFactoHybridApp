@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "buildCommand": "npm ci && npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "env": {
+    "VITE_API_URL": "https://api.facto.org.in/api/v1"
+  }
+}
+
+
+
+
+
+
+
+
+

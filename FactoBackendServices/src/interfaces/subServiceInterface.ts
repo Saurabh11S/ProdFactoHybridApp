@@ -6,7 +6,7 @@ interface IRequests {
   inputType: "dropdown" | "checkbox";
   isMultipleSelect?: boolean;
   options?: { 
-    title: string;
+    name: string;
     priceModifier: number;
     needsQuotation: boolean;
   }[];

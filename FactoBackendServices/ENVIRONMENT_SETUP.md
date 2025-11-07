@@ -6,7 +6,9 @@ Create a `.env` file in the backend root directory with the following variables:
 
 ```env
 # Database Configuration
-MONGODB_URI=mongodb://localhost:27017/facto_app
+# MongoDB Atlas connection string (for both localhost and production)
+# Note: The database name 'facto_app' is included in the connection string
+MONGODB_URI=mongodb+srv://factoDB:facto%400938$@facto-cluster.2yoapwv.mongodb.net/facto_app?appName=facto-cluster
 
 # Razorpay Configuration
 RAZORPAY_KEY_ID=rzp_test_RH6v2Ap0TDGOmM
@@ -15,38 +17,17 @@ RAZORPAY_WEBHOOK_SECRET=your_webhook_secret_here
 
 # JWT Configuration
 JWT_SECRET=your_jwt_secret_here
-JWT_EXPIRES_IN=24h
+JWT_EXPIRE=7d
 
 # Server Configuration
 PORT=8080
 NODE_ENV=development
-
-# Cloudinary Configuration (Required for file uploads)
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-
-# Cloudinary Folders (Optional)
-CLOUDINARY_COURSE_THUMBNAILS_FOLDER=course_thumbnails
-CLOUDINARY_COURSE_VIDEOS_FOLDER=course_videos
-CLOUDINARY_BLOGS_FOLDER=blogs
-
-# File Upload Configuration
-MAX_FILE_SIZE_MB=10
 
 # Twilio Configuration (Optional)
 TWILIO_ACCOUNT_SID=your_twilio_account_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
 TWILIO_PHONE_NUMBER=your_twilio_phone_number
 ```
-
-## How to Get Cloudinary Keys
-
-1. Go to [Cloudinary Dashboard](https://cloudinary.com/console)
-2. Sign up or login to your account
-3. Go to **Dashboard** → **Product Environment Credentials**
-4. Copy your **Cloud Name**, **API Key**, and **API Secret**
-5. Replace the values in the `.env` file
 
 ## How to Get Razorpay Keys
 

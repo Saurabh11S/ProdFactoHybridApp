@@ -37,8 +37,9 @@ export const getUserPurchases = bigPromise(
         return next(createCustomError('User not found', StatusCode.NOT_FOUND));
       }
 
-      // Get user purchases
+      // Get user purchases with populated payment order details
       const purchases = await db.UserPurchase.find({ userId })
+        .populate('paymentOrderId', 'amount currency status transactionId createdAt paymentMethod')
         .sort({ createdAt: -1 })
         .lean();
 

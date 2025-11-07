@@ -15,7 +15,7 @@ interface IRequests {
   inputType: "dropdown" | "checkbox";
   isMultipleSelect?: boolean;
   options?: { 
-    title: string;
+    name: string;
     priceModifier: number;
     needsQuotation: boolean;
   }[];
@@ -27,6 +27,7 @@ const router = express.Router();
 router.get('/service/:serviceId',controllers.subServiceController.getAllSubServicesbyServiceId);
 router.get("/all",controllers.subServiceController.getAllSubServices);
 router.get("/my-services",verifyToken,controllers.subServiceController.getYourServices);
+router.get("/:subServiceId",controllers.subServiceController.getSubServiceById);
 
 // Add sample sub-services endpoint for testing
 router.post('/seed', bigPromise(

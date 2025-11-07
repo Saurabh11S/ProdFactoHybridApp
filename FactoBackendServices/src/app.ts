@@ -39,7 +39,14 @@ const corsOptions: cors.CorsOptions = {
     process.env.CORS_ORIGIN || "*"
   ],
   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  allowedHeaders: [
+    "Content-Type", 
+    "Authorization", 
+    "X-Requested-With",
+    "Cache-Control",
+    "Pragma",
+    "Expires"
+  ],
   credentials: true,
   preflightContinue: false,
   optionsSuccessStatus: 204,
@@ -77,7 +84,7 @@ app.options("*", cors(corsOptions));
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma, Expires");
   res.header("Access-Control-Allow-Credentials", "true");
   
   if (req.method === "OPTIONS") {

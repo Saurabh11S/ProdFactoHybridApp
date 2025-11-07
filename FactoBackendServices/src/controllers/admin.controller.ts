@@ -830,13 +830,51 @@ export const updateSubService = bigPromise(
     try {
       const { subServiceId } = req.params;
       const updateData = req.body;
-      console.log("updateData", updateData);
 
       // Validate subServiceId
       if (!mongoose.Types.ObjectId.isValid(subServiceId)) {
         return next(
           createCustomError("Invalid subService ID", StatusCode.BAD_REQ)
         );
+      }
+
+      // Validate and ensure requests array has inputType field
+      if (updateData.requests && Array.isArray(updateData.requests)) {
+        updateData.requests = updateData.requests.map((request: any) => {
+          // Ensure inputType is present and valid
+          if (!request.inputType || !['dropdown', 'checkbox'].includes(request.inputType)) {
+            // Default to checkbox if not provided or invalid
+            request.inputType = 'checkbox';
+          }
+          
+          // Ensure options array exists and is properly formatted
+          if (request.inputType === 'dropdown') {
+            // For dropdown, ensure options array exists (even if empty)
+            if (!request.options || !Array.isArray(request.options)) {
+              request.options = [];
+            }
+            // Normalize options to use 'name' field (not 'title')
+            request.options = request.options.map((option: any) => {
+              // Convert 'title' to 'name' if present (for backward compatibility)
+              if (option.title && !option.name) {
+                option.name = option.title;
+                delete option.title;
+              }
+              // Ensure all required fields are present
+              return {
+                name: option.name || '',
+                priceModifier: option.priceModifier || 0,
+                needsQuotation: option.needsQuotation || false,
+              };
+            });
+          } else {
+            // For checkbox, clear options array
+            request.options = [];
+          }
+          
+          return request;
+        });
+        console.log("Validated requests array:", JSON.stringify(updateData.requests, null, 2));
       }
 
       // Update the sub-service with the provided data

@@ -1,0 +1,25 @@
+[build]
+  command = "npm ci && npm run build"
+  publish = "dist"
+
+[build.environment]
+  VITE_API_URL = "https://api.facto.org.in/api/v1"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+
+
+
+
+
+
+
+
