@@ -98,10 +98,17 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
         console.log('✅ Fetched services data:', data);
         console.log('📊 Total services received:', data.length);
         
-        // Filter only active main services (show all active services from database)
-        const activeServices = data.filter(service => service.isActive);
-        console.log('✅ Active services:', activeServices.length);
-        console.log('📋 Active services list:', activeServices.map(s => ({ title: s.title, category: s.category, isActive: s.isActive })));
+        // Backend now filters by isActive, but double-check on frontend
+        const activeServices = data.filter(service => service.isActive !== false);
+        console.log('✅ Active services after filter:', activeServices.length);
+        console.log('📋 Active services list:', activeServices.map(s => ({ 
+          _id: s._id,
+          title: s.title, 
+          category: s.category, 
+          isActive: s.isActive,
+          hasDescription: !!s.description,
+          featuresCount: s.features?.length || 0
+        })));
         
         // Sort by title alphabetically for consistent display
         activeServices.sort((a, b) => a.title.localeCompare(b.title));
@@ -109,7 +116,12 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
         
         if (activeServices.length === 0) {
           console.warn('⚠️ No active services found in database');
-          setError('No services available. Please add services from Admin App.');
+          console.warn('⚠️ Raw data received:', data);
+          if (data.length === 0) {
+            setError('No services found in database. Please add services from Admin App.');
+          } else {
+            setError(`Found ${data.length} service(s), but none are active. Please activate services in Admin App.`);
+          }
         }
       } catch (err: any) {
         console.error('❌ Error fetching services:', err);

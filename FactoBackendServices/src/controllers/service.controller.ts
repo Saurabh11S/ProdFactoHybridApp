@@ -8,7 +8,8 @@ import { Request, Response, NextFunction } from "express";
 export const getAllServices = bigPromise(
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const services = await db.Service.find();
+        // Filter only active services for public endpoint
+        const services = await db.Service.find({ isActive: true });
   
         const response = sendSuccessApiResponse("Services retrieved successfully", {
           services,

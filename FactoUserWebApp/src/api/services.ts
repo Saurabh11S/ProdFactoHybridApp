@@ -60,13 +60,40 @@ export interface ServiceResponse {
 // Fetch all services
 export const fetchServices = async (): Promise<Service[]> => {
   try {
-    console.log('Fetching services from:', `${API_BASE_URL}/services`);
-    const response = await axios.get<ServiceResponse>(`${API_BASE_URL}/services`);
-    console.log('Services response:', response.data);
-    return response.data.data.services || [];
-  } catch (error) {
-    console.error('Error fetching services:', error);
-    throw new Error('Failed to fetch services');
+    const url = `${API_BASE_URL}/services`;
+    console.log('🔄 Fetching services from:', url);
+    const response = await axios.get<ServiceResponse>(url);
+    console.log('📦 Full API Response:', JSON.stringify(response.data, null, 2));
+    
+    // Handle different response structures
+    let services: Service[] = [];
+    
+    if (response.data?.data?.services) {
+      services = response.data.data.services;
+    } else if (Array.isArray(response.data?.data)) {
+      services = response.data.data;
+    } else if (Array.isArray(response.data)) {
+      services = response.data;
+    }
+    
+    console.log('✅ Extracted services:', services.length);
+    console.log('📋 Services list:', services.map(s => ({ 
+      _id: s._id, 
+      title: s.title, 
+      category: s.category, 
+      isActive: s.isActive 
+    })));
+    
+    return services;
+  } catch (error: any) {
+    console.error('❌ Error fetching services:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      response: error?.response?.data,
+      status: error?.response?.status,
+      url: error?.config?.url
+    });
+    throw new Error(`Failed to fetch services: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
   }
 };
 
