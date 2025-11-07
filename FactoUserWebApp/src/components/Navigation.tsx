@@ -39,9 +39,32 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
             className="flex items-center cursor-pointer group"
             onClick={() => onNavigate('home')}
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-[#007AFF] to-[#0056CC] rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+            {/* Logo Image - Replace with your actual logo */}
+            {/* Option 1: If you have a full logo (icon + text), use this and remove the "Facto" text below */}
+            {/* <img 
+              src="/logo/logo-full.svg" 
+              alt="Facto" 
+              className="h-10 w-auto transition-all duration-300 group-hover:scale-105"
+            /> */}
+            
+            {/* Option 2: If you have just an icon/logo mark, use this (current setup) */}
+            <img 
+              src="/logo/logo.svg" 
+              alt="Facto Logo" 
+              className="h-10 w-10 object-contain transition-all duration-300 group-hover:scale-105"
+              onError={(e) => {
+                // Fallback to default if logo not found
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const fallback = target.nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }}
+            />
+            {/* Fallback to default logo if image not found */}
+            <div className="w-10 h-10 bg-gradient-to-br from-[#007AFF] to-[#0056CC] rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105 hidden">
               <span className="text-white font-bold text-lg">F</span>
             </div>
+            {/* Text - Remove this if your logo includes text */}
             <span className="ml-3 text-2xl font-bold text-gray-800 dark:text-white transition-colors duration-300">Facto</span>
           </div>
           
