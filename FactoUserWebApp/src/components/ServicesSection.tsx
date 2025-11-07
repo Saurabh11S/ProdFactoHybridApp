@@ -143,6 +143,11 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
 
 
   useEffect(() => {
+    // Only set up observer if services exist
+    if (services.length === 0) {
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -158,11 +163,26 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
       }
     );
 
-    const cards = sectionRef.current?.querySelectorAll('[data-index]');
-    cards?.forEach(card => observer.observe(card));
+    // Use setTimeout to ensure DOM is ready
+    const timeoutId = setTimeout(() => {
+      const cards = sectionRef.current?.querySelectorAll('[data-index]');
+      if (cards && cards.length > 0) {
+        cards.forEach(card => observer.observe(card));
+        // Immediately show all cards if they're already in viewport
+        cards.forEach((card, index) => {
+          const rect = card.getBoundingClientRect();
+          if (rect.top < window.innerHeight && rect.bottom > 0) {
+            setVisibleCards(prev => [...new Set([...prev, index])]);
+          }
+        });
+      }
+    }, 100);
 
-    return () => observer.disconnect();
-  }, []);
+    return () => {
+      clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, [services.length]);
 
   // Debug: Log component render
   useEffect(() => {
@@ -290,12 +310,12 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
                   key={service._id}
                   data-index={index}
                   className={`group relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl p-6 border border-gray-100 dark:border-gray-700 hover:border-[#007AFF]/30 dark:hover:border-blue-400/30 shadow-lg hover:shadow-2xl transition-all duration-700 transform ${
-                    visibleCards.includes(index) 
+                    visibleCards.includes(index) || visibleCards.length === 0
                       ? 'translate-y-0 opacity-100' 
                       : 'translate-y-10 opacity-0'
                   } hover:-translate-y-4 hover:scale-105`}
                   style={{ 
-                    transitionDelay: visibleCards.includes(index) ? `${index * 150}ms` : '0ms' 
+                    transitionDelay: (visibleCards.includes(index) || visibleCards.length === 0) ? `${index * 150}ms` : '0ms' 
                   }}
                 >
                   {/* Glassmorphism overlay on hover */}
