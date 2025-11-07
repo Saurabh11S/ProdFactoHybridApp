@@ -93,15 +93,33 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
       try {
         setLoading(true);
         setError(null);
+        console.log('🔄 Loading services for Professional Services Section...');
         const data = await fetchServices();
+        console.log('✅ Fetched services data:', data);
+        console.log('📊 Total services received:', data.length);
+        
         // Filter only active main services (show all active services from database)
         const activeServices = data.filter(service => service.isActive);
+        console.log('✅ Active services:', activeServices.length);
+        console.log('📋 Active services list:', activeServices.map(s => ({ title: s.title, category: s.category, isActive: s.isActive })));
+        
         // Sort by title alphabetically for consistent display
         activeServices.sort((a, b) => a.title.localeCompare(b.title));
         setServices(activeServices);
-      } catch (err) {
-        console.error('Error fetching services:', err);
-        setError('Failed to load services. Please try again later.');
+        
+        if (activeServices.length === 0) {
+          console.warn('⚠️ No active services found in database');
+          setError('No services available. Please add services from Admin App.');
+        }
+      } catch (err: any) {
+        console.error('❌ Error fetching services:', err);
+        const errorMessage = err?.response?.data?.message || err?.message || 'Failed to load services';
+        console.error('Error details:', {
+          message: errorMessage,
+          status: err?.response?.status,
+          url: err?.config?.url
+        });
+        setError(`Failed to load services: ${errorMessage}. Please check your API connection.`);
         setServices([]);
       } finally {
         setLoading(false);
@@ -173,19 +191,60 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
             ))}
           </div>
         ) : error ? (
-          <div className="text-center py-12">
-            <p className="text-red-500 text-lg mb-4">⚠️ {error}</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="bg-[#007AFF] text-white px-6 py-2 rounded-lg hover:bg-[#0056CC] transition-colors"
-            >
-              Try Again
-            </button>
+          <div className="text-center py-12 bg-red-50 dark:bg-red-900/20 rounded-2xl p-8 border border-red-200 dark:border-red-800">
+            <div className="max-w-md mx-auto">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-red-800 dark:text-red-400 mb-2">Error Loading Services</h3>
+              <p className="text-red-600 dark:text-red-300 text-sm mb-6">{error}</p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="bg-[#007AFF] text-white px-6 py-2 rounded-lg hover:bg-[#0056CC] transition-colors"
+                >
+                  Try Again
+                </button>
+                <button 
+                  onClick={() => {
+                    console.log('🔍 Debug Info:', {
+                      API_URL: import.meta.env.VITE_API_URL || 'Not set (using default)',
+                      services: services.length,
+                      loading,
+                      error
+                    });
+                  }}
+                  className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Debug Info
+                </button>
+              </div>
+            </div>
           </div>
         ) : services.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">No services available at the moment.</p>
-            <p className="text-gray-500 dark:text-gray-500 text-sm">Please check back later.</p>
+          <div className="text-center py-12 bg-white/50 dark:bg-gray-800/50 rounded-2xl p-8 border border-gray-200 dark:border-gray-700">
+            <div className="max-w-md mx-auto">
+              <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">No Services Available</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                {error || 'No active services found in the database.'}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
+                Please add services from the Admin App to display them here.
+              </p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="bg-[#007AFF] text-white px-6 py-2 rounded-lg hover:bg-[#0056CC] transition-colors"
+              >
+                Refresh Page
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
