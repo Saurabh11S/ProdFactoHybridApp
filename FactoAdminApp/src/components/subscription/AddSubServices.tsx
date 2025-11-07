@@ -234,12 +234,21 @@ export function AddSubServices({
   };
 
   const handleRequestInputChange = (name: string, value: any) => {
-    setRequestInput((prev) => ({
-      ...prev,
-      [name]: value,
+    setRequestInput((prev) => {
+      const updated = {
+        ...prev,
+        [name]: value,
+      };
       // Reset options when switching from dropdown to checkbox
-      ...(name === "inputType" && value === "checkbox" ? { options: [] } : {}),
-    }));
+      if (name === "inputType" && value === "checkbox") {
+        updated.options = [];
+      }
+      // Ensure inputType is always set correctly
+      if (name === "inputType") {
+        updated.inputType = value as "dropdown" | "checkbox";
+      }
+      return updated;
+    });
   };
 
   const handleOptionInputChange = (name: string, value: any) => {
@@ -292,17 +301,26 @@ export function AddSubServices({
 
   const handleRequestUpdate = () => {
     if (requestInput.name.trim() === "") return;
+    
+    // Ensure inputType is always present and valid
+    const requestToAdd: Request = {
+      ...requestInput,
+      inputType: requestInput.inputType || "checkbox",
+      // Clear options if it's a checkbox type
+      options: requestInput.inputType === "checkbox" ? [] : (requestInput.options || []),
+    };
+    
     if (editingRequestIndex !== null) {
       setFormData((prev) => {
         const newRequests = [...prev.requests];
-        newRequests[editingRequestIndex] = { ...requestInput };
+        newRequests[editingRequestIndex] = requestToAdd;
         return { ...prev, requests: newRequests };
       });
     } else {
       // Add new request
       setFormData((prev) => ({
         ...prev,
-        requests: [...prev.requests, requestInput],
+        requests: [...prev.requests, requestToAdd],
       }));
     }
     // Reset requestInput and editing state
