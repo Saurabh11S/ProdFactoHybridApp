@@ -618,10 +618,16 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                 </div>
                 <button
                   onClick={handleGetQuotation}
-                  disabled={isProcessingPayment}
+                  disabled={isProcessingPayment || !isAuthenticated}
                   className="px-6 py-3 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isProcessingPayment ? 'Processing...' : priceCalculation.needsQuotation ? 'Login to Get Quotation' : `Get Quotation — ₹${priceCalculation.total.toLocaleString('en-IN')}`}
+                  {isProcessingPayment 
+                    ? 'Processing...' 
+                    : !isAuthenticated 
+                      ? 'Login to Pay and Activate' 
+                      : priceCalculation.needsQuotation 
+                        ? 'Pay and Activate — Request Quotation' 
+                        : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`}
                 </button>
               </div>
             </div>
@@ -934,22 +940,29 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                 {/* CTA Button */}
                 <button
                   onClick={handleGetQuotation}
-                  disabled={isProcessingPayment || priceCalculation.total === 0}
+                  disabled={isProcessingPayment || priceCalculation.total === 0 || !isAuthenticated}
                   className="w-full mt-6 px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isProcessingPayment 
                     ? 'Processing...' 
-                    : priceCalculation.needsQuotation 
-                      ? 'Login to Get Quotation' 
-                      : priceCalculation.total === 0
-                        ? 'Get Started'
-                        : `Get Quotation — ₹${priceCalculation.total.toLocaleString('en-IN')}`
+                    : !isAuthenticated 
+                      ? 'Login to Pay and Activate' 
+                      : priceCalculation.needsQuotation 
+                        ? 'Pay and Activate — Request Quotation' 
+                        : priceCalculation.total === 0
+                          ? 'Get Started'
+                          : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
                   }
                 </button>
 
                 {priceCalculation.needsQuotation && (
                   <p className="text-xs text-[#98a0ad] mt-3 text-center">
-                    Some selected options require a quotation. Login to request a quote.
+                    Some selected options require a quotation. Please login to proceed.
+                  </p>
+                )}
+                {!isAuthenticated && (
+                  <p className="text-xs text-[#98a0ad] mt-3 text-center">
+                    Please login to pay and activate this service.
                   </p>
                 )}
 
@@ -1230,16 +1243,18 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                   setShowMobileConfigurator(false);
                   handleGetQuotation();
                 }}
-                disabled={isProcessingPayment || priceCalculation.total === 0}
+                disabled={isProcessingPayment || priceCalculation.total === 0 || !isAuthenticated}
                 className="w-full px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isProcessingPayment 
                   ? 'Processing...' 
-                  : priceCalculation.needsQuotation 
-                    ? 'Login to Get Quotation' 
-                    : priceCalculation.total === 0
-                      ? 'Get Started'
-                      : `Get Quotation — ₹${priceCalculation.total.toLocaleString('en-IN')}`
+                  : !isAuthenticated 
+                    ? 'Login to Pay and Activate' 
+                    : priceCalculation.needsQuotation 
+                      ? 'Pay and Activate — Request Quotation' 
+                      : priceCalculation.total === 0
+                        ? 'Get Started'
+                        : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
                 }
               </button>
             </div>
