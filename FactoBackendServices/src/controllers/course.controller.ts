@@ -14,10 +14,11 @@ export const getCourses = bigPromise(
       
       // Get all published courses with all lectures (not just free ones)
       // This allows the frontend to show course previews with free lectures unlocked
+      // Use .lean() to return plain JavaScript objects for proper JSON serialization
       const courses = await db.Course.find({ status: "published" }).populate({
         path: "lectures",
         // Don't filter by isFree here - let frontend handle which lectures to show
-      });
+      }).lean();
       
       console.log(`✅ Found ${courses.length} published courses:`);
       courses.forEach((course, index) => {

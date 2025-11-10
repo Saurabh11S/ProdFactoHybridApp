@@ -91,8 +91,32 @@ async function seedBlogs() {
     }
 
     console.log('🔌 Connecting to MongoDB...');
-    await mongoose.connect(mongoUri);
+    
+    // Ensure database name is included
+    let uriWithOptions = mongoUri.includes('retryWrites') 
+      ? mongoUri 
+      : `${mongoUri}${mongoUri.includes('?') ? '&' : '?'}retryWrites=true&w=majority`;
+    
+    // Add database name if missing
+    if (!uriWithOptions.match(/\/[^\/\?]+(\?|$)/)) {
+      const parts = uriWithOptions.split('?');
+      uriWithOptions = parts[0] + '/facto_app' + (parts[1] ? '?' + parts[1] : '');
+      console.log('⚠️  Added database name "facto_app" to connection string');
+    }
+    
+    await mongoose.connect(uriWithOptions);
     console.log('✅ Connected to MongoDB successfully!');
+    console.log('🗄️  Database:', mongoose.connection.name);
+    
+    // Check if this is production database
+    const isProductionDB = mongoose.connection.host.includes('mongodb.net') || 
+                          mongoose.connection.host.includes('atlas');
+    if (isProductionDB) {
+      console.log('🌐 Database Type: Production (MongoDB Atlas)');
+    } else {
+      console.log('💻 Database Type: Local/Development');
+      console.log('⚠️  WARNING: Using local/development database. Data may differ from production!');
+    }
 
     // Clear existing blogs (optional - comment out if you want to keep existing data)
     // await Blog.deleteMany({});

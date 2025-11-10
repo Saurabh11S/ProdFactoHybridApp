@@ -41,7 +41,8 @@ export const getBlogs = bigPromise(
         };
   
         // Fetch blogs
-        const blogs = await db.Blog.find(filter, null, options);
+        // Use .lean() to return plain JavaScript objects for proper JSON serialization
+        const blogs = await db.Blog.find(filter, null, options).lean();
         const total = await db.Blog.countDocuments(filter);
   
         const response = sendSuccessApiResponse(
@@ -76,7 +77,8 @@ export const getBlogById = bigPromise(
         }
   
         // Fetch blog
-        const blog = await db.Blog.findById(id);
+        // Use .lean() to return plain JavaScript object for proper JSON serialization
+        const blog = await db.Blog.findById(id).lean();
   
         if (!blog) {
           return next(
