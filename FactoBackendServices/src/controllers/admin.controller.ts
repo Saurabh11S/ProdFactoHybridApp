@@ -1377,12 +1377,14 @@ export const getCourses = bigPromise(
       console.log('📅 Timestamp:', new Date().toISOString());
       console.log('🔐 User ID:', (req as any).user?.id || 'Not authenticated');
       
+      // Use .lean() to get plain JavaScript objects instead of Mongoose documents
+      // This ensures proper JSON serialization
       const courses = await db.Course.find().populate({
         path: "lectures",
-      });
+      }).lean();
       
       console.log(`✅ Found ${courses.length} total courses (all statuses):`);
-      courses.forEach((course, index) => {
+      courses.forEach((course: any, index: number) => {
         console.log(`  ${index + 1}. ${course.title}`);
         console.log(`     - ID: ${course._id}`);
         console.log(`     - Status: ${course.status}`);
@@ -1391,13 +1393,15 @@ export const getCourses = bigPromise(
         console.log(`     - Lectures: ${course.lectures?.length || 0}`);
       });
       
-      const publishedCount = courses.filter(c => c.status === 'published').length;
-      const draftCount = courses.filter(c => c.status === 'draft').length;
+      const publishedCount = courses.filter((c: any) => c.status === 'published').length;
+      const draftCount = courses.filter((c: any) => c.status === 'draft').length;
       console.log(`📊 Breakdown: ${publishedCount} published, ${draftCount} draft`);
       
+      // sendSuccessApiResponse expects Record<string, any>, but arrays work in runtime
+      // The frontend expects data.data to be an array
       const response = sendSuccessApiResponse(
         "Courses Fetched Successfully",
-        courses
+        courses as any // Array serializes correctly as JSON
       );
       
       console.log('📦 Response structure:', {
