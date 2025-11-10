@@ -84,14 +84,43 @@ export default function CourseTable() {
   const navigate = useNavigate();
   const fetchCourses = async () => {
     try {
+      console.log('🔄 [CoursesTable] Fetching courses from API...');
       const data = await COURSES.GetCourses();
-      console.log(data);
+      console.log('📦 [CoursesTable] API Response:', data);
+      console.log('📊 [CoursesTable] Response structure:', {
+        success: data.success,
+        hasData: !!data.data,
+        dataType: typeof data.data,
+        isArray: Array.isArray(data.data),
+        dataLength: Array.isArray(data.data) ? data.data.length : 'N/A',
+        message: data.message || data.status?.message
+      });
+      
       if (data.success) {
-        setCourses(data.data);
+        // Handle both response formats: data.data (array) or data.data.courses (nested)
+        const coursesData = Array.isArray(data.data) 
+          ? data.data 
+          : (data.data?.courses || data.data || []);
+        
+        console.log(`✅ [CoursesTable] Setting ${coursesData.length} courses`);
+        setCourses(coursesData);
+        
+        if (coursesData.length === 0) {
+          console.warn('⚠️ [CoursesTable] No courses found in response');
+        }
+      } else {
+        console.error('❌ [CoursesTable] API returned success: false', data);
+        toast.error(data.message || data.status?.message || "Failed to fetch courses");
       }
-    } catch (error) {
-      console.log(error);
-      toast.error("Something went wrong");
+    } catch (error: any) {
+      console.error('❌ [CoursesTable] Error fetching courses:', error);
+      console.error('📡 [CoursesTable] Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url
+      });
+      toast.error(error.response?.data?.message || error.message || "Something went wrong");
     }
   };
   useEffect(() => {

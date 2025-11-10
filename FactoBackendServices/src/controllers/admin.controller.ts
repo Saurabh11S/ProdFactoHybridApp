@@ -1373,13 +1373,45 @@ export const deleteCourse = bigPromise(
 export const getCourses = bigPromise(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const courses = await db.Course.find();
+      console.log('\n📚 === ADMIN: FETCHING ALL COURSES ===');
+      console.log('📅 Timestamp:', new Date().toISOString());
+      console.log('🔐 User ID:', (req as any).user?.id || 'Not authenticated');
+      
+      const courses = await db.Course.find().populate({
+        path: "lectures",
+      });
+      
+      console.log(`✅ Found ${courses.length} total courses (all statuses):`);
+      courses.forEach((course, index) => {
+        console.log(`  ${index + 1}. ${course.title}`);
+        console.log(`     - ID: ${course._id}`);
+        console.log(`     - Status: ${course.status}`);
+        console.log(`     - Category: ${course.category}`);
+        console.log(`     - Price: ₹${course.price}`);
+        console.log(`     - Lectures: ${course.lectures?.length || 0}`);
+      });
+      
+      const publishedCount = courses.filter(c => c.status === 'published').length;
+      const draftCount = courses.filter(c => c.status === 'draft').length;
+      console.log(`📊 Breakdown: ${publishedCount} published, ${draftCount} draft`);
+      
       const response = sendSuccessApiResponse(
         "Courses Fetched Successfully",
         courses
       );
+      
+      console.log('📦 Response structure:', {
+        success: response.success,
+        dataType: typeof response.data,
+        isArray: Array.isArray(response.data),
+        dataLength: Array.isArray(response.data) ? response.data.length : 'N/A',
+        message: response.message
+      });
+      console.log('📚 === ADMIN COURSES FETCH COMPLETE ===\n');
+      
       res.status(StatusCode.OK).send(response);
     } catch (error) {
+      console.error('❌ Error fetching admin courses:', error);
       return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
