@@ -94,6 +94,19 @@ export const fetchServices = async (): Promise<Service[]> => {
       status: error?.response?.status,
       url: error?.config?.url
     });
+    
+    // Check for specific error conditions
+    if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network Error')) {
+      const errorMsg = error?.config?.url?.includes('onrender.com') 
+        ? 'Backend service is unavailable. Please check if the backend server is running or reactivate the Render.com service.'
+        : 'Cannot connect to backend server. Please ensure the backend is running on http://localhost:8080';
+      throw new Error(errorMsg);
+    }
+    
+    if (error?.response?.status === 503 || error?.message?.includes('suspended')) {
+      throw new Error('Backend service has been suspended. Please reactivate the service or use a local backend.');
+    }
+    
     throw new Error(`Failed to fetch services: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
   }
 };
@@ -230,6 +243,15 @@ export const fetchAllSubServices = async (): Promise<SubService[]> => {
       return allSubServices;
     } catch (fallbackError) {
       console.error('❌ [fetchAllSubServices] Fallback method also failed:', fallbackError);
+      
+      // Provide helpful error message
+      if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network Error')) {
+        const errorMsg = error?.config?.url?.includes('onrender.com') 
+          ? 'Backend service is unavailable. Please check if the backend server is running or reactivate the Render.com service.'
+          : 'Cannot connect to backend server. Please ensure the backend is running on http://localhost:8080';
+        throw new Error(errorMsg);
+      }
+      
       throw new Error(`Failed to fetch sub-services: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
     }
   }

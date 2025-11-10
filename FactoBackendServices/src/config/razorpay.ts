@@ -1,10 +1,26 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+// Lazy initialization - only create Razorpay instance when needed
+let razorpayInstance: Razorpay | null = null;
+
+function getRazorpayInstance(): Razorpay {
+  if (!razorpayInstance) {
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    
+    if (!keyId || !keySecret) {
+      throw new Error('Razorpay is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your .env file');
+    }
+    
+    razorpayInstance = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret,
+    });
+  }
+  
+  return razorpayInstance;
+}
 
 export async function createOrder(amount: number, currency: string, receipt: string) {
   console.log('Razorpay configuration check:');
@@ -23,6 +39,7 @@ export async function createOrder(amount: number, currency: string, receipt: str
   console.log('- Amount in rupees:', amount / 100);
 
   try {
+    const razorpay = getRazorpayInstance();
     const order = await razorpay.orders.create(options);
     console.log('Razorpay order created successfully:', order);
     return order;

@@ -2,17 +2,36 @@ import twilio from "twilio";
 import { configDotenv } from "dotenv";
 import path from "path";
 configDotenv({ path: path.join(__dirname, '../../.env') })
-const twilioConfig = {
-  accountSid: process.env.TWILIO_ACCOUNT_SID || "", // Your Twilio Account SID
-  authToken: process.env.TWILIO_AUTH_TOKEN || "", // Your Twilio Auth Token
-  serviceSid: process.env.TWILIO_SERVICE_SID || "", // Your Twilio Verify Service SID
-};
-console.log('TWILIO_ACCOUNT_SID:', process.env.TWILIO_ACCOUNT_SID);
-console.log('TWILIO_AUTH_TOKEN:', process.env.TWILIO_AUTH_TOKEN);
-console.log('TWILIO_SERVICE_SID:', process.env.TWILIO_SERVICE_SID);
 
+console.log('TWILIO_ACCOUNT_SID:', process.env.TWILIO_ACCOUNT_SID ? 'Set' : 'Not set');
+console.log('TWILIO_AUTH_TOKEN:', process.env.TWILIO_AUTH_TOKEN ? 'Set' : 'Not set');
+console.log('TWILIO_SERVICE_SID:', process.env.TWILIO_SERVICE_SID ? 'Set' : 'Not set');
 
-const client = twilio(twilioConfig.accountSid, twilioConfig.authToken);
+// Lazy initialization - only create Twilio client when needed
+let twilioClient: ReturnType<typeof twilio> | null = null;
+
+function getTwilioClient() {
+  if (!twilioClient) {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    
+    if (!accountSid || !authToken) {
+      throw new Error('Twilio is not configured. Please set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in your .env file');
+    }
+    
+    twilioClient = twilio(accountSid, authToken);
+  }
+  
+  return twilioClient;
+}
+
+function getTwilioServiceSid() {
+  const serviceSid = process.env.TWILIO_SERVICE_SID;
+  if (!serviceSid) {
+    throw new Error('Twilio Service SID is not configured. Please set TWILIO_SERVICE_SID in your .env file');
+  }
+  return serviceSid;
+}
 
 /**
  * Sends an OTP to the provided phone number.
@@ -21,8 +40,11 @@ const client = twilio(twilioConfig.accountSid, twilioConfig.authToken);
  */
 export const sendOTP = async (phoneNumber: string): Promise<any> => {
   try {
+    const client = getTwilioClient();
+    const serviceSid = getTwilioServiceSid();
+    
     const verification = await client.verify.v2
-      .services(twilioConfig.serviceSid)
+      .services(serviceSid)
       .verifications.create({ to: phoneNumber, channel: "sms" });
 
     return { success:true };
@@ -36,8 +58,11 @@ export const verifyOTP = async (
   otp: string
 ): Promise<string> => {
   try {
+    const client = getTwilioClient();
+    const serviceSid = getTwilioServiceSid();
+    
     const verificationCheck = await client.verify.v2
-      .services(twilioConfig.serviceSid)
+      .services(serviceSid)
       .verificationChecks.create({ to: phoneNumber, code: otp });
 
     if (verificationCheck.status === "approved") {

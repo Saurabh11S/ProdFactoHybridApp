@@ -14,6 +14,15 @@ export const api = axios.create({
 const errorHandler = (error: any) => {
   const statusCode = error.response?.status;
 
+  // Check if backend is not running (network/CORS error)
+  if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('CORS')) {
+    console.error('❌ Backend Connection Error:', {
+      message: 'Backend server is not running or not accessible',
+      url: error.config?.baseURL + error.config?.url,
+      suggestion: 'Please start the backend server: cd FactoBackendServices && npm start'
+    });
+  }
+
   // Log errors for debugging (except 401 which is handled in components)
   if (statusCode && statusCode !== 401) {
     console.error('❌ API Error:', {

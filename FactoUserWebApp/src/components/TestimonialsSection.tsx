@@ -132,10 +132,10 @@ export function TestimonialsSection() {
         {/* Testimonials Carousel */}
         <div className={`relative transform transition-all duration-1000 delay-300 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-3xl transition-all duration-500">
-            <div className="p-8 sm:p-12">
+            <div className="p-8 sm:p-12 md:pl-20 md:pr-20 relative z-10">
               <div className="flex flex-col md:flex-row items-center gap-8">
                 {/* Customer Photo & Info */}
-                <div className="flex-shrink-0 text-center md:text-left">
+                <div className="flex-shrink-0 text-center md:text-left md:min-w-[200px] relative z-10">
                   <div className="relative mx-auto md:mx-0 group">
                     <ImageWithFallback
                       src={testimonials[currentTestimonial].image}
@@ -186,18 +186,20 @@ export function TestimonialsSection() {
           {/* Navigation Arrows */}
           <button
             onClick={prevTestimonial}
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-full shadow-lg border border-gray-200 dark:border-gray-600 flex items-center justify-center text-[#007AFF] dark:text-blue-400 hover:bg-[#007AFF] hover:text-white dark:hover:bg-blue-500 transition-all duration-300 hover:scale-110"
+            className="absolute left-2 md:left-4 top-1/2 transform -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-full shadow-lg border border-gray-200 dark:border-gray-600 flex items-center justify-center text-[#007AFF] dark:text-blue-400 hover:bg-[#007AFF] hover:text-white dark:hover:bg-blue-500 transition-all duration-300 hover:scale-110 z-20"
+            aria-label="Previous testimonial"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
 
           <button
             onClick={nextTestimonial}
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-full shadow-lg border border-gray-200 dark:border-gray-600 flex items-center justify-center text-[#007AFF] dark:text-blue-400 hover:bg-[#007AFF] hover:text-white dark:hover:bg-blue-500 transition-all duration-300 hover:scale-110"
+            className="absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-full shadow-lg border border-gray-200 dark:border-gray-600 flex items-center justify-center text-[#007AFF] dark:text-blue-400 hover:bg-[#007AFF] hover:text-white dark:hover:bg-blue-500 transition-all duration-300 hover:scale-110 z-20"
+            aria-label="Next testimonial"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>

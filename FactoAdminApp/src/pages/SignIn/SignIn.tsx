@@ -89,7 +89,13 @@ export default function SignIn() {
       } else if (error.request) {
         // Request made but no response
         console.error('❌ No response received:', error.request);
-        errorMessage = "Unable to connect to server. Please check your internet connection.";
+        
+        // Check if it's a network/CORS error (backend not running)
+        if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('CORS')) {
+          errorMessage = "Backend server is not running. Please start the backend server on http://localhost:8080";
+        } else {
+          errorMessage = "Unable to connect to server. Please ensure the backend is running on http://localhost:8080";
+        }
       } else {
         // Error setting up request
         console.error('❌ Request setup error:', error.message);

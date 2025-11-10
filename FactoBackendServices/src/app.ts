@@ -24,18 +24,24 @@ import router from "@/routes";
 // import { connectDB } from "./config/db.js";
 
 // Define CORS options with explicit typing
+// FOR LOCAL DEVELOPMENT - Allow all localhost ports
 const corsOptions: cors.CorsOptions = {
   origin: [
     "http://localhost:3000",
-    "http://localhost:5173", 
-    "http://localhost:8080",
-    "https://admin.facto.org.in",
-    "https://facto.org.in",
-    // Vercel deployment domains
-    /^https:\/\/.*\.vercel\.app$/,
-    /^https:\/\/.*-factouserwebapps-projects\.vercel\.app$/,
-    // Netlify deployment domains (if used)
-    /^https:\/\/.*\.netlify\.app$/,
+    "http://localhost:5173",  // User Web App default port
+    "http://localhost:5174",  // Admin App default port (if 5173 is taken)
+    "http://localhost:5175",  // Additional Vite port
+    "http://localhost:8080",  // Backend port
+    // Allow all localhost ports for development
+    /^http:\/\/localhost:\d+$/,
+    // Production domains (commented out for local dev only)
+    // "https://admin.facto.org.in",
+    // "https://facto.org.in",
+    // Vercel deployment domains (commented out for local dev)
+    // /^https:\/\/.*\.vercel\.app$/,
+    // /^https:\/\/.*-factouserwebapps-projects\.vercel\.app$/,
+    // Netlify deployment domains (commented out for local dev)
+    // /^https:\/\/.*\.netlify\.app$/,
     process.env.CORS_ORIGIN || "*"
   ],
   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
