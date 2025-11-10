@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useDarkMode } from './DarkModeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
 interface NavigationProps {
   currentPage: PageType;
   onNavigate: (page: PageType) => void;
+  isShortsPage?: boolean;
 }
 
-export function Navigation({ currentPage, onNavigate }: NavigationProps) {
+export function Navigation({ currentPage, onNavigate, isShortsPage = false }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { isDarkMode, toggleDarkMode } = useDarkMode();
@@ -24,12 +27,39 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Update status bar for mobile
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      const updateStatusBar = async () => {
+        try {
+          // Set status bar to overlay content (transparent) so we can handle padding ourselves
+          await StatusBar.setOverlaysWebView({ overlay: true });
+          await StatusBar.setStyle({ 
+            style: isDarkMode ? Style.Dark : Style.Light 
+          });
+          await StatusBar.setBackgroundColor({ 
+            color: isDarkMode ? '#1a1a1a' : '#ffffff' 
+          });
+        } catch (error) {
+          console.error('Error updating status bar:', error);
+        }
+      };
+      updateStatusBar();
+    }
+  }, [isDarkMode]);
+
+  // On mobile, show minimal navigation (just logo and menu)
+  const isMobile = Capacitor.isNativePlatform() || (typeof window !== 'undefined' && window.innerWidth < 768);
+
+  // Special styling for Shorts page - transparent dark overlay
+  const shortsNavStyle = isShortsPage 
+    ? 'bg-black/60 dark:bg-black/60 backdrop-blur-md border-b border-white/10 shadow-none'
+    : isScrolled 
+      ? 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg' 
+      : 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm';
+
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      isScrolled 
-        ? 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg' 
-        : 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm'
-    }`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${shortsNavStyle} ${Capacitor.isNativePlatform() ? 'pt-safe-nav' : ''}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`flex justify-between items-center transition-all duration-300 ${
           isScrolled ? 'h-14' : 'h-16'
@@ -68,14 +98,18 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
             </span>
           </div>
           
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          {/* Desktop Navigation - Hidden on mobile */}
+          <div className={`${isMobile ? 'hidden' : 'hidden md:flex'} items-center space-x-8`}>
             <button 
               onClick={() => onNavigate('home')}
               className={`px-3 py-2 rounded-lg transition-all duration-200 ${
                 currentPage === 'home' 
-                  ? 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30' 
-                  : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
+                  ? isShortsPage 
+                    ? 'text-white bg-white/20' 
+                    : 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30'
+                  : isShortsPage
+                    ? 'text-white/80 hover:text-white hover:bg-white/10'
+                    : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
               }`}
             >
               Home
@@ -84,8 +118,12 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
               onClick={() => onNavigate('services')}
               className={`px-3 py-2 rounded-lg transition-all duration-200 ${
                 currentPage === 'services' 
-                  ? 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30' 
-                  : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
+                  ? isShortsPage 
+                    ? 'text-white bg-white/20' 
+                    : 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30'
+                  : isShortsPage
+                    ? 'text-white/80 hover:text-white hover:bg-white/10'
+                    : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
               }`}
             >
               Services
@@ -94,8 +132,12 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
               onClick={() => onNavigate('learning')}
               className={`px-3 py-2 rounded-lg transition-all duration-200 ${
                 currentPage === 'learning' 
-                  ? 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30' 
-                  : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
+                  ? isShortsPage 
+                    ? 'text-white bg-white/20' 
+                    : 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30'
+                  : isShortsPage
+                    ? 'text-white/80 hover:text-white hover:bg-white/10'
+                    : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
               }`}
             >
               Learning
@@ -104,8 +146,12 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
               onClick={() => onNavigate('shorts')}
               className={`px-3 py-2 rounded-lg transition-all duration-200 ${
                 currentPage === 'shorts' 
-                  ? 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30' 
-                  : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
+                  ? isShortsPage 
+                    ? 'text-white bg-white/20' 
+                    : 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30'
+                  : isShortsPage
+                    ? 'text-white/80 hover:text-white hover:bg-white/10'
+                    : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
               }`}
             >
               Shorts
@@ -114,8 +160,12 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
               onClick={() => onNavigate('updates')}
               className={`px-3 py-2 rounded-lg transition-all duration-200 ${
                 currentPage === 'updates' 
-                  ? 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30' 
-                  : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
+                  ? isShortsPage 
+                    ? 'text-white bg-white/20' 
+                    : 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30'
+                  : isShortsPage
+                    ? 'text-white/80 hover:text-white hover:bg-white/10'
+                    : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
               }`}
             >
               Updates
@@ -124,7 +174,11 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                isShortsPage 
+                  ? 'text-white/80 hover:text-white hover:bg-white/10' 
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
               aria-label="Toggle dark mode"
             >
               {isDarkMode ? (
@@ -178,12 +232,16 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center space-x-2">
+          {/* Mobile menu button - Show on mobile */}
+          <div className={`${isMobile ? 'flex' : 'md:hidden flex'} items-center space-x-2`}>
             {/* Mobile Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                isShortsPage 
+                  ? 'text-white/80 hover:text-white hover:bg-white/10' 
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
               aria-label="Toggle dark mode"
             >
               {isDarkMode ? (
@@ -199,7 +257,11 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
             
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-gray-800 dark:text-white hover:text-[#007AFF] p-2 rounded-lg transition-colors"
+              className={`p-2 rounded-lg transition-colors ${
+                isShortsPage 
+                  ? 'text-white/80 hover:text-white hover:bg-white/10' 
+                  : 'text-gray-800 dark:text-white hover:text-[#007AFF]'
+              }`}
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 {isMobileMenuOpen ? (
@@ -214,7 +276,11 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md">
+          <div className={`md:hidden py-4 border-t backdrop-blur-md ${
+            isShortsPage 
+              ? 'border-white/10 bg-black/80' 
+              : 'border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95'
+          }`}>
             <div className="flex flex-col space-y-3">
               <button 
                 onClick={() => {
@@ -223,8 +289,12 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
                 }}
                 className={`text-left px-4 py-2 rounded-lg transition-all duration-200 ${
                   currentPage === 'home' 
-                    ? 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30' 
-                    : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ? isShortsPage 
+                      ? 'text-white bg-white/20' 
+                      : 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30'
+                    : isShortsPage
+                      ? 'text-white/80 hover:text-white hover:bg-white/10'
+                      : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 Home
@@ -236,8 +306,12 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
                 }}
                 className={`text-left px-4 py-2 rounded-lg transition-all duration-200 ${
                   currentPage === 'services' 
-                    ? 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30' 
-                    : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ? isShortsPage 
+                      ? 'text-white bg-white/20' 
+                      : 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30'
+                    : isShortsPage
+                      ? 'text-white/80 hover:text-white hover:bg-white/10'
+                      : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 Services
@@ -249,8 +323,12 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
                 }}
                 className={`text-left px-4 py-2 rounded-lg transition-all duration-200 ${
                   currentPage === 'learning' 
-                    ? 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30' 
-                    : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ? isShortsPage 
+                      ? 'text-white bg-white/20' 
+                      : 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30'
+                    : isShortsPage
+                      ? 'text-white/80 hover:text-white hover:bg-white/10'
+                      : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 Learning
@@ -262,8 +340,12 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
                 }}
                 className={`text-left px-4 py-2 rounded-lg transition-all duration-200 ${
                   currentPage === 'shorts' 
-                    ? 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30' 
-                    : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ? isShortsPage 
+                      ? 'text-white bg-white/20' 
+                      : 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30'
+                    : isShortsPage
+                      ? 'text-white/80 hover:text-white hover:bg-white/10'
+                      : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 Shorts
@@ -275,13 +357,17 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
                 }}
                 className={`text-left px-4 py-2 rounded-lg transition-all duration-200 ${
                   currentPage === 'updates' 
-                    ? 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30' 
-                    : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ? isShortsPage 
+                      ? 'text-white bg-white/20' 
+                      : 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30'
+                    : isShortsPage
+                      ? 'text-white/80 hover:text-white hover:bg-white/10'
+                      : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 Updates
               </button>
-              <hr className="border-gray-200 dark:border-gray-700" />
+              <hr className={isShortsPage ? "border-white/10" : "border-gray-200 dark:border-gray-700"} />
               {isAuthenticated ? (
                 // User is logged in - show profile and logout
                 <>
@@ -292,8 +378,12 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
                     }}
                     className={`text-left px-4 py-2 rounded-lg transition-all duration-200 ${
                       currentPage === 'profile' 
-                        ? 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30' 
-                        : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
+                        ? isShortsPage 
+                          ? 'text-white bg-white/20' 
+                          : 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30'
+                        : isShortsPage
+                          ? 'text-white/80 hover:text-white hover:bg-white/10'
+                          : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
                     }`}
                   >
                     Profile
@@ -303,7 +393,11 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
                       logout();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="mx-4 text-red-400 hover:text-red-300 px-6 py-2.5 rounded-lg font-medium text-center hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+                    className={`mx-4 px-6 py-2.5 rounded-lg font-medium text-center transition-all duration-200 ${
+                      isShortsPage 
+                        ? 'text-red-300 hover:text-red-200 hover:bg-red-500/20' 
+                        : 'text-red-400 hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20'
+                    }`}
                   >
                     Logout
                   </button>
@@ -316,7 +410,11 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
                       onNavigate('login');
                       setIsMobileMenuOpen(false);
                     }}
-                    className="text-left px-4 py-2 text-gray-800 dark:text-white hover:text-[#007AFF] rounded-lg transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    className={`text-left px-4 py-2 rounded-lg transition-all duration-200 ${
+                      isShortsPage 
+                        ? 'text-white/80 hover:text-white hover:bg-white/10' 
+                        : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
                   >
                     Login
                   </button>
@@ -325,7 +423,9 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
                       onNavigate('signup');
                       setIsMobileMenuOpen(false);
                     }}
-                    className="mx-4 bg-gradient-to-r from-[#007AFF] to-[#0056CC] text-white px-6 py-2.5 rounded-lg font-medium text-center hover:from-[#0056CC] hover:to-[#0041A3] transition-all duration-200"
+                    className={`mx-4 bg-gradient-to-r from-[#007AFF] to-[#0056CC] text-white px-6 py-2.5 rounded-lg font-medium text-center hover:from-[#0056CC] hover:to-[#0041A3] transition-all duration-200 ${
+                      isShortsPage ? 'opacity-90 hover:opacity-100' : ''
+                    }`}
                   >
                     Sign Up
                   </button>

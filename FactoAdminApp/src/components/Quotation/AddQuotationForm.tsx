@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BASE_URL } from "@/utils/apiConstants";
 import {
   Select,
   SelectContent,
@@ -151,7 +152,7 @@ export default function MultiStepQuotationForm({setShowForm}:{setShowForm: React
     });
     try {
       const response = await axios.post(
-        "https://admin.facto.org.in/api/v1/admin/quotation",
+        `${BASE_URL}/admin/quotation`,
         {
           userId: selectedUser,
           subServiceId: selectedSubService,
@@ -165,11 +166,18 @@ export default function MultiStepQuotationForm({setShowForm}:{setShowForm: React
         }
       );
       if(response.data.success){
-          showSucccess("Quotation created successfully");
+          showSucccess(response.data.message || "Quotation created successfully");
         setShowForm(false);
+      } else {
+        showError(response.data.message || "Failed to create quotation");
       }
-    } catch (err) {
-      showError("Something went wrong");
+    } catch (err: any) {
+      console.error("Error creating quotation:", err);
+      showError(
+        err.response?.data?.message || 
+        err.response?.data?.status?.message ||
+        "Something went wrong while creating quotation"
+      );
     }
     // Reset form
     setStep(1);

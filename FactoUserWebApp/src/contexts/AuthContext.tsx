@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config/apiConfig';
+import { Storage } from '../utils/storage';
 
 // User interface based on backend model
 export interface User {
@@ -116,15 +117,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Configure axios defaults and add response interceptor
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token && !isTokenExpired(token)) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    }
+    const setupAxios = async () => {
+      const token = await Storage.get('authToken');
+      if (token && !isTokenExpired(token)) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+    };
+    setupAxios();
 
     // Add response interceptor to handle token expiration
     const responseInterceptor = axios.interceptors.response.use(
       (response) => response,
-      (error) => {
+      async (error) => {
         if (error.response?.status === 401) {
           // Only logout for specific endpoints that indicate token expiration
           const url = error.config?.url || '';
@@ -136,8 +140,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setUser(null);
             setToken(null);
             setError(null);
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('user');
+            await Storage.remove('authToken');
+            await Storage.remove('user');
             delete axios.defaults.headers.common['Authorization'];
           } else {
             console.log('401 Unauthorized on non-auth endpoint - not logging out automatically');
@@ -153,43 +157,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  // Initialize auth state from localStorage
+  // Initialize auth state from storage
   useEffect(() => {
-    const initializeAuth = () => {
+    const initializeAuth = async () => {
       try {
-        console.log('🚀 Initializing auth state from localStorage...');
-        const storedToken = localStorage.getItem('authToken');
-        const storedUser = localStorage.getItem('user');
+        console.log('🚀 Initializing auth state from storage...');
+        const storedToken = await Storage.get('authToken');
+        const storedUserStr = await Storage.get('user');
         
         console.log('Stored token exists:', !!storedToken);
-        console.log('Stored user exists:', !!storedUser);
+        console.log('Stored user exists:', !!storedUserStr);
         
-        if (storedToken && storedUser) {
+        if (storedToken && storedUserStr) {
           // Check if token is expired
           const isExpired = isTokenExpired(storedToken);
           
           if (isExpired) {
             console.log('❌ Token expired, clearing auth data');
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('user');
+            await Storage.remove('authToken');
+            await Storage.remove('user');
             delete axios.defaults.headers.common['Authorization'];
             setToken(null);
             setUser(null);
           } else {
             console.log('✅ Token valid, restoring auth state');
             setToken(storedToken);
-            setUser(JSON.parse(storedUser));
+            setUser(JSON.parse(storedUserStr));
             axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
           }
         } else {
-          console.log('No stored auth data found in localStorage');
+          console.log('No stored auth data found in storage');
           setToken(null);
           setUser(null);
         }
       } catch (error) {
         console.error('❌ Error initializing auth:', error);
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
+        await Storage.remove('authToken');
+        await Storage.remove('user');
         delete axios.defaults.headers.common['Authorization'];
         setToken(null);
         setUser(null);
@@ -237,9 +241,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setToken(newToken);
         setUser(newUser);
         
-        // Store in localStorage
-        localStorage.setItem('authToken', newToken);
-        localStorage.setItem('user', JSON.stringify(newUser));
+        // Store in storage
+        await Storage.set('authToken', newToken);
+        await Storage.set('user', JSON.stringify(newUser));
         
         // Update axios default header
         axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
@@ -256,10 +260,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Force logout for testing
-  const forceLogout = () => {
+  const forceLogout = async () => {
     console.log('🔄 Force logout triggered');
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
+    await Storage.remove('authToken');
+    await Storage.remove('user');
     delete axios.defaults.headers.common['Authorization'];
     setToken(null);
     setUser(null);
@@ -280,8 +284,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(null);
       setToken(null);
       setError(null);
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
+      Storage.remove('authToken');
+      Storage.remove('user');
       delete axios.defaults.headers.common['Authorization'];
       return;
     }
@@ -308,8 +312,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(null);
       setToken(null);
       setError(null);
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
+      Storage.remove('authToken');
+      Storage.remove('user');
       delete axios.defaults.headers.common['Authorization'];
     }, timeUntilExpiry);
 
@@ -317,19 +321,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => clearTimeout(timeoutId);
   }, [token]);
 
-  // Clear session on browser close/tab close
+  // Clear session on browser close/tab close (web only)
   useEffect(() => {
     const handleBeforeUnload = () => {
       console.log('🔄 Browser closing, clearing session...');
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
+      Storage.remove('authToken');
+      Storage.remove('user');
     };
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
         console.log('🔄 Tab hidden, clearing session...');
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
+        Storage.remove('authToken');
+        Storage.remove('user');
       }
     };
 
@@ -372,9 +376,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(userData);
         setToken(authToken);
         
-        // Store in localStorage
-        localStorage.setItem('authToken', authToken);
-        localStorage.setItem('user', JSON.stringify(userData));
+        // Store in storage
+        await Storage.set('authToken', authToken);
+        await Storage.set('user', JSON.stringify(userData));
         
         // Set axios default header
         axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
@@ -525,9 +529,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(userData);
         setToken(authToken);
         
-        // Store in localStorage
-        localStorage.setItem('authToken', authToken);
-        localStorage.setItem('user', JSON.stringify(userData));
+        // Store in storage
+        await Storage.set('authToken', authToken);
+        await Storage.set('user', JSON.stringify(userData));
         
         // Set axios default header
         axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
@@ -607,12 +611,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Logout
-  const logout = () => {
+  const logout = async () => {
     setUser(null);
     setToken(null);
     setError(null);
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
+    await Storage.remove('authToken');
+    await Storage.remove('user');
     delete axios.defaults.headers.common['Authorization'];
   };
 

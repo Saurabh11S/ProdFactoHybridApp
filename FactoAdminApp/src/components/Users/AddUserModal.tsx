@@ -27,6 +27,7 @@ export function AddUserModal({ isOpen, onClose, fetchData }: AddUserModalProps) 
     panNumber: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -93,24 +94,38 @@ export function AddUserModal({ isOpen, onClose, fetchData }: AddUserModalProps) 
       aadharNumber: Number(formData.aadharNumber),
     };
 
+    setLoading(true);
     try {
       console.log("Submitting payload:", payload);
       const response = await USERS.PostUser(payload);
 
-
       if (response.success) {
         onClose();
         fetchData();
-        showSucccess(response.message || "User created successfully.");
+        showSucccess(response.message || response.status?.message || "User created successfully.");
+        // Reset form
+        setFormData({
+          fullName: "",
+          phoneNumber: "",
+          email: "",
+          dateOfBirth: "",
+          aadharNumber: "",
+          panNumber: "",
+          password: "",
+        });
       } else {
-        showError(response.message || "An error occurred.");
+        showError(response.message || response.status?.message || "An error occurred.");
       }
     } catch (error: any) {
       console.error("Error during user creation:", error);
-      showError(
-        error.response?.data?.message ||
-          "Failed to create user. Please check your input and try again."
-      );
+      const errorMessage = 
+        error.response?.data?.message || 
+        error.response?.data?.status?.message ||
+        error.message ||
+        "Failed to create user. Please check your input and try again.";
+      showError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -201,8 +216,8 @@ export function AddUserModal({ isOpen, onClose, fetchData }: AddUserModalProps) 
             <Button variant="outline" className="w-1/2" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" className="w-1/2">
-              Add User
+            <Button type="submit" className="w-1/2" disabled={loading}>
+              {loading ? "Creating..." : "Add User"}
             </Button>
           </DialogFooter>
         </form>

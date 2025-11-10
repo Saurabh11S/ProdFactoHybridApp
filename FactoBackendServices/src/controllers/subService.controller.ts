@@ -76,15 +76,86 @@ export const getSubServiceById = bigPromise(
 export const getAllSubServices = bigPromise(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      console.log('🔍 [getAllSubServices] Fetching all active sub-services...');
+      
+      // First, get all active sub-services without populate to see raw data
+      const rawSubServices = await db.SubService.find({ isActive: true });
+      console.log(`📊 [getAllSubServices] Found ${rawSubServices.length} active sub-services (before populate)`);
+      
+      // Now populate with serviceId - don't use match filter to avoid filtering out sub-services
       const subServices = await db.SubService.find({ isActive: true })
-        .populate('serviceId', 'title category');
+        .populate({
+          path: 'serviceId',
+          select: 'title category isActive'
+        });
+      
+      // Filter out sub-services where serviceId doesn't exist or service is inactive
+      const filteredOut: Array<{ _id: string; title: string; reason: string }> = [];
+      const validSubServices = subServices.filter(sub => {
+        // If serviceId is populated as object, check if service is active
+        if (sub.serviceId && typeof sub.serviceId === 'object' && sub.serviceId !== null) {
+          const isServiceActive = (sub.serviceId as any).isActive !== false;
+          if (!isServiceActive) {
+            filteredOut.push({
+              _id: sub._id.toString(),
+              title: sub.title,
+              reason: 'Parent service is inactive'
+            });
+          }
+          return isServiceActive;
+        }
+        // If serviceId is null (populate returned null - service doesn't exist), filter it out
+        if (!sub.serviceId || sub.serviceId === null) {
+          filteredOut.push({
+            _id: sub._id.toString(),
+            title: sub.title,
+            reason: 'serviceId is null (referenced service does not exist)'
+          });
+          return false;
+        }
+        // If serviceId is still an ObjectId (populate didn't work for some reason), include it
+        // Frontend will handle this case by looking up the service
+        return true;
+      });
+      
+      console.log(`✅ [getAllSubServices] Returning ${validSubServices.length} sub-services with valid serviceId`);
+      if (filteredOut.length > 0) {
+        console.log(`⚠️ [getAllSubServices] Filtered out ${filteredOut.length} sub-services:`, JSON.stringify(filteredOut, null, 2));
+      }
+      
+      // Log category breakdown
+      const categoryBreakdown: { [key: string]: number } = {};
+      validSubServices.forEach(sub => {
+        const category = (sub.serviceId as any)?.category || 'Unknown';
+        categoryBreakdown[category] = (categoryBreakdown[category] || 0) + 1;
+      });
+      console.log('📋 [getAllSubServices] Category breakdown:', JSON.stringify(categoryBreakdown, null, 2));
+      
+      // Log detailed info about each sub-service for debugging
+      console.log('📋 [getAllSubServices] Detailed sub-services list:', validSubServices.map(sub => ({
+        _id: sub._id.toString(),
+        title: sub.title,
+        serviceCode: sub.serviceCode,
+        isActive: sub.isActive,
+        serviceId: sub.serviceId 
+          ? (typeof sub.serviceId === 'object' && sub.serviceId !== null
+            ? {
+                _id: (sub.serviceId as any)._id?.toString(),
+                title: (sub.serviceId as any).title,
+                category: (sub.serviceId as any).category,
+                isActive: (sub.serviceId as any).isActive
+              }
+            : sub.serviceId.toString())
+          : null
+      })));
       
       const response = sendSuccessApiResponse(
         "All SubServices retrieved successfully",
-        { subServices }
+        { subServices: validSubServices }
       );
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
+      console.error('❌ [getAllSubServices] Error:', error);
       next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }

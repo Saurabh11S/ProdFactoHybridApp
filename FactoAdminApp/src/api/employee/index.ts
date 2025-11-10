@@ -42,7 +42,7 @@ export const EMPLOYEE = {
   GetById: async (id:string, cancel = false) => {
     console.log(id);
     const response = await api.request({
-      url: `admin/employee/${id}`,
+      url: `/admin/employee/${id}`,
       method: 'GET',
       headers: {
         Authorization: `Bearer ` + localStorage.getItem('token'),
@@ -56,7 +56,7 @@ export const EMPLOYEE = {
   },
   Update: async (data: any, cancel = false) => {
     const response = await api.request({
-      url: `admin/employee/${data._id}`,
+      url: `/admin/employee/${data._id}`,
       method: 'PUT',
       data: {
         email: data.email,
@@ -76,7 +76,7 @@ export const EMPLOYEE = {
   },
   Delete: async (id: string, cancel = false) => {
     const response = await api.request({
-      url: `admin/users/${id}`,
+      url: `/admin/employee/${id}`,
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ` + localStorage.getItem('token'),

@@ -132,7 +132,7 @@ export const COURSES = {
   },
   PublishCourse: async (courseId:string, cancel= false) =>{
     const response = await api.request({
-      url:`admin/courses/${courseId}/publish`,
+      url:`/admin/courses/${courseId}/publish`,
       method:"PATCH",
       headers: {
         Authorization: `Bearer ` + localStorage.getItem('token'),

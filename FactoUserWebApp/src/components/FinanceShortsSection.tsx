@@ -13,62 +13,44 @@ export function FinanceShortsSection({ onNavigate }: FinanceShortsSectionProps) 
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
 
-  const financeShorts = [
-    {
-      title: '5-Minute Tax Tips',
-      description: 'Quick ways to save on taxes',
-      thumbnail: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=300&h=400&fit=crop',
-      duration: '0:45',
-      views: '2.5K',
-      category: 'Tax Tips',
-      expert: 'CA Rajesh Kumar'
-    },
-    {
-      title: 'GST Filing Hacks',
-      description: 'Simplify your GST returns',
-      thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop',
-      duration: '1:20',
-      views: '3.2K',
-      category: 'GST',
-      expert: 'CA Priya Sharma'
-    },
-    {
-      title: 'Investment Basics',
-      description: 'Start investing with ₹500',
-      thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300&h=400&fit=crop',
-      duration: '2:15',
-      views: '4.1K',
-      category: 'Investment',
-      expert: 'CA Vikram Singh'
-    },
-    {
-      title: 'Deduction Calculator',
-      description: 'Maximize your 80C benefits',
-      thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=300&h=400&fit=crop',
-      duration: '1:05',
-      views: '1.8K',
-      category: 'Deductions',
-      expert: 'CA Anita Patel'
-    },
-    {
-      title: 'Business Loan Tips',
-      description: 'Get loans for your startup',
-      thumbnail: 'https://images.unsplash.com/photo-1556740758-90de374c12ad?w=300&h=400&fit=crop',
-      duration: '1:45',
-      views: '2.9K',
-      category: 'Business',
-      expert: 'CA Rohit Shah'
-    },
-    {
-      title: 'Mutual Fund SIP',
-      description: 'Start SIP with just ₹100',
-      thumbnail: 'https://images.unsplash.com/photo-1579621970795-87facc2f976d?w=300&h=400&fit=crop',
-      duration: '1:30',
-      views: '3.7K',
-      category: 'Mutual Funds',
-      expert: 'CA Meera Reddy'
-    }
+  /**
+   * YouTube Video Configuration
+   * Channel: @KRISHNA5-5-5 (Krishna-5-5-5)
+   * 
+   * Video from: https://www.youtube.com/shorts/tLvaiyovqls
+   * Video ID: tLvaiyovqls
+   * 
+   * To add more videos from your channel:
+   * 1. Open the video on YouTube
+   * 2. Copy the video ID from the URL (e.g., https://www.youtube.com/shorts/VIDEO_ID)
+   * 3. Add it to the YOUTUBE_VIDEOS array below
+   */
+
+  // Configure your YouTube video IDs from @KRISHNA5-5-5 channel
+  const YOUTUBE_VIDEOS = [
+    { videoId: 'tLvaiyovqls', title: 'Travel with me .. high in the sky ...', description: 'Travel with me .. high in the sky ...', duration: '0:30', views: '12.5K', category: 'Travel', expert: '@KRISHNA5-5-5' },
+    // Add more videos from your channel here by copying their video IDs
   ];
+
+  // Helper function to get YouTube thumbnail
+  const getYouTubeThumbnail = (videoId: string) => {
+    return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+  };
+
+  // Helper function to generate YouTube embed URL
+  const getYouTubeEmbedUrl = (videoId: string) => {
+    const params = new URLSearchParams({
+      rel: '0', // Don't show related videos from other channels
+      modestbranding: '1', // Minimal YouTube branding
+    });
+    return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
+  };
+
+  const financeShorts = YOUTUBE_VIDEOS.map((video) => ({
+    ...video,
+    thumbnail: getYouTubeThumbnail(video.videoId),
+    videoUrl: getYouTubeEmbedUrl(video.videoId),
+  }));
 
   // Intersection Observer for animations
   useEffect(() => {
@@ -112,7 +94,14 @@ export function FinanceShortsSection({ onNavigate }: FinanceShortsSectionProps) 
   }, []);
 
   const handleVideoPlay = (index: number) => {
+    // Option 1: Open in embedded modal (recommended for better UX)
     setActiveVideo(activeVideo === index ? null : index);
+    
+    // Option 2: Open in new tab (uncomment if you prefer this approach)
+    // const video = financeShorts[index];
+    // if (video && video.videoUrl) {
+    //   window.open(`https://www.youtube.com/watch?v=${YOUTUBE_VIDEOS[index].videoId}`, '_blank');
+    // }
   };
 
   return (
@@ -222,6 +211,37 @@ export function FinanceShortsSection({ onNavigate }: FinanceShortsSectionProps) 
             </div>
           ))}
         </div>
+
+        {/* Video Player Modal - Embedded Player (Optional) */}
+        {activeVideo !== null && (
+          <div 
+            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" 
+            onClick={() => setActiveVideo(null)}
+          >
+            <div 
+              className="relative w-full max-w-4xl aspect-video bg-black rounded-lg overflow-hidden shadow-2xl" 
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setActiveVideo(null)}
+                className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                aria-label="Close video"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <iframe
+                src={financeShorts[activeVideo]?.videoUrl}
+                title={financeShorts[activeVideo]?.title}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                frameBorder="0"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Video Categories */}
         <div className={`flex flex-wrap justify-center gap-3 mb-12 transform transition-all duration-1000 delay-300 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>

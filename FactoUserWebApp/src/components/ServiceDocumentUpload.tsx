@@ -1,6 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config/apiConfig';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Capacitor } from '@capacitor/core';
+import { Storage } from '../utils/storage';
 
 interface ServiceDocumentUploadProps {
   serviceId: string;
@@ -154,7 +157,7 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
         setRequiredDocuments(requiredDocs);
 
         // Fetch existing documents for this service
-        const token = localStorage.getItem('authToken');
+        const token = await Storage.get('authToken');
         const response = await axios.get(
           `${API_BASE_URL}/document/service/${serviceId}`,
           {
@@ -218,6 +221,53 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
     }
   };
 
+  // Capture from camera (mobile only)
+  const captureFromCamera = async () => {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera,
+        presentationStyle: 'fullscreen'
+      });
+
+      // Convert base64 to File
+      const blob = await fetch(`data:image/jpeg;base64,${image.base64String}`).then(r => r.blob());
+      const file = new File([blob], `camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      // Use existing handleFiles function
+      handleFiles([file]);
+    } catch (error: any) {
+      if (error.message !== 'User cancelled photos app') {
+        console.error('Camera error:', error);
+        alert('Failed to capture photo. Please try again.');
+      }
+    }
+  };
+
+  // Select from gallery (mobile only)
+  const selectFromGallery = async () => {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Photos
+      });
+
+      const blob = await fetch(`data:image/jpeg;base64,${image.base64String}`).then(r => r.blob());
+      const file = new File([blob], `gallery_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      handleFiles([file]);
+    } catch (error: any) {
+      if (error.message !== 'User cancelled photos app') {
+        console.error('Gallery error:', error);
+        alert('Failed to select photo. Please try again.');
+      }
+    }
+  };
+
   const handleFiles = (files: File[]) => {
     files.forEach((file) => {
       // Validate file type
@@ -271,7 +321,7 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
       formData.append('title', fileData.name);
       formData.append('description', `Uploaded for ${serviceName}`);
 
-      const token = localStorage.getItem('authToken');
+      const token = await Storage.get('authToken');
       console.log('📤 Uploading to:', `${API_BASE_URL}/document/upload/${serviceId}`);
       console.log('🔑 Token exists:', !!token);
       
@@ -354,7 +404,7 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
 
   const removeDocument = async (documentId: string) => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = await Storage.get('authToken');
       await axios.delete(
         `${API_BASE_URL}/document/remove/${documentId}`,
         {
@@ -598,6 +648,42 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   or click to browse and select files from your device
                 </p>
+                
+                {/* Mobile-specific camera/gallery buttons */}
+                {Capacitor.isNativePlatform() && (
+                  <div className="flex gap-3 justify-center mb-4">
+                    <button
+                      onClick={captureFromCamera}
+                      disabled={uploading}
+                      className={`inline-flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                        uploading
+                          ? 'bg-gray-400 text-white cursor-not-allowed'
+                          : 'bg-green-500 text-white hover:bg-green-600'
+                      }`}
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Camera
+                    </button>
+                    <button
+                      onClick={selectFromGallery}
+                      disabled={uploading}
+                      className={`inline-flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                        uploading
+                          ? 'bg-gray-400 text-white cursor-not-allowed'
+                          : 'bg-purple-500 text-white hover:bg-purple-600'
+                      }`}
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Gallery
+                    </button>
+                  </div>
+                )}
+                
                 <input
                   type="file"
                   multiple

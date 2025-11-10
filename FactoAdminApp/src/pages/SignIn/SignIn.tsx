@@ -31,6 +31,7 @@ export default function SignIn() {
     
     try {
       console.log('📡 Making API call...');
+      console.log('📦 Request data:', { email: formData.email, password: '***' });
       const response = await AUTH.PostLogin(formData);
       console.log('✅ API response:', response);
       
@@ -45,18 +46,60 @@ export default function SignIn() {
         setIsAuthenticated(true);
         
         if (response.data.user.role === "admin") {
-          toast({ description: response.message }); 
+          const message = response.status?.message || response.message || "Login successful!";
+          toast({ description: message }); 
           navigate("/dashboard");
         } else {
           toast({ description: "You are not authorized to access this page" }); 
         }
       } else {
-        console.log('❌ Login failed:', response.message);
-        toast({ description: response.message || "Login failed" });
+        const errorMessage = response.status?.message || response.message || "Login failed";
+        console.log('❌ Login failed:', errorMessage);
+        toast({ description: errorMessage, variant: "destructive" }); 
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('💥 Login error:', error);
-      toast({ description: "An error occurred. Please try again." }); 
+      
+      // Extract error message from response
+      let errorMessage = "An error occurred. Please try again.";
+      
+      if (error.response) {
+        // Server responded with error
+        const status = error.response.status;
+        const data = error.response.data;
+        
+        console.error('📡 Error response:', {
+          status,
+          data,
+          message: data?.status?.message || data?.message || data?.error?.message
+        });
+        
+        // Backend error structure: { status: { code, success }, error: { message }, message }
+        const backendMessage = data?.message || data?.error?.message || data?.status?.message;
+        
+        if (status === 401) {
+          errorMessage = backendMessage || "Invalid email or password. Please check your credentials.";
+        } else if (status === 404) {
+          errorMessage = backendMessage || "User not found. Please check your email.";
+        } else if (status === 400) {
+          errorMessage = backendMessage || "Invalid request. Please check your input.";
+        } else {
+          errorMessage = backendMessage || `Server error (${status}). Please try again later.`;
+        }
+      } else if (error.request) {
+        // Request made but no response
+        console.error('❌ No response received:', error.request);
+        errorMessage = "Unable to connect to server. Please check your internet connection.";
+      } else {
+        // Error setting up request
+        console.error('❌ Request setup error:', error.message);
+        errorMessage = error.message || "An unexpected error occurred.";
+      }
+      
+      toast({ 
+        description: errorMessage,
+        variant: "destructive"
+      }); 
     }
   };
 

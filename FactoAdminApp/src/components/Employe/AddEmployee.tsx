@@ -23,6 +23,7 @@ import { EMPLOYEE } from "@/api/employee";
       phoneNumber: "",
       email: "",
     });
+    const [loading, setLoading] = useState(false);
   
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
@@ -66,6 +67,7 @@ import { EMPLOYEE } from "@/api/employee";
         phoneNumber: Number(formData.phoneNumber),
       };
   
+      setLoading(true);
       try {
         console.log("Submitting payload:", payload);
         const response = await EMPLOYEE.PostEmployee(payload);
@@ -73,16 +75,26 @@ import { EMPLOYEE } from "@/api/employee";
         if (response.success) {
           onClose();
           fetchData();
-          showSucccess(response.message || "Employee created successfully.");
+          showSucccess(response.message || response.status?.message || "Employee created successfully.");
+          // Reset form
+          setFormData({
+            fullName: "",
+            phoneNumber: "",
+            email: "",
+          });
         } else {
-          showError(response.message || "An error occurred.");
+          showError(response.message || response.status?.message || "An error occurred.");
         }
       } catch (error: any) {
         console.error("Error during employee creation:", error);
-        showError(
-          error.response?.data?.message ||
-            "Failed to create user. Please check your input and try again."
-        );
+        const errorMessage = 
+          error.response?.data?.message || 
+          error.response?.data?.status?.message ||
+          error.message ||
+          "Failed to create employee. Please check your input and try again.";
+        showError(errorMessage);
+      } finally {
+        setLoading(false);
       }
     };
  
@@ -139,7 +151,8 @@ import { EMPLOYEE } from "@/api/employee";
             <Button
             type="submit"
              className="w-1/2"
-             >Add Employee</Button>
+             disabled={loading}
+             >{loading ? "Creating..." : "Add Employee"}</Button>
           </DialogFooter> 
           </form>
         </DialogContent>

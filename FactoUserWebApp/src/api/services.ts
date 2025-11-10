@@ -17,11 +17,12 @@ export interface Service {
 export interface SubService {
   _id: string;
   serviceCode: string;
-  serviceId: {
+  serviceId: string | {
     _id: string;
     title: string;
     category: string;
-  };
+    isActive?: boolean;
+  } | null;
   title: string;
   description: string;
   features: string[];
@@ -100,24 +101,116 @@ export const fetchServices = async (): Promise<Service[]> => {
 // Fetch sub-services by service ID
 export const fetchSubServices = async (serviceId: string): Promise<SubService[]> => {
   try {
-    const response = await axios.get<ServiceResponse>(`${API_BASE_URL}/sub-services/service/${serviceId}`);
-    return response.data.data.subServices || [];
-  } catch (error) {
-    console.error('Error fetching sub-services:', error);
-    throw new Error('Failed to fetch sub-services');
+    const url = `${API_BASE_URL}/sub-services/service/${serviceId}`;
+    console.log('🔄 [fetchSubServices] Fetching from:', url);
+    const response = await axios.get<ServiceResponse>(url);
+    
+    // Handle different response structures
+    let subServices: SubService[] = [];
+    
+    if (response.data?.data?.subServices) {
+      subServices = response.data.data.subServices;
+    } else if (Array.isArray(response.data?.data)) {
+      subServices = response.data.data;
+    } else if (Array.isArray(response.data)) {
+      subServices = response.data;
+    }
+    
+    console.log(`✅ [fetchSubServices] Fetched ${subServices.length} sub-services for service ${serviceId}`);
+    return subServices;
+  } catch (error: any) {
+    console.error('❌ [fetchSubServices] Error fetching sub-services:', error);
+    console.error('❌ [fetchSubServices] Error details:', {
+      message: error?.message,
+      response: error?.response?.data,
+      status: error?.response?.status,
+      url: error?.config?.url
+    });
+    throw new Error(`Failed to fetch sub-services: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
   }
 };
 
 // Fetch all sub-services directly
 export const fetchAllSubServices = async (): Promise<SubService[]> => {
   try {
-    const response = await axios.get<ServiceResponse>(`${API_BASE_URL}/sub-services/all`);
-    console.log('Sub-services response:', response.data);
-    return response.data.data.subServices || [];
-  } catch (error) {
-    console.error('Error fetching all sub-services:', error);
+    const url = `${API_BASE_URL}/sub-services/all`;
+    console.log('🔄 [fetchAllSubServices] Fetching from:', url);
+    const response = await axios.get<ServiceResponse>(url);
+    
+    console.log('📦 [fetchAllSubServices] Full response:', JSON.stringify(response.data, null, 2));
+    console.log('📦 [fetchAllSubServices] Response structure:', {
+      hasData: !!response.data,
+      hasDataData: !!response.data?.data,
+      hasSubServices: !!response.data?.data?.subServices,
+      isArray: Array.isArray(response.data?.data?.subServices),
+      subServicesLength: response.data?.data?.subServices?.length || 0
+    });
+    
+    // Handle different response structures
+    let subServices: SubService[] = [];
+    
+    if (response.data?.data?.subServices) {
+      subServices = response.data.data.subServices;
+    } else if (Array.isArray(response.data?.data)) {
+      subServices = response.data.data;
+    } else if (Array.isArray(response.data)) {
+      subServices = response.data;
+    }
+    
+    console.log('✅ [fetchAllSubServices] Extracted sub-services:', subServices.length);
+    
+    // Detailed logging of ALL sub-services with full details
+    console.log('📋 [fetchAllSubServices] Complete sub-services list:', subServices.map(s => {
+      const serviceIdInfo = s.serviceId 
+        ? (typeof s.serviceId === 'object' && s.serviceId !== null
+          ? {
+              type: 'object',
+              _id: (s.serviceId as any)._id,
+              title: (s.serviceId as any).title,
+              category: (s.serviceId as any).category,
+              isActive: (s.serviceId as any).isActive
+            }
+          : {
+              type: 'string',
+              value: s.serviceId
+            })
+        : { type: 'null', value: null };
+      
+      return {
+        _id: s._id,
+        title: s.title,
+        serviceCode: s.serviceCode,
+        isActive: s.isActive,
+        serviceId: serviceIdInfo
+      };
+    }));
+    
+    // Group by category for summary
+    const categorySummary: { [key: string]: number } = {};
+    subServices.forEach(s => {
+      let category = 'Unknown';
+      if (typeof s.serviceId === 'object' && s.serviceId !== null) {
+        category = (s.serviceId as any).category || (s.serviceId as any).title || 'Unknown';
+      } else if (typeof s.serviceId === 'string') {
+        category = 'String ID (needs lookup)';
+      }
+      categorySummary[category] = (categorySummary[category] || 0) + 1;
+    });
+    console.log('📊 [fetchAllSubServices] Category summary:', JSON.stringify(categorySummary, null, 2));
+    
+    return subServices;
+  } catch (error: any) {
+    console.error('❌ [fetchAllSubServices] Error fetching all sub-services:', error);
+    console.error('❌ [fetchAllSubServices] Error details:', {
+      message: error?.message,
+      response: error?.response?.data,
+      status: error?.response?.status,
+      url: error?.config?.url
+    });
+    
     // Fallback to the old method if the new endpoint fails
     try {
+      console.log('🔄 [fetchAllSubServices] Attempting fallback method...');
       const services = await fetchServices();
       const allSubServices: SubService[] = [];
       
@@ -126,16 +219,18 @@ export const fetchAllSubServices = async (): Promise<SubService[]> => {
           try {
             const subServices = await fetchSubServices(service._id);
             allSubServices.push(...subServices);
+            console.log(`✅ [fetchAllSubServices] Fetched ${subServices.length} sub-services for service ${service.title}`);
           } catch (error) {
-            console.warn(`Failed to fetch sub-services for service ${service._id}:`, error);
+            console.warn(`⚠️ [fetchAllSubServices] Failed to fetch sub-services for service ${service._id}:`, error);
           }
         }
       }
       
+      console.log(`✅ [fetchAllSubServices] Fallback method returned ${allSubServices.length} sub-services`);
       return allSubServices;
     } catch (fallbackError) {
-      console.error('Fallback method also failed:', fallbackError);
-      throw new Error('Failed to fetch sub-services');
+      console.error('❌ [fetchAllSubServices] Fallback method also failed:', fallbackError);
+      throw new Error(`Failed to fetch sub-services: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
     }
   }
 };

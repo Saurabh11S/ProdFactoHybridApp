@@ -9,16 +9,48 @@ import { Request, Response, NextFunction } from "express";
 export const getCourses = bigPromise(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      console.log('\n📚 === FETCHING PUBLISHED COURSES ===');
+      console.log('📅 Timestamp:', new Date().toISOString());
+      
+      // Get all published courses with all lectures (not just free ones)
+      // This allows the frontend to show course previews with free lectures unlocked
       const courses = await db.Course.find({ status: "published" }).populate({
         path: "lectures",
-        match: { isFree: true },
+        // Don't filter by isFree here - let frontend handle which lectures to show
       });
+      
+      console.log(`✅ Found ${courses.length} published courses:`);
+      courses.forEach((course, index) => {
+        console.log(`  ${index + 1}. ${course.title}`);
+        console.log(`     - ID: ${course._id}`);
+        console.log(`     - Status: ${course.status}`);
+        console.log(`     - Category: ${course.category}`);
+        console.log(`     - Price: ₹${course.price}`);
+        console.log(`     - Lectures: ${course.lectures?.length || 0}`);
+      });
+      
+      // Also check total courses (including drafts) for debugging
+      const totalCourses = await db.Course.countDocuments();
+      const draftCourses = await db.Course.countDocuments({ status: "draft" });
+      console.log(`📊 Total courses in DB: ${totalCourses} (${draftCourses} drafts, ${courses.length} published)`);
+      
+      // Wrap courses array in an object for sendSuccessApiResponse
       const response = sendSuccessApiResponse(
         "Courses Fetched Successfully",
-        courses
+        { courses: courses }
       );
+      
+      console.log('📦 Response structure:', {
+        success: response.success,
+        dataType: typeof response.data,
+        hasCourses: !!response.data?.courses,
+        coursesCount: response.data?.courses?.length || 0
+      });
+      console.log('📚 === COURSES FETCH COMPLETE ===\n');
+      
       res.status(StatusCode.OK).send(response);
     } catch (error) {
+      console.error('❌ Error fetching courses:', error);
       next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }

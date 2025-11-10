@@ -62,7 +62,8 @@ export const saveUserService = bigPromise(
         billingPeriod = 'one-time',
         status = 'active',
         specialRequirement = '',
-        additionalRequirements = ''
+        additionalRequirements = '',
+        isFreeConsultation = false
       } = req.body;
 
       if (!userId) {
@@ -73,6 +74,73 @@ export const saveUserService = bigPromise(
         return next(createCustomError('Item type and item ID are required', StatusCode.BAD_REQUEST));
       }
 
+      // Check if user already has this service
+      const existingPurchase = await db.UserPurchase.findOne({
+        userId,
+        itemId,
+        status: 'active'
+      });
+
+      if (existingPurchase) {
+        return next(createCustomError('Service already requested or purchased', StatusCode.BAD_REQUEST));
+      }
+
+      // For free consultation, use a special paymentOrderId value
+      // We'll use a dummy ObjectId that we can identify as 'free-consultation'
+      // Since paymentOrderId is required and references PaymentOrder, we need to handle this differently
+      // Option: Create a special PaymentOrder for free consultations or make paymentOrderId optional
+      // For now, we'll use a special string identifier that we can check in the frontend
+      
+      // Create a minimal PaymentOrder for free consultation if needed
+      // Or we can modify the schema to allow null/optional paymentOrderId for free consultations
+      // For simplicity, let's use a special ObjectId pattern that we can identify
+      
+      // Using a workaround: Create a dummy payment order or use a special identifier
+      // Since the schema requires ObjectId, we'll need to either:
+      // 1. Create a dummy PaymentOrder with status 'free-consultation'
+      // 2. Modify schema to make paymentOrderId optional
+      // For now, let's use approach 1 - create a minimal payment order
+      
+      let paymentOrderId;
+      if (isFreeConsultation) {
+        // Create a special payment order for free consultation
+        const freeConsultationOrder = new db.PaymentOrder({
+          userId,
+          amount: 0,
+          currency: 'INR',
+          status: 'free_consultation', // Special status
+          paymentMethod: 'free_consultation',
+          items: [{
+            itemType,
+            itemId,
+            price: 0,
+            billingPeriod,
+            selectedFeatures: selectedFeatures
+          }]
+        });
+        await freeConsultationOrder.save();
+        paymentOrderId = freeConsultationOrder._id;
+      } else {
+        // For regular free services (legacy)
+        // Create a dummy payment order
+        const freeServiceOrder = new db.PaymentOrder({
+          userId,
+          amount: 0,
+          currency: 'INR',
+          status: 'free_service',
+          paymentMethod: 'free_service',
+          items: [{
+            itemType,
+            itemId,
+            price: 0,
+            billingPeriod,
+            selectedFeatures: selectedFeatures
+          }]
+        });
+        await freeServiceOrder.save();
+        paymentOrderId = freeServiceOrder._id;
+      }
+
       // Create a UserPurchase record
       const userPurchase = new db.UserPurchase({
         userId,
@@ -80,7 +148,7 @@ export const saveUserService = bigPromise(
         itemId,
         selectedFeatures,
         billingPeriod,
-        paymentOrderId: 'free-service', // For free services
+        paymentOrderId,
         status,
         // Add additional data
         specialRequirement,
@@ -89,9 +157,13 @@ export const saveUserService = bigPromise(
 
       await userPurchase.save();
 
+      const message = isFreeConsultation 
+        ? 'Your free consultation request has been submitted successfully. Our team will contact you soon.'
+        : 'Your service has been saved and will be processed soon';
+
       const response = sendSuccessApiResponse('Service saved successfully', { 
         purchase: userPurchase,
-        message: 'Your service has been saved and will be processed soon'
+        message
       });
       res.status(StatusCode.CREATED).send(response);
     } catch (error: any) {

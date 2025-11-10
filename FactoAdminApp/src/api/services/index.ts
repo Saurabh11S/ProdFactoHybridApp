@@ -71,7 +71,7 @@ export const SERVICES = {
   },
   DeleteService: async (id: string, cancel = false) => {
     const response = await api.request({
-      url: `admin/service/${id}`,
+      url: `/admin/service/${id}`,
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ` + localStorage.getItem('token'),

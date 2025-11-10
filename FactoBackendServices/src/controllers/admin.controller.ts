@@ -211,7 +211,12 @@ export const login = bigPromise(
     try {
       const { email, password } = req.body;
 
+      console.log('\n🔐 === ADMIN LOGIN ATTEMPT ===');
+      console.log('📅 Timestamp:', new Date().toISOString());
+      console.log('📧 Email:', email);
+
       if (!email || !password) {
+        console.log('❌ Missing email or password');
         return next(
           createCustomError(
             "Email and password are required",
@@ -221,30 +226,40 @@ export const login = bigPromise(
       }
 
       // Find user and explicitly select password
+      console.log('🔍 Searching for admin user...');
       const user = await db.User.findOne({ email, role: "admin" }).select(
         "+password"
       );
 
       if (!user) {
+        console.log('❌ Admin user not found for email:', email);
         return next(
           createCustomError("Invalid credentials", StatusCode.UNAUTH)
         );
       }
+
+      console.log('✅ Admin user found:', user._id);
+      console.log('🔐 Comparing passwords...');
 
       // Compare password
       const isPasswordValid = password == user.password;
 
       if (!isPasswordValid) {
+        console.log('❌ Password mismatch');
         return next(
           createCustomError("Invalid credentials", StatusCode.UNAUTH)
         );
       }
 
+      console.log('✅ Password verified successfully');
+
       // Update last login
+      console.log('📅 Updating last login time...');
       user.lastLogin = new Date();
       await user.save();
 
       // Create token
+      console.log('🎫 Creating JWT token...');
       const token = jwt.sign(
         { userId: user._id, email: user.email },
         process.env.JWT_SECRET || "your-secret-key",
@@ -254,6 +269,10 @@ export const login = bigPromise(
       // Remove password from response
       const userResponse = user.toObject();
       delete userResponse.password;
+
+      console.log('✅ Login successful!');
+      console.log('👤 User ID:', user._id);
+      console.log('🔐 === ADMIN LOGIN COMPLETE ===\n');
 
       const response = sendSuccessApiResponse("Login Successful!", {
         user: userResponse,

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { fetchSubServiceById, SubService } from '../api/services';
 
 type PageType = 'home' | 'services' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment';
 
@@ -7,48 +8,52 @@ interface PaymentPageProps {
   serviceId?: string;
 }
 
-export function PaymentPage({ onNavigate, serviceId = 'itr-1' }: PaymentPageProps) {
+export function PaymentPage({ onNavigate, serviceId }: PaymentPageProps) {
   const [paymentMethod, setPaymentMethod] = useState('upi');
   const [selectedPlan, setSelectedPlan] = useState('monthly');
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState<{code: string, discount: number} | null>(null);
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+  const [serviceDetails, setServiceDetails] = useState<SubService | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Service data based on serviceId
-  const getServiceDetails = (id: string) => {
-    const services: Record<string, { name: string; category: string; description: string; price: number; originalPrice: number }> = {
-      'itr-1': { name: 'ITR-1', category: 'Tax Services', description: 'Salaried + 1 House property Plan', price: 1499, originalPrice: 2499 },
-      'itr-2': { name: 'ITR-2', category: 'Tax Services', description: 'Salary + more than 1 House property, Capital gain', price: 1999, originalPrice: 2999 },
-      'itr-3': { name: 'ITR-3', category: 'Tax Services', description: 'Business income, Future & option, crypto income', price: 2499, originalPrice: 3999 },
-      'itr-4': { name: 'ITR-4', category: 'Tax Services', description: 'Business & income (Composition dealer)', price: 1499, originalPrice: 2499 },
-      'gstr-1-3b-monthly': { name: 'GSTR-1 & GSTR-3B (Monthly)', category: 'GST Services', description: 'Monthly GST return filing', price: 1500, originalPrice: 2500 },
-      'gstr-1-3b-quarterly': { name: 'GSTR-1/IFF & GSTR-3B (Quarterly)', category: 'GST Services', description: 'Quarterly GST return filing', price: 3000, originalPrice: 4500 },
-      'gst-registration': { name: 'GST Registration', category: 'GST Services', description: 'GST Registration service', price: 1999, originalPrice: 3999 },
-      'gst-composite-quarterly': { name: 'GST Compliance for Composite Dealer', category: 'GST Services', description: 'Composition dealer compliance', price: 1999, originalPrice: 2999 },
-      'lut-filing-annually': { name: 'LUT Filing (Annually)', category: 'GST Services', description: 'Letter of Undertaking filing', price: 1996, originalPrice: 2996 },
-      'tax-optimization-plan': { name: 'Tax Optimization Plan (Annual)', category: 'Consultancy Services', description: 'Tax Optimization Plan for Salaried Employees', price: 1100, originalPrice: 1500 },
-      'property-tax-optimization': { name: 'Property tax Optimization Plan (Annual)', category: 'Consultancy Services', description: 'Tax Saving and Optimization Plan Property and other', price: 1999, originalPrice: 2999 },
-      'gst-registration-service': { name: 'GST Registration', category: 'Registration Services', description: 'GST Registration service', price: 2999, originalPrice: 4999 },
-      'partnership-registration': { name: 'Partnership Registration', category: 'Registration Services', description: 'Partnership firm registration', price: 3999, originalPrice: 5999 },
-      'llp-registration': { name: 'LLP (Limited Liability Partnership)', category: 'Registration Services', description: 'LLP registration service', price: 4999, originalPrice: 7999 },
-      'company-registration': { name: 'Company Registration', category: 'Registration Services', description: 'Private limited company registration', price: 6999, originalPrice: 9999 },
-      'msme-registration-service': { name: 'MSME Registration', category: 'Registration Services', description: 'Udyam registration service', price: 1499, originalPrice: 2499 },
-      'startup-india-registration': { name: 'Startup India Registration', category: 'Registration Services', description: 'Startup India registration', price: 2999, originalPrice: 4999 },
-      'day-to-day-accounting': { name: 'Day-to-day Accounting', category: 'Outsourcing Services', description: 'Daily accounting services', price: 2499, originalPrice: 3999 },
-      'payroll-management': { name: 'Payroll Management', category: 'Outsourcing Services', description: 'Payroll management services', price: 1999, originalPrice: 2999 },
-      'finance-gst-compliance': { name: 'Finance Role & GST Compliance', category: 'Outsourcing Services', description: 'Complete finance and GST compliance', price: 3999, originalPrice: 5999 }
+  // Fetch service details from API
+  useEffect(() => {
+    const loadServiceDetails = async () => {
+      if (!serviceId) {
+        setError('Service ID is required');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const service = await fetchSubServiceById(serviceId);
+        setServiceDetails(service);
+      } catch (err: any) {
+        console.error('Error loading service details:', err);
+        setError('Failed to load service details. Please try again.');
+        setServiceDetails(null);
+      } finally {
+        setLoading(false);
+      }
     };
-    return services[id] || services['itr-1'];
-  };
 
-  const serviceDetails = getServiceDetails(serviceId);
+    loadServiceDetails();
+  }, [serviceId]);
+
+  // Get price from service details or default to 0
+  const basePrice = serviceDetails?.price || 0;
+  const originalPrice = serviceDetails?.pricingStructure?.[0]?.price || basePrice || 0;
 
   const pricingPlans = {
     monthly: {
-      price: serviceDetails.price,
-      originalPrice: serviceDetails.originalPrice,
-      duration: 'One-time',
-      features: [
+      price: basePrice,
+      originalPrice: originalPrice,
+      duration: serviceDetails?.period === 'one_time' ? 'One-time' : 'Monthly',
+      features: serviceDetails?.features || [
         'Complete service delivery',
         'Expert CA review',
         'Error-free processing',
@@ -58,8 +63,8 @@ export function PaymentPage({ onNavigate, serviceId = 'itr-1' }: PaymentPageProp
       ]
     },
     yearly: {
-      price: Math.round(serviceDetails.price * 1.5),
-      originalPrice: Math.round(serviceDetails.originalPrice * 1.5),
+      price: Math.round(basePrice * 1.5),
+      originalPrice: Math.round(originalPrice * 1.5),
       duration: 'Annual Package',
       features: [
         'Unlimited service access',
@@ -96,6 +101,34 @@ export function PaymentPage({ onNavigate, serviceId = 'itr-1' }: PaymentPageProp
   const discountAmount = appliedDiscount ? appliedDiscount.discount : 0;
   const taxes = Math.round((subtotal - discountAmount) * 0.18);
   const total = subtotal - discountAmount + taxes;
+
+  // Show loading or error state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 pt-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#007AFF]"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading service details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !serviceDetails) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 pt-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-lg mb-4">{error || 'Service not found'}</div>
+          <button 
+            onClick={() => onNavigate('services')}
+            className="bg-[#007AFF] text-white px-6 py-2 rounded-lg hover:bg-[#0056CC] transition-colors"
+          >
+            Back to Services
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const paymentMethods = [
     {
@@ -486,8 +519,8 @@ export function PaymentPage({ onNavigate, serviceId = 'itr-1' }: PaymentPageProp
                     <span className="text-[#007AFF] dark:text-blue-400 text-xl">📊</span>
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-medium text-gray-800 dark:text-white">{serviceDetails.name}</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{serviceDetails.category}</p>
+                    <h4 className="font-medium text-gray-800 dark:text-white">{serviceDetails.title}</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{serviceDetails.serviceId?.category || 'Service'}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{serviceDetails.description}</p>
                   </div>
                 </div>

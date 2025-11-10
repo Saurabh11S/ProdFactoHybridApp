@@ -4,6 +4,9 @@ import axios from 'axios';
 import SuccessPopup from './SuccessPopup';
 import { API_BASE_URL } from '../config/apiConfig';
 import { fetchSubServiceById, fetchAllSubServices, SubService } from '../api/services';
+import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
+import { Storage } from '../utils/storage';
 
 type PageType = 'home' | 'services' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
@@ -21,8 +24,20 @@ interface ServiceDetailsPageProps {
 //   one_time: 1
 // };
 
+interface UserPurchase {
+  _id: string;
+  itemId: string;
+  itemType: 'service' | 'course';
+  status: 'active' | 'expired' | 'cancelled';
+  paymentOrderId: string | {
+    _id: string;
+    status: string;
+    amount: number;
+  };
+}
+
 export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceDetailsPageProps) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, token } = useAuth();
   const [subService, setSubService] = useState<SubService | null>(null);
   const [loadingService, setLoadingService] = useState(true);
   const [serviceError, setServiceError] = useState<string | null>(null);
@@ -31,6 +46,8 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
   const [_showQuotationForm, setShowQuotationForm] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [isRequestingConsultation, setIsRequestingConsultation] = useState(false);
+  const [userPurchases, setUserPurchases] = useState<UserPurchase[]>([]);
   const [successPopup, setSuccessPopup] = useState({
     isOpen: false,
     title: '',
@@ -42,6 +59,70 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
   });
   const [showMobileConfigurator, setShowMobileConfigurator] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); // Add refresh key to force re-fetch
+
+  // Fetch user purchases (paymentOrderId is already populated by the API)
+  useEffect(() => {
+    const fetchUserPurchases = async () => {
+      if (!isAuthenticated || !user || !token) {
+        return;
+      }
+
+      try {
+        const purchasesResponse = await axios.get(`${API_BASE_URL}/user-purchases`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        setUserPurchases(purchasesResponse.data.data || []);
+      } catch (error) {
+        console.error('Error fetching user purchases:', error);
+        // Don't block the UI if this fails
+      }
+    };
+
+    fetchUserPurchases();
+  }, [isAuthenticated, user, token, refreshKey]);
+
+  // Check if service is already purchased (regardless of payment status)
+  const isServicePurchased = useMemo(() => {
+    if (!subService || !isAuthenticated || userPurchases.length === 0) {
+      return false;
+    }
+
+    const purchase = userPurchases.find(
+      p => p.itemId === subService._id && p.itemType === 'service' && p.status === 'active'
+    );
+
+    return !!purchase;
+  }, [subService, userPurchases, isAuthenticated]);
+
+  // Check if service is already paid
+  const isServicePaid = useMemo(() => {
+    if (!subService || !isAuthenticated || userPurchases.length === 0) {
+      return false;
+    }
+
+    const purchase = userPurchases.find(
+      p => p.itemId === subService._id && p.itemType === 'service' && p.status === 'active'
+    );
+
+    if (!purchase) {
+      return false;
+    }
+
+    // Check payment status (paymentOrderId is populated by the API)
+    const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
+      ? purchase.paymentOrderId
+      : null;
+
+    if (payment && typeof payment === 'object' && 'status' in payment) {
+      // Service is paid if status is 'completed'
+      return payment.status === 'completed';
+    }
+
+    return false;
+  }, [subService, userPurchases, isAuthenticated]);
 
   // Fetch sub-service details
   useEffect(() => {
@@ -363,6 +444,68 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     }
   };
 
+  // Handle Free Consultation Request
+  const handleFreeConsultation = async () => {
+    if (!isAuthenticated || !user || !subService) {
+      onNavigate('login');
+      return;
+    }
+
+    setIsRequestingConsultation(true);
+    setPaymentError(null);
+
+    try {
+      const authToken = await Storage.get('authToken');
+      
+      // Extract selected features from options
+      const selectedFeatures: string[] = [];
+      Object.entries(selectedRequestOptions).forEach(([key, value]) => {
+        if (value) {
+          if (Array.isArray(value)) {
+            selectedFeatures.push(...value);
+          } else {
+            selectedFeatures.push(value as string);
+          }
+        }
+      });
+      
+      const response = await axios.post(
+        `${API_BASE_URL}/user/save-service`,
+        {
+          itemType: 'service',
+          itemId: subService._id,
+          selectedFeatures,
+          billingPeriod: selectedPeriod,
+          isFreeConsultation: true
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      setSuccessPopup({
+        isOpen: true,
+        title: 'Free Consultation Requested!',
+        message: response.data.data?.message || 'Your free consultation request has been submitted successfully. Our team will contact you soon.',
+        serviceName: displayService.title,
+        purchaseId: response.data.data?.purchase?._id || 'N/A',
+        amount: 0,
+        currency: 'INR'
+      });
+
+      // Refresh user purchases to update the UI
+      setRefreshKey(prev => prev + 1);
+    } catch (error: any) {
+      console.error('Free consultation request failed:', error);
+      setPaymentError(error.response?.data?.message || 'Failed to request free consultation. Please try again.');
+    } finally {
+      setIsRequestingConsultation(false);
+    }
+  };
+
   // Handle payment
   const handlePayment = async () => {
     if (!isAuthenticated || !user || !subService) {
@@ -385,71 +528,90 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
         }]
       };
 
+      const authToken = await Storage.get('authToken');
       const paymentOrderResponse = await axios.post(`${API_BASE_URL}/payment/initiate-payment`, paymentOrderData, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
         }
       });
 
       const { orderId, amount, currency } = paymentOrderResponse.data.data;
       
-      // Load Razorpay script
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => {
-        const options = {
-          key: 'rzp_test_RH6v2Ap0TDGOmM',
-          amount: amount,
-          currency: currency,
-          name: 'Facto Services',
-          description: `Payment for ${displayService.title}`,
-          order_id: orderId,
-          handler: async function (response: any) {
-            try {
-              const verifyResponse = await axios.post(`${API_BASE_URL}/payment/verify-payment`, {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature
-              }, {
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                  'Content-Type': 'application/json'
-                }
-              });
+      if (Capacitor.isNativePlatform()) {
+        // Mobile: Open Razorpay in in-app browser
+        const paymentUrl = `https://razorpay.com/payment-button/pl_${orderId}`;
+        await Browser.open({ 
+          url: paymentUrl,
+          toolbarColor: '#007AFF'
+        });
+        
+        // Note: You may need to implement deep linking or polling to detect payment completion
+        // For now, we'll show a message to the user
+        setPaymentError('Payment opened in browser. Please complete the payment and return to the app.');
+        setIsProcessingPayment(false);
+      } else {
+        // Web: Use existing Razorpay script
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => {
+          const options = {
+            key: 'rzp_test_RH6v2Ap0TDGOmM',
+            amount: amount,
+            currency: currency,
+            name: 'Facto Services',
+            description: `Payment for ${displayService.title}`,
+            order_id: orderId,
+            handler: async function (response: any) {
+              try {
+                const token = await Storage.get('authToken');
+                const verifyResponse = await axios.post(`${API_BASE_URL}/payment/verify-payment`, {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature
+                }, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  }
+                });
 
-              setSuccessPopup({
-                isOpen: true,
-                title: 'Payment Successful!',
-                message: verifyResponse.data.data.message || 'Your service has been activated successfully',
-                serviceName: displayService.title,
-                purchaseId: verifyResponse.data.data.purchaseId || 'N/A',
-                amount: verifyResponse.data.data.amount || amount,
-                currency: currency
-              });
-              
-              setShowQuotationForm(false);
-            } catch (error) {
-              console.error('Payment verification failed:', error);
-              setPaymentError('Payment successful, but verification failed. Please contact support.');
+                setSuccessPopup({
+                  isOpen: true,
+                  title: 'Payment Successful!',
+                  message: verifyResponse.data.data.message || 'Your service has been activated successfully',
+                  serviceName: displayService.title,
+                  purchaseId: verifyResponse.data.data.purchaseId || 'N/A',
+                  amount: verifyResponse.data.data.amount || amount,
+                  currency: currency
+                });
+                
+                setShowQuotationForm(false);
+                
+                // Refresh user purchases to update the UI
+                setRefreshKey(prev => prev + 1);
+              } catch (error) {
+                console.error('Payment verification failed:', error);
+                setPaymentError('Payment successful, but verification failed. Please contact support.');
+              }
+            },
+            prefill: {
+              name: user.fullName || '',
+              email: user.email || '',
+              contact: user.phoneNumber || ''
+            },
+            modal: {
+              ondismiss: function() {
+                setIsProcessingPayment(false);
+              }
             }
-          },
-          prefill: {
-            name: user.fullName || '',
-            email: user.email || '',
-            contact: user.phoneNumber || ''
-          },
-          modal: {
-            ondismiss: function() {
-              setIsProcessingPayment(false);
-            }
-          }
+          };
+
+          const rzp = new (window as any).Razorpay(options);
+          rzp.open();
         };
-
-        const rzp = new (window as any).Razorpay(options);
-        rzp.open();
-      };
-      document.body.appendChild(script);
+        document.body.appendChild(script);
+      }
     } catch (error: any) {
       console.error('Payment initiation failed:', error);
       setPaymentError(error.response?.data?.message || 'Payment initiation failed. Please try again.');
@@ -540,26 +702,47 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0b1220] via-[#0f1729] to-[#121826] pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Breadcrumbs */}
-        <nav className="flex items-center space-x-2 text-sm mb-8 text-[#98a0ad]">
-          <button 
-            onClick={() => onNavigate('home')} 
-            className="hover:text-[#1287ff] transition-colors"
-          >
-            Home
-          </button>
-          <span>/</span>
-          <button 
-            onClick={() => onNavigate('services')} 
-            className="hover:text-[#1287ff] transition-colors"
-          >
-            Services
-          </button>
-          <span>/</span>
-          <span className="text-[#1287ff]">{category}</span>
-          <span>/</span>
-          <span className="text-white">{displayService.title}</span>
-        </nav>
+        {/* Mobile-Friendly Navigation */}
+        {Capacitor.isNativePlatform() || (typeof window !== 'undefined' && window.innerWidth < 768) ? (
+          <div className="mb-6">
+            <button
+              onClick={() => onNavigate('services')}
+              className="flex items-center gap-2 text-[#1287ff] mb-4 active:opacity-70 transition-opacity"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="font-medium">Back to Services</span>
+            </button>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="px-3 py-1 bg-[#1287ff]/20 text-[#1287ff] rounded-full text-xs font-medium">
+                {category}
+              </span>
+              <span className="text-[#98a0ad]">•</span>
+              <span className="text-white font-medium">{displayService.title}</span>
+            </div>
+          </div>
+        ) : (
+          <nav className="flex items-center space-x-2 text-sm mb-8 text-[#98a0ad]">
+            <button 
+              onClick={() => onNavigate('home')} 
+              className="hover:text-[#1287ff] transition-colors"
+            >
+              Home
+            </button>
+            <span>/</span>
+            <button 
+              onClick={() => onNavigate('services')} 
+              className="hover:text-[#1287ff] transition-colors"
+            >
+              Services
+            </button>
+            <span>/</span>
+            <span className="text-[#1287ff]">{category}</span>
+            <span>/</span>
+            <span className="text-white">{displayService.title}</span>
+          </nav>
+        )}
 
         {/* Main Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -601,34 +784,77 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
               </div>
 
               {/* Price Preview */}
-              <div className="flex items-center justify-between pt-6 border-t border-[rgba(255,255,255,0.1)]">
-                <div>
-                  <p className="text-[#98a0ad] text-sm mb-1">
-                    {subService && subService.pricingStructure && subService.pricingStructure.length > 0
-                      ? `Starting from (${selectedPeriod === 'one_time' ? 'One-Time' : selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1).replace('_', ' ')})`
-                      : 'Starting from'}
-                  </p>
-                  <p className="text-2xl font-bold text-white">
-                    {priceCalculation.total === 0 ? (
-                      <span className="px-3 py-1 bg-[#12d6b8]/20 text-[#12d6b8] rounded-full text-sm">Free</span>
-                    ) : (
-                      `₹${priceCalculation.total.toLocaleString('en-IN')}`
-                    )}
-                  </p>
+              <div className="pt-6 border-t border-[rgba(255,255,255,0.1)]">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                  <div>
+                    <p className="text-[#98a0ad] text-sm mb-1">
+                      {subService && subService.pricingStructure && subService.pricingStructure.length > 0
+                        ? `Starting from (${selectedPeriod === 'one_time' ? 'One-Time' : selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1).replace('_', ' ')})`
+                        : 'Starting from'}
+                    </p>
+                    <p className="text-2xl font-bold text-white">
+                      {priceCalculation.total === 0 ? (
+                        <span className="px-3 py-1 bg-[#12d6b8]/20 text-[#12d6b8] rounded-full text-sm">Free</span>
+                      ) : (
+                        `₹${priceCalculation.total.toLocaleString('en-IN')}`
+                      )}
+                    </p>
+                  </div>
+                  {!isServicePurchased && (
+                    <button
+                      onClick={handleGetQuotation}
+                      disabled={isProcessingPayment || !isAuthenticated}
+                      className="px-6 py-3 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    >
+                      {isProcessingPayment 
+                        ? 'Processing...' 
+                        : !isAuthenticated 
+                          ? 'Login to Pay and Activate' 
+                          : priceCalculation.needsQuotation 
+                            ? 'Pay and Activate — Request Quotation' 
+                            : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`}
+                    </button>
+                  )}
+                  {isServicePurchased && (
+                    <div className="px-6 py-3 bg-green-500/20 border-2 border-green-500/50 text-green-400 rounded-full font-semibold text-center whitespace-nowrap">
+                      ✓ Service Already Purchased
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={handleGetQuotation}
-                  disabled={isProcessingPayment || !isAuthenticated}
-                  className="px-6 py-3 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isProcessingPayment 
-                    ? 'Processing...' 
-                    : !isAuthenticated 
-                      ? 'Login to Pay and Activate' 
-                      : priceCalculation.needsQuotation 
-                        ? 'Pay and Activate — Request Quotation' 
-                        : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`}
-                </button>
+                
+                {/* Free Consultation Button - Hero Section */}
+                {!isServicePurchased && (
+                  <div className="mt-3 sm:mt-0 sm:flex sm:justify-end">
+                    <button
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          onNavigate('login');
+                        } else {
+                          handleFreeConsultation();
+                        }
+                      }}
+                      disabled={isRequestingConsultation || isProcessingPayment}
+                      className="w-full sm:w-auto px-6 py-3 bg-transparent border-2 border-[#12d6b8] text-[#12d6b8] rounded-full font-semibold hover:bg-[#12d6b8]/10 transition-all shadow-lg shadow-[#12d6b8]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isRequestingConsultation ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Requesting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          <span>{!isAuthenticated ? 'Login to Request Free Consultation' : 'Request Free Consultation'}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -684,7 +910,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                 {/* Billing Period Toggle - Only show periods configured by Admin */}
                 {subService && subService.pricingStructure && subService.pricingStructure.length > 0 && (
                   <div className="mb-6">
-                    <label className="block text-sm font-medium text-[#98a0ad] mb-3">
+                    <label className="block text-sm font-medium text-white mb-3">
                       Billing Period
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -697,7 +923,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                           <button
                             key={pricing.period}
                             onClick={() => setSelectedPeriod(pricing.period)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                            className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
                               selectedPeriod === pricing.period
                                 ? 'bg-[#1287ff] text-white shadow-lg shadow-[#1287ff]/20'
                                 : 'bg-[rgba(255,255,255,0.05)] text-[#98a0ad] hover:bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.1)]'
@@ -708,7 +934,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                         );
                       })}
                     </div>
-                    <p className="text-xs text-[#98a0ad] mt-2">
+                    <p className="text-xs text-[#98a0ad] mt-3">
                       Choose how often you'll be billed. Prices shown are per selected billing period.
                     </p>
                   </div>
@@ -828,9 +1054,9 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                                     name={request.name}
                                     checked={isSelected}
                                     onChange={() => handleOptionChange(request.name, option.name, request.isMultipleSelect || false)}
-                                    className="w-5 h-5 rounded border-2 border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff]"
+                                    className="w-5 h-5 min-w-[20px] rounded border-2 border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff] flex-shrink-0"
                                   />
-                                  <div className="flex-1 flex items-center justify-between">
+                                  <div className="flex-1 flex items-center justify-between min-w-0 ml-2">
                                     <div>
                                       <span className={`text-sm font-medium block ${isSelected ? 'text-white' : 'text-[#98a0ad]'}`}>
                                         {option.name}
@@ -867,9 +1093,9 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                               name={request.name}
                               checked={!!selectedRequestOptions[request.name]}
                               onChange={(e) => handleCheckboxToggle(request.name, e.target.checked)}
-                              className="w-5 h-5 rounded border-2 border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff]"
+                              className="w-5 h-5 min-w-[20px] rounded border-2 border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff] flex-shrink-0"
                             />
-                            <div className="flex-1 flex items-center justify-between">
+                            <div className="flex-1 flex items-center justify-between min-w-0 ml-2">
                               <div>
                                 <span className={`text-sm font-medium block ${selectedRequestOptions[request.name] ? 'text-white' : 'text-[#98a0ad]'}`}>
                                   {request.name}
@@ -906,14 +1132,14 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
 
                 {/* Price Breakdown */}
                 <div className="border-t border-[rgba(255,255,255,0.1)] pt-6">
-                  <h4 className="text-sm font-medium text-[#98a0ad] mb-4">Price Breakdown</h4>
-                  <div className="space-y-2 mb-4">
+                  <h4 className="text-sm font-semibold text-white mb-4">Price Breakdown</h4>
+                  <div className="space-y-2.5 mb-4">
                     {priceCalculation.breakdown.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between text-sm">
+                      <div key={index} className="flex items-center justify-between text-sm py-1">
                         <span className={item.type === 'base' ? 'text-white font-medium' : 'text-[#98a0ad]'}>
                           {item.label}
                         </span>
-                        <span className={item.type === 'base' ? 'text-white font-medium' : 'text-[#98a0ad]'}>
+                        <span className={item.type === 'base' ? 'text-white font-semibold' : 'text-[#98a0ad]'}>
                           ₹{item.amount.toLocaleString('en-IN')}
                         </span>
                       </div>
@@ -931,40 +1157,91 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                     </span>
                   </div>
                   {priceCalculation.modifiers > 0 && (
-                    <p className="text-xs text-[#12d6b8] mt-2 text-right">
+                    <p className="text-xs text-[#12d6b8] mt-3 text-right font-medium">
                       +₹{priceCalculation.modifiers.toLocaleString('en-IN')} from selected options
                     </p>
                   )}
                 </div>
 
-                {/* CTA Button */}
-                <button
-                  onClick={handleGetQuotation}
-                  disabled={isProcessingPayment || priceCalculation.total === 0 || !isAuthenticated}
-                  className="w-full mt-6 px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isProcessingPayment 
-                    ? 'Processing...' 
-                    : !isAuthenticated 
-                      ? 'Login to Pay and Activate' 
-                      : priceCalculation.needsQuotation 
-                        ? 'Pay and Activate — Request Quotation' 
-                        : priceCalculation.total === 0
-                          ? 'Get Started'
-                          : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
-                  }
-                </button>
+                {/* Action Buttons Section */}
+                <div className="mt-6 space-y-3">
+                  {/* Primary CTA Button */}
+                  {!isServicePurchased ? (
+                    <button
+                      onClick={handleGetQuotation}
+                      disabled={isProcessingPayment || priceCalculation.total === 0 || !isAuthenticated}
+                      className="w-full px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isProcessingPayment ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Processing...</span>
+                        </>
+                      ) : !isAuthenticated 
+                        ? 'Login to Pay and Activate' 
+                        : priceCalculation.needsQuotation 
+                          ? 'Pay and Activate — Request Quotation' 
+                          : priceCalculation.total === 0
+                            ? 'Get Started'
+                            : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
+                      }
+                    </button>
+                  ) : (
+                    <div className="w-full px-6 py-4 bg-green-500/20 border-2 border-green-500/50 text-green-400 rounded-full font-semibold text-center flex items-center justify-center gap-2">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span>Service Already Purchased</span>
+                    </div>
+                  )}
 
-                {priceCalculation.needsQuotation && (
-                  <p className="text-xs text-[#98a0ad] mt-3 text-center">
-                    Some selected options require a quotation. Please login to proceed.
-                  </p>
-                )}
-                {!isAuthenticated && (
-                  <p className="text-xs text-[#98a0ad] mt-3 text-center">
-                    Please login to pay and activate this service.
-                  </p>
-                )}
+                  {/* Info Messages */}
+                  {priceCalculation.needsQuotation && !isServicePurchased && (
+                    <p className="text-xs text-[#98a0ad] text-center">
+                      Some selected options require a quotation. Please login to proceed.
+                    </p>
+                  )}
+                  {!isAuthenticated && !isServicePurchased && (
+                    <p className="text-xs text-[#98a0ad] text-center">
+                      Please login to pay and activate this service.
+                    </p>
+                  )}
+
+                  {/* Free Consultation Button */}
+                  {!isServicePurchased && (
+                    <button
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          onNavigate('login');
+                        } else {
+                          handleFreeConsultation();
+                        }
+                      }}
+                      disabled={isRequestingConsultation || isProcessingPayment}
+                      className="w-full px-6 py-3 bg-transparent border-2 border-[#12d6b8] text-[#12d6b8] rounded-full font-semibold hover:bg-[#12d6b8]/10 transition-all shadow-lg shadow-[#12d6b8]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isRequestingConsultation ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Requesting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          <span>{!isAuthenticated ? 'Login to Request Free Consultation' : 'Request Free Consultation'}</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
 
                 {/* Secondary Actions */}
                 <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-[rgba(255,255,255,0.1)]">
@@ -1148,9 +1425,9 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                                   name={request.name}
                                   checked={isSelected}
                                   onChange={() => handleOptionChange(request.name, option.name, request.isMultipleSelect || false)}
-                                  className="w-5 h-5 rounded border-2 border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff]"
+                                  className="w-5 h-5 min-w-[20px] rounded border-2 border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff] flex-shrink-0"
                                 />
-                                <div className="flex-1 flex items-center justify-between">
+                                <div className="flex-1 flex items-center justify-between min-w-0 ml-2">
                                   <div>
                                     <span className={`text-sm font-medium block ${isSelected ? 'text-white' : 'text-[#98a0ad]'}`}>
                                       {option.name}
@@ -1187,9 +1464,9 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                             name={request.name}
                             checked={!!selectedRequestOptions[request.name]}
                             onChange={(e) => handleCheckboxToggle(request.name, e.target.checked)}
-                            className="w-5 h-5 rounded border-2 border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff]"
+                            className="w-5 h-5 min-w-[20px] rounded border-2 border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff] flex-shrink-0"
                           />
-                          <div className="flex-1 flex items-center justify-between">
+                          <div className="flex-1 flex items-center justify-between min-w-0 ml-2">
                             <div>
                               <span className={`text-sm font-medium block ${selectedRequestOptions[request.name] ? 'text-white' : 'text-[#98a0ad]'}`}>
                                 {request.name}
@@ -1237,26 +1514,77 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                 </div>
               </div>
 
-              {/* CTA Button */}
-              <button
-                onClick={() => {
-                  setShowMobileConfigurator(false);
-                  handleGetQuotation();
-                }}
-                disabled={isProcessingPayment || priceCalculation.total === 0 || !isAuthenticated}
-                className="w-full px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isProcessingPayment 
-                  ? 'Processing...' 
-                  : !isAuthenticated 
-                    ? 'Login to Pay and Activate' 
-                    : priceCalculation.needsQuotation 
-                      ? 'Pay and Activate — Request Quotation' 
-                      : priceCalculation.total === 0
-                        ? 'Get Started'
-                        : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
-                }
-              </button>
+              {/* Action Buttons Section - Mobile */}
+              <div className="mt-6 space-y-3">
+                {/* Primary CTA Button */}
+                {!isServicePurchased ? (
+                  <button
+                    onClick={() => {
+                      setShowMobileConfigurator(false);
+                      handleGetQuotation();
+                    }}
+                    disabled={isProcessingPayment || priceCalculation.total === 0 || !isAuthenticated}
+                    className="w-full px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isProcessingPayment ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Processing...</span>
+                      </>
+                    ) : !isAuthenticated 
+                      ? 'Login to Pay and Activate' 
+                      : priceCalculation.needsQuotation 
+                        ? 'Pay and Activate — Request Quotation' 
+                        : priceCalculation.total === 0
+                          ? 'Get Started'
+                          : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
+                    }
+                  </button>
+                ) : (
+                  <div className="w-full px-6 py-4 bg-green-500/20 border-2 border-green-500/50 text-green-400 rounded-full font-semibold text-center flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span>Service Already Purchased</span>
+                  </div>
+                )}
+
+                {/* Free Consultation Button - Mobile */}
+                {!isServicePurchased && (
+                  <button
+                    onClick={() => {
+                      setShowMobileConfigurator(false);
+                      if (!isAuthenticated) {
+                        onNavigate('login');
+                      } else {
+                        handleFreeConsultation();
+                      }
+                    }}
+                    disabled={isRequestingConsultation || isProcessingPayment}
+                    className="w-full px-6 py-3 bg-transparent border-2 border-[#12d6b8] text-[#12d6b8] rounded-full font-semibold hover:bg-[#12d6b8]/10 transition-all shadow-lg shadow-[#12d6b8]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isRequestingConsultation ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Requesting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        <span>{!isAuthenticated ? 'Login to Request Free Consultation' : 'Request Free Consultation'}</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}

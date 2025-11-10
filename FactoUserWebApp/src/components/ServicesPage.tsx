@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
-import { fetchAllSubServices, SubService } from '../api/services';
+import { fetchAllSubServices, fetchServices, SubService, Service } from '../api/services';
 import { API_BASE_URL } from '../config/apiConfig';
 
 type PageType = 'home' | 'services' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
@@ -28,32 +28,217 @@ export function ServicesPage({ onNavigate }: ServicesPageProps) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [userPurchases, setUserPurchases] = useState<UserPurchase[]>([]);
   const [services, setServices] = useState<SubService[]>([]);
+  const [mainServices, setMainServices] = useState<Service[]>([]);
   const [servicesLoading, setServicesLoading] = useState(true);
   const [_loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch services when component mounts
+  // Fetch both main services and sub-services when component mounts
   useEffect(() => {
-    const fetchServices = async () => {
+    const loadServices = async () => {
       try {
         setServicesLoading(true);
         setError(null);
-        console.log('Fetching services in ServicesPage...');
-        const data = await fetchAllSubServices();
-        console.log('Fetched services data:', data);
-        const activeServices = data.filter(service => service.isActive);
-        console.log('Active services:', activeServices);
-        setServices(activeServices);
-      } catch (err) {
-        console.error('Error fetching services:', err);
-        setError('Failed to load services');
+        console.log('🔄 [ServicesPage] Fetching services...');
+        
+        // Fetch both sub-services and main services in parallel
+        const [subServicesData, mainServicesData] = await Promise.all([
+          fetchAllSubServices().catch(err => {
+            console.error('❌ [ServicesPage] Error fetching sub-services:', err);
+            return [];
+          }),
+          fetchServices().catch(err => {
+            console.error('❌ [ServicesPage] Error fetching main services:', err);
+            return [];
+          })
+        ]);
+        
+        console.log('📊 [ServicesPage] Raw sub-services data length:', subServicesData.length);
+        console.log('📊 [ServicesPage] Raw main services data length:', mainServicesData.length);
+        
+        // Log the actual data structure
+        if (subServicesData.length > 0) {
+          console.log('📊 [ServicesPage] First sub-service sample:', JSON.stringify(subServicesData[0], null, 2));
+        }
+        if (mainServicesData.length > 0) {
+          console.log('📊 [ServicesPage] First main service sample:', JSON.stringify(mainServicesData[0], null, 2));
+        }
+        
+        // Log ALL sub-services with their serviceId details
+        console.log('📋 [ServicesPage] ALL fetched sub-services:', subServicesData.map(s => ({
+          _id: s._id,
+          title: s.title,
+          isActive: s.isActive,
+          serviceId: s.serviceId,
+          serviceIdType: typeof s.serviceId,
+          serviceIdCategory: typeof s.serviceId === 'object' && s.serviceId !== null 
+            ? (s.serviceId as any).category 
+            : 'N/A (not populated or string)',
+          serviceIdTitle: typeof s.serviceId === 'object' && s.serviceId !== null 
+            ? (s.serviceId as any).title 
+            : 'N/A (not populated or string)'
+        })));
+        
+        // Backend already filters by isActive, but double-check on frontend
+        const activeSubServices = subServicesData.filter(service => service.isActive !== false);
+        const activeMainServices = mainServicesData.filter(service => service.isActive !== false);
+        
+        console.log('✅ [ServicesPage] Active sub-services:', activeSubServices.length);
+        console.log('✅ [ServicesPage] Active main services:', activeMainServices.length);
+        
+        // Log which sub-services have properly populated serviceId
+        const subServicesWithPopulatedServiceId = activeSubServices.filter(s => 
+          typeof s.serviceId === 'object' && s.serviceId !== null
+        );
+        const subServicesWithStringServiceId = activeSubServices.filter(s => 
+          typeof s.serviceId === 'string'
+        );
+        const subServicesWithNullServiceId = activeSubServices.filter(s => 
+          !s.serviceId || s.serviceId === null
+        );
+        
+        console.log('📊 [ServicesPage] Sub-services breakdown:', {
+          total: activeSubServices.length,
+          withPopulatedServiceId: subServicesWithPopulatedServiceId.length,
+          withStringServiceId: subServicesWithStringServiceId.length,
+          withNullServiceId: subServicesWithNullServiceId.length
+        });
+        
+        if (subServicesWithNullServiceId.length > 0) {
+          console.warn('⚠️ [ServicesPage] Sub-services with null serviceId:', subServicesWithNullServiceId.map(s => s.title));
+        }
+        
+        // Helper function to extract category from serviceId (needs mainServices)
+        const getCategoryFromSubService = (sub: SubService): string => {
+          // First try: serviceId is populated as object
+          if (typeof sub.serviceId === 'object' && sub.serviceId !== null) {
+            const category = (sub.serviceId as any).category || (sub.serviceId as any).title || 'Unknown';
+            return category;
+          }
+          
+          // Second try: serviceId is a string ID - lookup in mainServices
+          if (typeof sub.serviceId === 'string') {
+            const mainService = activeMainServices.find(s => s._id === sub.serviceId);
+            if (mainService) {
+              return mainService.category || mainService.title || 'Unknown';
+            }
+          }
+          
+          // Third try: Match by serviceCode pattern (fallback)
+          if (sub.serviceCode) {
+            const serviceCodeUpper = sub.serviceCode.toUpperCase();
+            if (serviceCodeUpper.includes('GSTR') || serviceCodeUpper.includes('GST')) {
+              return 'GST';
+            }
+            if (serviceCodeUpper.includes('ITR')) {
+              return 'ITR';
+            }
+            if (serviceCodeUpper.includes('TAX') || serviceCodeUpper.includes('PLANNING')) {
+              return 'Tax Planning';
+            }
+            if (serviceCodeUpper.includes('REGISTRATION') || serviceCodeUpper.includes('REG')) {
+              return 'Registration';
+            }
+            if (serviceCodeUpper.includes('OUTSOURCE') || serviceCodeUpper.includes('BOOKKEEP')) {
+              return 'Outsourcing';
+            }
+          }
+          
+          // Fourth try: Match by title pattern (fallback)
+          if (sub.title) {
+            const titleUpper = sub.title.toUpperCase();
+            if (titleUpper.includes('GSTR') || titleUpper.includes('GST')) {
+              return 'GST';
+            }
+            if (titleUpper.includes('ITR')) {
+              return 'ITR';
+            }
+            if (titleUpper.includes('TAX PLANNING') || titleUpper.includes('TAX PLAN')) {
+              return 'Tax Planning';
+            }
+            if (titleUpper.includes('REGISTRATION') || titleUpper.includes('REGISTER')) {
+              return 'Registration';
+            }
+            if (titleUpper.includes('OUTSOURCE') || titleUpper.includes('BOOKKEEP')) {
+              return 'Outsourcing';
+            }
+          }
+          
+          console.warn('⚠️ [ServicesPage] Could not determine category for sub-service:', {
+            subServiceId: sub._id,
+            subServiceTitle: sub.title,
+            serviceCode: sub.serviceCode,
+            serviceId: sub.serviceId,
+            serviceIdType: typeof sub.serviceId
+          });
+          return 'Unknown';
+        };
+        
+        // Log category breakdown for debugging
+        const categoryBreakdown: { [key: string]: number } = {};
+        const gstSubServices: any[] = [];
+        const subServicesByCategory: { [key: string]: any[] } = {};
+        
+        activeSubServices.forEach(sub => {
+          const category = getCategoryFromSubService(sub);
+          categoryBreakdown[category] = (categoryBreakdown[category] || 0) + 1;
+          
+          if (!subServicesByCategory[category]) {
+            subServicesByCategory[category] = [];
+          }
+          subServicesByCategory[category].push({
+            _id: sub._id,
+            title: sub.title,
+            serviceId: sub.serviceId
+          });
+          
+          // Track GST sub-services specifically
+          if (category === 'GST' || category.toLowerCase() === 'gst') {
+            gstSubServices.push({
+              _id: sub._id,
+              title: sub.title,
+              serviceId: sub.serviceId,
+              category: category
+            });
+          }
+        });
+        
+        console.log('📋 [ServicesPage] Category breakdown:', JSON.stringify(categoryBreakdown, null, 2));
+        console.log('📋 [ServicesPage] Sub-services by category:', Object.keys(subServicesByCategory).map(cat => ({
+          category: cat,
+          count: subServicesByCategory[cat].length,
+          services: subServicesByCategory[cat].map((s: any) => s.title)
+        })));
+        console.log('📋 [ServicesPage] GST sub-services found:', gstSubServices.length);
+        if (gstSubServices.length > 0) {
+          console.log('📋 [ServicesPage] GST sub-services list:', JSON.stringify(gstSubServices, null, 2));
+        }
+        
+        // Log sub-services with missing serviceId
+        const subServicesWithMissingServiceId = activeSubServices.filter(sub => 
+          !sub.serviceId || (typeof sub.serviceId === 'object' && sub.serviceId === null)
+        );
+        if (subServicesWithMissingServiceId.length > 0) {
+          console.warn('⚠️ [ServicesPage] Sub-services with missing serviceId:', subServicesWithMissingServiceId.length);
+          console.warn('⚠️ [ServicesPage] Missing serviceId sub-services:', subServicesWithMissingServiceId.map(s => ({
+            _id: s._id,
+            title: s.title
+          })));
+        }
+        
+        setServices(activeSubServices);
+        setMainServices(activeMainServices);
+      } catch (err: any) {
+        console.error('❌ [ServicesPage] Error fetching services:', err);
+        setError(`Failed to load services: ${err?.message || 'Unknown error'}`);
         setServices([]);
+        setMainServices([]);
       } finally {
         setServicesLoading(false);
       }
     };
 
-    fetchServices();
+    loadServices();
   }, []);
 
   // Fetch user purchases when component mounts
@@ -104,29 +289,183 @@ export function ServicesPage({ onNavigate }: ServicesPageProps) {
   const mainCategories = ['ITR', 'GST', 'Tax Planning', 'Registration', 'Outsourcing'];
   const categoryMap = new Map<string, number>();
   
+  // Helper function to normalize category name for matching
+  const normalizeCategoryName = (name: string): string => {
+    return name.trim();
+  };
+  
+  // Helper function to extract category from serviceId (with fallback to serviceCode/title)
+  const getCategoryFromServiceId = (serviceId: any, service?: SubService): string => {
+    // First try: serviceId is populated as object
+    if (typeof serviceId === 'object' && serviceId !== null) {
+      let category = serviceId.category || serviceId.title || 'Other';
+      category = normalizeCategoryName(category);
+      
+      // Try to match with main categories (case-insensitive)
+      const matchedMainCategory = mainCategories.find(mc => 
+        mc.toLowerCase() === category.toLowerCase() || 
+        category.toLowerCase().includes(mc.toLowerCase()) ||
+        mc.toLowerCase().includes(category.toLowerCase())
+      );
+      
+      if (matchedMainCategory) {
+        return matchedMainCategory;
+      }
+      return category;
+    }
+    
+    // Second try: serviceId is a string ID - lookup in mainServices
+    if (typeof serviceId === 'string') {
+      const mainService = mainServices.find(s => s._id === serviceId);
+      if (mainService) {
+        let category = mainService.category || mainService.title || 'Other';
+        category = normalizeCategoryName(category);
+        
+        const matchedMainCategory = mainCategories.find(mc => 
+          mc.toLowerCase() === category.toLowerCase()
+        );
+        
+        return matchedMainCategory || category;
+      }
+    }
+    
+    // Third try: Fallback to serviceCode/title pattern matching (if service object provided)
+    if (service) {
+      if (service.serviceCode) {
+        const serviceCodeUpper = service.serviceCode.toUpperCase();
+        if (serviceCodeUpper.includes('GSTR') || serviceCodeUpper.includes('GST')) return 'GST';
+        if (serviceCodeUpper.includes('ITR')) return 'ITR';
+        if (serviceCodeUpper.includes('TAX') || serviceCodeUpper.includes('PLANNING')) return 'Tax Planning';
+        if (serviceCodeUpper.includes('REGISTRATION') || serviceCodeUpper.includes('REG')) return 'Registration';
+        if (serviceCodeUpper.includes('OUTSOURCE') || serviceCodeUpper.includes('BOOKKEEP')) return 'Outsourcing';
+      }
+      
+      if (service.title) {
+        const titleUpper = service.title.toUpperCase();
+        if (titleUpper.includes('GSTR') || titleUpper.includes('GST')) return 'GST';
+        if (titleUpper.includes('ITR')) return 'ITR';
+        if (titleUpper.includes('TAX PLANNING') || titleUpper.includes('TAX PLAN')) return 'Tax Planning';
+        if (titleUpper.includes('REGISTRATION') || titleUpper.includes('REGISTER')) return 'Registration';
+        if (titleUpper.includes('OUTSOURCE') || titleUpper.includes('BOOKKEEP')) return 'Outsourcing';
+      }
+    }
+    
+    if (!serviceId) {
+      console.warn('⚠️ [ServicesPage] getCategoryFromServiceId: serviceId is null/undefined', service ? { title: service.title, serviceCode: service.serviceCode } : '');
+    } else {
+      console.warn('⚠️ [ServicesPage] getCategoryFromServiceId: Could not determine category', { serviceId, service: service ? { title: service.title, serviceCode: service.serviceCode } : null });
+    }
+    return 'Other';
+  };
+  
+  // Count sub-services by category and log details
+  const categoryDetails: { [key: string]: any[] } = {};
   services.forEach(service => {
-    const category = service.serviceId?.category || 'Other';
+    const category = getCategoryFromServiceId(service.serviceId, service);
     categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
+    
+    // Store details for debugging
+    if (!categoryDetails[category]) {
+      categoryDetails[category] = [];
+    }
+    categoryDetails[category].push({
+      title: service.title,
+      serviceIdType: typeof service.serviceId,
+      serviceId: service.serviceId,
+      extractedCategory: category
+    });
   });
+  
+  // Debug: Log category mapping with details
+  console.log('📊 [ServicesPage] Category map:', Array.from(categoryMap.entries()).map(([cat, count]) => `${cat}: ${count}`).join(', '));
+  console.log('📊 [ServicesPage] Category details:', JSON.stringify(categoryDetails, null, 2));
+  
+  // Log main services for reference
+  console.log('📊 [ServicesPage] Main services available:', mainServices.map(s => ({
+    _id: s._id,
+    title: s.title,
+    category: s.category
+  })));
+  
+  // Only show sub-services, not main services
+  // Main services are just categories - users should see the actual sub-services
+  const combinedServices: SubService[] = [...services];
 
-  // Always show all main categories, even if they have 0 sub-services
-  // This ensures all filters are visible
+  // Show categories with their actual sub-service counts
+  // Only show categories that have sub-services (or show all with 0 count for visibility)
   const categories = [
-    { id: 'all', name: 'All Services', count: services.length },
+    { id: 'all', name: 'All Services', count: combinedServices.length },
     ...mainCategories.map(category => ({
       id: category.toLowerCase().replace(/\s+/g, '-'),
       name: category,
       count: categoryMap.get(category) || 0
     }))
   ];
+  
+  console.log('📊 [ServicesPage] Category counts:', categories.map(c => `${c.name}: ${c.count}`).join(', '));
 
-  // Filter sub-services based on selected category
+  // Helper function to normalize category for comparison
+  const normalizeCategory = (category: string): string => {
+    return category.toLowerCase().trim().replace(/\s+/g, '-');
+  };
+  
+  // Filter services based on selected category
   const filteredServices = selectedCategory === 'all' 
-    ? services 
-    : services.filter(service => {
-        const serviceCategory = service.serviceId?.category || '';
-        return serviceCategory.toLowerCase().replace(/\s+/g, '-') === selectedCategory;
+    ? combinedServices 
+    : combinedServices.filter(service => {
+        const serviceCategory = getCategoryFromServiceId(service.serviceId, service);
+        const normalizedServiceCategory = normalizeCategory(serviceCategory);
+        
+        // selectedCategory is already normalized (e.g., "gst", "tax-planning")
+        // So we just need to compare normalizedServiceCategory with selectedCategory
+        const matches = normalizedServiceCategory === selectedCategory;
+        
+        // Also check if the service category matches the main category name directly
+        // This handles cases where category might be "GST" but selectedCategory is "gst"
+        const mainCategoryMatch = mainCategories.some(mainCat => {
+          const normalizedMainCat = normalizeCategory(mainCat);
+          return normalizedMainCat === selectedCategory && 
+                 (normalizeCategory(serviceCategory) === normalizedMainCat ||
+                  serviceCategory.toLowerCase() === mainCat.toLowerCase());
+        });
+        
+        const finalMatch = matches || mainCategoryMatch;
+        
+        // Debug logging for GST filter
+        if (selectedCategory === 'gst') {
+          if (!finalMatch) {
+            console.log('🔍 [ServicesPage] GST filter - Service does not match:', {
+              serviceTitle: service.title,
+              serviceCategory: serviceCategory,
+              normalizedServiceCategory: normalizedServiceCategory,
+              selectedCategory: selectedCategory,
+              serviceId: service.serviceId,
+              matches: matches,
+              mainCategoryMatch: mainCategoryMatch
+            });
+          } else {
+            console.log('✅ [ServicesPage] GST filter - Service matches:', {
+              serviceTitle: service.title,
+              serviceCategory: serviceCategory
+            });
+          }
+        }
+        
+        return finalMatch;
       });
+  
+  // Debug logging for filtered services
+  if (selectedCategory === 'gst') {
+    console.log('📊 [ServicesPage] GST filter results:', {
+      selectedCategory: selectedCategory,
+      totalServices: combinedServices.length,
+      filteredCount: filteredServices.length,
+      filteredServices: filteredServices.map(s => ({
+        title: s.title,
+        category: getCategoryFromServiceId(s.serviceId)
+      }))
+    });
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 pt-16">
@@ -251,7 +590,11 @@ export function ServicesPage({ onNavigate }: ServicesPageProps) {
                       {service.period}
                     </div>
                     <div className="flex items-center">
-                      <span className="text-[#007AFF] font-bold">₹{service.price}</span>
+                      {service.price > 0 ? (
+                        <span className="text-[#007AFF] font-bold">₹{service.price}</span>
+                      ) : (
+                        <span className="text-gray-500 dark:text-gray-400 text-xs">Contact for pricing</span>
+                      )}
                     </div>
                   </div>
 

@@ -129,7 +129,7 @@ export function RecentQuery({ isOpen, onClose, query,fetchData }: RecentQueryPro
               Cancel
             </Button>
             <Button
-              typeof="submit"
+              type="submit"
               className="w-full mx-1 text-white hover:bg-[#3449b4]"
               disabled={loading}
             >

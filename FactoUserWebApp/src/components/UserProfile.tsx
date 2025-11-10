@@ -490,6 +490,10 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
         return { status: 'Failed', color: 'red' };
       case 'refunded':
         return { status: 'Refunded', color: 'blue' };
+      case 'free_consultation':
+        return { status: 'Free Consultation', color: 'blue' };
+      case 'free_service':
+        return { status: 'Free Service', color: 'blue' };
       default:
         return { status: 'Unknown', color: 'gray' };
     }
@@ -915,9 +919,21 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-600 dark:text-gray-400">Price:</span>
                               <span className="font-medium text-[#1F2937] dark:text-white">
-                                {typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId?.amount 
-                                  ? `₹${purchase.paymentOrderId.amount.toLocaleString('en-IN')}` 
-                                  : serviceData.price}
+                                {(() => {
+                                  const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
+                                    ? purchase.paymentOrderId
+                                    : paymentOrders.find(p => p._id === purchase.paymentOrderId);
+                                  
+                                  if (payment && typeof payment === 'object' && 'status' in payment) {
+                                    if (payment.status === 'free_consultation' || payment.status === 'free_service') {
+                                      return 'Free';
+                                    }
+                                    if (payment.amount !== undefined && payment.amount > 0) {
+                                      return `₹${payment.amount.toLocaleString('en-IN')}`;
+                                    }
+                                  }
+                                  return serviceData.price;
+                                })()}
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">

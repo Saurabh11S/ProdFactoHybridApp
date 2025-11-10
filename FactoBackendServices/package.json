@@ -13,6 +13,13 @@
     "build-ts:prod": "node --max-old-space-size=2048 node_modules/typescript/bin/tsc -p tsconfig.release.json || npm run copy:prod",
     "copy:prod": "cp package.json ./dist/ && cp pm2.config.prod.json ./dist/pm2.config.json 2>/dev/null || true",
     "start:production-dummy": "set NODE_ENV=prod&& ts-node-dev --respawn --transpile-only ./src/server.ts",
+    "seed:courses": "ts-node -r tsconfig-paths/register ./src/scripts/seedCourses.ts",
+    "add:manual-courses": "ts-node -r tsconfig-paths/register ./src/scripts/addManualCourses.ts",
+    "create:admin": "ts-node -r tsconfig-paths/register ./src/scripts/createAdminUser.ts",
+    "verify:courses": "ts-node -r tsconfig-paths/register ./src/scripts/verifyCourses.ts",
+    "seed:blogs": "ts-node -r tsconfig-paths/register ./src/scripts/seedBlogs.ts",
+    "seed:services": "ts-node -r tsconfig-paths/register ./src/scripts/seedMainServices.ts",
+    "verify:db": "node verify-database-connection.js",
     "lint": "eslint \"src/**/*.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" --fix"
   },

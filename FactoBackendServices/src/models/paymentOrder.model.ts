@@ -20,7 +20,7 @@ const PaymentOrderSchema = new mongoose.Schema<IPaymentOrder, PaymentOrderModel>
     },
     status: {
       type: String,
-      enum: ["pending", "completed", "failed", "refunded"],
+      enum: ["pending", "completed", "failed", "refunded", "free_consultation", "free_service"],
       default: "pending",
     },
     paymentMethod: {

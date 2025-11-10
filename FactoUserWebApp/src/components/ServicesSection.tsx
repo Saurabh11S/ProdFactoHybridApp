@@ -87,14 +87,23 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
 
-  // Fetch main service categories from database
+  // Fetch main service categories from database with retry logic
   useEffect(() => {
-    const loadServices = async () => {
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1 second
+    let isMounted = true;
+
+    const loadServices = async (attempt: number = 1) => {
       try {
-        setLoading(true);
-        setError(null);
-        console.log('🔄 Loading services for Professional Services Section...');
+        if (isMounted) {
+          setLoading(true);
+          setError(null);
+        }
+        console.log(`🔄 Loading services (attempt ${attempt}/${maxRetries})...`);
         const data = await fetchServices();
+        
+        if (!isMounted) return;
+        
         console.log('✅ Fetched services data:', data);
         console.log('📊 Total services received:', data.length);
         
@@ -110,9 +119,34 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
           featuresCount: s.features?.length || 0
         })));
         
-        // Sort by title alphabetically for consistent display
-        activeServices.sort((a, b) => a.title.localeCompare(b.title));
-        setServices(activeServices);
+        // Expected main service categories: ITR, GST, Tax Planning, Registration, Outsourcing
+        // Filter to show only these main categories if they exist
+        const mainCategories = ['ITR', 'GST', 'Tax Planning', 'Registration', 'Outsourcing'];
+        const mainServices = activeServices.filter(service => 
+          mainCategories.includes(service.title) || mainCategories.includes(service.category)
+        );
+        
+        // If we have main services, use those; otherwise use all active services
+        const servicesToDisplay = mainServices.length > 0 ? mainServices : activeServices;
+        console.log('📋 Services to display:', servicesToDisplay.length, servicesToDisplay.map(s => s.title));
+        
+        // Sort by predefined order (main categories first), then alphabetically
+        const categoryOrder: { [key: string]: number } = {
+          'ITR': 1,
+          'GST': 2,
+          'Tax Planning': 3,
+          'Registration': 4,
+          'Outsourcing': 5
+        };
+        
+        servicesToDisplay.sort((a, b) => {
+          const orderA = categoryOrder[a.title] || categoryOrder[a.category] || 999;
+          const orderB = categoryOrder[b.title] || categoryOrder[b.category] || 999;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.title.localeCompare(b.title);
+        });
+        
+        setServices(servicesToDisplay);
         
         if (activeServices.length === 0) {
           console.warn('⚠️ No active services found in database');
@@ -123,9 +157,25 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
             setError(`Found ${data.length} service(s), but none are active. Please activate services in Admin App.`);
           }
         }
+        setLoading(false);
       } catch (err: any) {
-        console.error('❌ Error fetching services:', err);
+        if (!isMounted) return;
+        
+        console.error(`❌ Error fetching services (attempt ${attempt}):`, err);
         const errorMessage = err?.response?.data?.message || err?.message || 'Failed to load services';
+        const isNetworkError = !err?.response || err?.code === 'NETWORK_ERROR' || err?.message?.includes('Network');
+        
+        // Retry on network errors
+        if (isNetworkError && attempt < maxRetries) {
+          console.log(`⏳ Retrying in ${retryDelay * attempt}ms...`);
+          setTimeout(() => {
+            if (isMounted) {
+              loadServices(attempt + 1);
+            }
+          }, retryDelay * attempt); // Exponential backoff
+          return;
+        }
+        
         console.error('Error details:', {
           message: errorMessage,
           status: err?.response?.status,
@@ -133,12 +183,15 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
         });
         setError(`Failed to load services: ${errorMessage}. Please check your API connection.`);
         setServices([]);
-      } finally {
         setLoading(false);
       }
     };
 
     loadServices();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
 
@@ -235,8 +288,13 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
               <p className="text-red-600 dark:text-red-300 text-sm mb-6">{error}</p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button 
-                  onClick={() => window.location.reload()}
-                  className="bg-[#007AFF] text-white px-6 py-2 rounded-lg hover:bg-[#0056CC] transition-colors"
+                  onClick={() => {
+                    setLoading(true);
+                    setError(null);
+                    // Trigger reload by updating a dependency
+                    window.location.reload();
+                  }}
+                  className="bg-[#007AFF] text-white px-6 py-3 rounded-lg hover:bg-[#0056CC] transition-colors min-h-[44px] touch-manipulation"
                 >
                   Try Again
                 </button>

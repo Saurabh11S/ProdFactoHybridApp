@@ -12,7 +12,7 @@ export interface IPaymentOrder extends Document {
   userId: mongoose.Types.ObjectId;
   amount: number;
   currency: string;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  status: 'pending' | 'completed' | 'failed' | 'refunded' | 'free_consultation' | 'free_service';
   paymentMethod: string;
   transactionId?: string;
   items: IPaymentOrderItem[];

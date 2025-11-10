@@ -46,7 +46,7 @@ export const USERS = {
   GetById: async (id:string, cancel = false) => {
     console.log(id);
     const response = await api.request({
-      url: `admin/users/${id}`,
+      url: `/admin/users/${id}`,
       method: 'GET',
       headers: {
         Authorization: `Bearer ` + localStorage.getItem('token'),

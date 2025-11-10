@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { fetchBlogs, Blog } from '../api/blogs';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
@@ -10,73 +11,73 @@ interface NewsSectionProps {
 export function NewsSection({ onNavigate }: NewsSectionProps) {
   const [visibleArticles, setVisibleArticles] = useState<number[]>([]);
   const [isVisible, setIsVisible] = useState(false);
+  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
 
-  const newsArticles = [
-    {
-      title: 'New Tax Slab Changes for FY 2024-25: What You Need to Know',
-      excerpt: 'The government has announced significant changes to income tax slabs. Learn how these changes will affect your tax liability and savings.',
-      image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=250&fit=crop',
-      category: 'Tax Updates',
-      readTime: '5 min read',
-      publishDate: '2 days ago',
-      author: 'CA Rajesh Kumar',
-      trending: true
-    },
-    {
-      title: 'GST Return Filing: Common Mistakes to Avoid in 2024',
-      excerpt: 'Avoid costly errors in your GST filings with these expert tips. A comprehensive guide to error-free GST compliance.',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=250&fit=crop',
-      category: 'GST',
-      readTime: '7 min read',
-      publishDate: '3 days ago',
-      author: 'CA Priya Sharma',
-      trending: false
-    },
-    {
-      title: 'MSME Registration Benefits: Complete Guide for Small Businesses',
-      excerpt: 'Discover the advantages of MSME registration and how it can help your small business grow with government support and subsidies.',
-      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=250&fit=crop',
-      category: 'Business',
-      readTime: '6 min read',
-      publishDate: '5 days ago',
-      author: 'CA Vikram Singh',
-      trending: true
-    },
-    {
-      title: 'Digital Gold vs Physical Gold: Tax Implications Explained',
-      excerpt: 'Compare the tax treatment of digital and physical gold investments. Make informed decisions for your investment portfolio.',
-      image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop',
-      category: 'Investment',
-      readTime: '8 min read',
-      publishDate: '1 week ago',
-      author: 'CA Anita Patel',
-      trending: false
-    },
-    {
-      title: 'Budget 2024: Key Highlights for Individual Taxpayers',
-      excerpt: 'A detailed analysis of Budget 2024 provisions affecting individual taxpayers, including new exemptions and deductions.',
-      image: 'https://images.unsplash.com/photo-1579621970795-87facc2f976d?w=400&h=250&fit=crop',
-      category: 'Policy',
-      readTime: '10 min read',
-      publishDate: '1 week ago',
-      author: 'CA Rohit Shah',
-      trending: true
-    },
-    {
-      title: 'Cryptocurrency Taxation in India: Latest Updates and Guidelines',
-      excerpt: 'Stay updated with the latest cryptocurrency taxation rules in India. Understand your compliance obligations and tax liabilities.',
-      image: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=400&h=250&fit=crop',
-      category: 'Crypto',
-      readTime: '9 min read',
-      publishDate: '2 weeks ago',
-      author: 'CA Meera Reddy',
-      trending: false
-    }
-  ];
+  // Fetch blogs from backend
+  useEffect(() => {
+    const loadBlogs = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log('🔄 Fetching blogs for NewsSection...');
+        const { blogs: fetchedBlogs } = await fetchBlogs(1, 50); // Fetch up to 50 blogs (same as Updates page)
+        console.log('✅ Fetched blogs:', fetchedBlogs.length);
+        setBlogs(fetchedBlogs);
+      } catch (err: any) {
+        console.error('❌ Error fetching blogs:', err);
+        setError('Failed to load latest updates');
+        setBlogs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBlogs();
+  }, []);
+
+  // Convert blogs to news articles format
+  const newsArticles = blogs.map((blog) => {
+    const publishDate = new Date(blog.createdAt);
+    const daysAgo = Math.floor((Date.now() - publishDate.getTime()) / (1000 * 60 * 60 * 24));
+    let publishDateText = '';
+    if (daysAgo === 0) publishDateText = 'Today';
+    else if (daysAgo === 1) publishDateText = '1 day ago';
+    else if (daysAgo < 7) publishDateText = `${daysAgo} days ago`;
+    else if (daysAgo < 30) publishDateText = `${Math.floor(daysAgo / 7)} weeks ago`;
+    else publishDateText = `${Math.floor(daysAgo / 30)} months ago`;
+
+    // Estimate read time based on content length
+    const wordsPerMinute = 200;
+    const wordCount = blog.content.split(/\s+/).length;
+    const readTime = Math.ceil(wordCount / wordsPerMinute);
+
+    // Get category from tags or default
+    const category = blog.tags && blog.tags.length > 0 ? blog.tags[0] : 'Updates';
+
+    return {
+      id: blog._id,
+      title: blog.title,
+      excerpt: blog.content.length > 150 ? blog.content.substring(0, 150) + '...' : blog.content,
+      image: blog.contentType === 'image' ? blog.contentUrl : 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=250&fit=crop',
+      category: category,
+      readTime: `${readTime} min read`,
+      publishDate: publishDateText,
+      author: blog.author || 'Facto Team',
+      trending: daysAgo < 3, // Trending if published in last 3 days
+      blog: blog // Keep reference to original blog
+    };
+  });
+
+  // Use blogs if available, otherwise show loading or empty state
+  const displayArticles = newsArticles.length > 0 ? newsArticles : [];
 
   // Intersection Observer for animations
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -103,18 +104,36 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
       { threshold: 0.1 }
     );
 
-    const articleCards = sectionRef.current?.querySelectorAll('[data-index]');
-    articleCards?.forEach(card => observer.observe(card));
+    // Use setTimeout to ensure DOM is ready after articles are rendered
+    timeoutId = setTimeout(() => {
+      const articleCards = sectionRef.current?.querySelectorAll('[data-index]');
+      if (articleCards && articleCards.length > 0) {
+        articleCards.forEach(card => observer.observe(card));
+        // Immediately show cards that are already in viewport
+        articleCards.forEach((card, index) => {
+          const rect = card.getBoundingClientRect();
+          if (rect.top < window.innerHeight && rect.bottom > 0) {
+            setVisibleArticles(prev => [...new Set([...prev, index])]);
+          }
+        });
+      }
+    }, 100);
 
     if (sectionRef.current) {
       sectionObserver.observe(sectionRef.current);
+      // Immediately show section if already in viewport
+      const rect = sectionRef.current.getBoundingClientRect();
+      if (rect.top < window.innerHeight && rect.bottom > 0) {
+        setIsVisible(true);
+      }
     }
 
     return () => {
+      if (timeoutId) clearTimeout(timeoutId);
       observer.disconnect();
       sectionObserver.disconnect();
     };
-  }, []);
+  }, [displayArticles.length]);
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -150,78 +169,37 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
           </p>
         </div>
 
-        {/* Featured Article */}
-        <div className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden mb-12 hover:shadow-2xl transition-all duration-500 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'} hover:-translate-y-2 delay-200`}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-            <div className="relative">
-              <ImageWithFallback
-                src={newsArticles[0].image}
-                alt={newsArticles[0].title}
-                className="w-full h-64 lg:h-full object-cover"
-              />
-              <div className="absolute top-4 left-4">
-                <span className="bg-[#FFD166] dark:bg-yellow-500 text-[#1F2937] dark:text-gray-800 px-3 py-1 rounded-full text-sm font-bold backdrop-blur-lg animate-pulse">
-                  🔥 Trending
-                </span>
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-            </div>
-            <div className="p-8 lg:p-12 flex flex-col justify-center">
-              <div className="flex items-center space-x-4 mb-4">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium backdrop-blur-lg ${getCategoryColor(newsArticles[0].category)}`}>
-                  {newsArticles[0].category}
-                </span>
-                <span className="text-gray-500 dark:text-gray-400 text-sm">{newsArticles[0].publishDate}</span>
-              </div>
-              <h3 className="text-2xl lg:text-3xl font-bold text-[#1F2937] dark:text-white mb-4 hover:text-[#007AFF] dark:hover:text-blue-400 transition-colors cursor-pointer">
-                {newsArticles[0].title}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 text-lg mb-6 leading-relaxed">
-                {newsArticles[0].excerpt}
-              </p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-[#007AFF] to-[#0056CC] rounded-full flex items-center justify-center shadow-lg">
-                    <span className="text-white font-medium text-sm">
-                      {newsArticles[0].author.split(' ').map(n => n[0]).join('')}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-[#1F2937] dark:text-white">{newsArticles[0].author}</p>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">{newsArticles[0].readTime}</p>
-                  </div>
+        {/* News Grid - Show all articles in grid format (same as Updates page) */}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden animate-pulse">
+                <div className="h-48 bg-gray-200 dark:bg-gray-700"></div>
+                <div className="p-6 space-y-4">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
                 </div>
-                <button 
-                  onClick={() => onNavigate('updates')}
-                  className="group bg-gradient-to-r from-[#007AFF] to-[#0056CC] text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:scale-105"
-                >
-                  <span className="flex items-center">
-                    Read Full Article
-                    <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </span>
-                </button>
               </div>
-            </div>
+            ))}
           </div>
-        </div>
-
-        {/* News Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {newsArticles.slice(1).map((article, index) => (
-            <div
-              key={index}
-              data-index={index + 1}
-              className={`group bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-2xl transition-all duration-500 cursor-pointer transform ${
-                visibleArticles.includes(index + 1) 
-                  ? 'translate-y-0 opacity-100' 
-                  : 'translate-y-10 opacity-0'
-              } hover:-translate-y-2 hover:scale-105`}
-              style={{ 
-                transitionDelay: visibleArticles.includes(index + 1) ? `${(index + 1) * 150}ms` : '0ms' 
-              }}
-            >
+        ) : displayArticles.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {/* Show all articles in grid format (matching Updates page) */}
+            {displayArticles.map((article, index) => (
+              <div
+                key={article.id}
+                data-index={index}
+                onClick={() => onNavigate('updates')}
+                className={`group bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-2xl transition-all duration-500 cursor-pointer transform ${
+                  visibleArticles.includes(index) 
+                    ? 'translate-y-0 opacity-100' 
+                    : 'translate-y-10 opacity-0'
+                } hover:-translate-y-2 hover:scale-105`}
+                style={{ 
+                  transitionDelay: visibleArticles.includes(index) ? `${index * 150}ms` : '0ms' 
+                }}
+              >
               {/* Article Image */}
               <div className="relative overflow-hidden">
                 <ImageWithFallback
@@ -280,7 +258,12 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        ) : displayArticles.length === 0 && !loading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600 dark:text-gray-400">No updates available at the moment. Check back soon!</p>
+          </div>
+        ) : null}
 
         {/* Newsletter Subscription */}
         <div className={`bg-gradient-to-r from-[#007AFF] to-[#0056CC] dark:from-blue-600 dark:to-blue-800 rounded-3xl p-8 lg:p-12 text-center text-white relative overflow-hidden transform transition-all duration-1000 delay-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>

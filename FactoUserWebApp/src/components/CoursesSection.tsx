@@ -11,31 +11,60 @@ interface CoursesSectionProps {
 export function CoursesSection({ onNavigate }: CoursesSectionProps) {
   const [progressValues, setProgressValues] = useState<number[]>([0, 0, 0, 0]);
   const [visibleCourses, setVisibleCourses] = useState<number[]>([]);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true); // Start as true so header is always visible
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
 
-  // Fetch courses on component mount
+  // Fetch courses on component mount with retry logic
   useEffect(() => {
-    const loadCourses = async () => {
+    const maxRetries = 3;
+    const retryDelay = 1000;
+    let isMounted = true;
+
+    const loadCourses = async (attempt: number = 1) => {
       try {
-        setLoading(true);
-        setError(null);
+        if (isMounted) {
+          setLoading(true);
+          setError(null);
+        }
+        console.log('🔄 Fetching courses...');
         const data = await fetchCourses();
-        // Only show first 4 courses for the home page
-        setCourses(data.slice(0, 4));
-      } catch (err) {
+        console.log('✅ Fetched courses:', data.length, data);
+        if (!isMounted) return;
+        
+        // Filter only published courses and show first 4 for the home page
+        const publishedCourses = data.filter(course => course.status === 'published');
+        console.log('✅ Published courses:', publishedCourses.length);
+        setCourses(publishedCourses.slice(0, 4));
+        setLoading(false);
+      } catch (err: any) {
+        if (!isMounted) return;
+        const isNetworkError = !err?.response || err?.code === 'NETWORK_ERROR' || err?.message?.includes('Network');
+        
+        // Retry on network errors
+        if (isNetworkError && attempt < maxRetries) {
+          setTimeout(() => {
+            if (isMounted) {
+              loadCourses(attempt + 1);
+            }
+          }, retryDelay * attempt);
+          return;
+        }
+        
         console.error('Error fetching courses:', err);
         setError('Failed to load courses');
         setCourses([]);
-      } finally {
         setLoading(false);
       }
     };
 
     loadCourses();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Intersection Observer for animations
@@ -66,18 +95,36 @@ export function CoursesSection({ onNavigate }: CoursesSectionProps) {
       { threshold: 0.1 }
     );
 
-    const courseCards = sectionRef.current?.querySelectorAll('[data-index]');
-    courseCards?.forEach(card => observer.observe(card));
+    // Use setTimeout to ensure DOM is ready after courses are rendered
+    const timeoutId = setTimeout(() => {
+      const courseCards = sectionRef.current?.querySelectorAll('[data-index]');
+      if (courseCards && courseCards.length > 0) {
+        courseCards.forEach(card => observer.observe(card));
+        // Immediately show cards that are already in viewport
+        courseCards.forEach((card, index) => {
+          const rect = card.getBoundingClientRect();
+          if (rect.top < window.innerHeight && rect.bottom > 0) {
+            setVisibleCourses(prev => [...new Set([...prev, index])]);
+          }
+        });
+      }
 
-    if (sectionRef.current) {
-      sectionObserver.observe(sectionRef.current);
-    }
+      if (sectionRef.current) {
+        sectionObserver.observe(sectionRef.current);
+        // Immediately show header if section is already in viewport
+        const rect = sectionRef.current.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+          setIsVisible(true);
+        }
+      }
+    }, 100);
 
     return () => {
+      clearTimeout(timeoutId);
       observer.disconnect();
       sectionObserver.disconnect();
     };
-  }, []);
+  }, [courses.length]);
 
   // Animate progress bars on component mount
   useEffect(() => {
@@ -138,8 +185,8 @@ export function CoursesSection({ onNavigate }: CoursesSectionProps) {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Section Header */}
-        <div className={`text-center mb-16 transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+        {/* Section Header - Always visible */}
+        <div className="text-center mb-16">
           <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-[#007AFF]/10 to-[#00C897]/10 dark:from-[#007AFF]/20 dark:to-[#00C897]/20 rounded-full text-sm font-medium text-[#007AFF] dark:text-blue-400 mb-4 backdrop-blur-lg border border-[#007AFF]/20 dark:border-blue-400/20">
             📚 Learn & Grow
           </div>
@@ -178,6 +225,16 @@ export function CoursesSection({ onNavigate }: CoursesSectionProps) {
               Try Again
             </button>
           </div>
+        ) : courses.length === 0 ? (
+          <div className={`text-center py-12 transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+            <div className="text-gray-500 dark:text-gray-400 text-lg mb-4">No courses available at the moment</div>
+            <button 
+              onClick={() => onNavigate('learning')}
+              className="bg-[#007AFF] text-white px-6 py-2 rounded-lg hover:bg-[#0056CC] transition-colors"
+            >
+              Browse All Courses
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {courses.map((course, index) => {
@@ -189,12 +246,12 @@ export function CoursesSection({ onNavigate }: CoursesSectionProps) {
                   key={course._id}
                   data-index={index}
                   className={`group bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-2xl transition-all duration-500 transform ${
-                    visibleCourses.includes(index) 
+                    visibleCourses.includes(index) || visibleCourses.length === 0
                       ? 'translate-y-0 opacity-100' 
                       : 'translate-y-10 opacity-0'
                   } hover:-translate-y-2 hover:scale-105`}
                   style={{ 
-                    transitionDelay: visibleCourses.includes(index) ? `${index * 150}ms` : '0ms' 
+                    transitionDelay: (visibleCourses.includes(index) || visibleCourses.length === 0) ? `${index * 150}ms` : '0ms' 
                   }}
                 >
                   {/* Course Thumbnail */}
@@ -305,28 +362,8 @@ export function CoursesSection({ onNavigate }: CoursesSectionProps) {
           </div>
         )}
 
-        {/* Course Categories */}
-        <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 transform transition-all duration-1000 delay-300 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-          {[
-            { name: 'Tax Planning', count: 12, icon: '📊' },
-            { name: 'GST Compliance', count: 8, icon: '🏢' },
-            { name: 'Financial Planning', count: 15, icon: '💰' },
-            { name: 'Audit & Assurance', count: 6, icon: '🔍' }
-          ].map((category, index) => (
-            <div
-              key={index}
-              className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-xl p-4 text-center border border-gray-100 dark:border-gray-700 hover:border-[#007AFF]/30 dark:hover:border-blue-400/30 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 hover:scale-105"
-              style={{ transitionDelay: `${index * 100}ms` }}
-            >
-              <div className="text-2xl mb-2 group-hover:scale-110 transition-transform duration-300">{category.icon}</div>
-              <h4 className="font-medium text-[#1F2937] dark:text-white mb-1 group-hover:text-[#007AFF] dark:group-hover:text-blue-400 transition-colors duration-300">{category.name}</h4>
-              <p className="text-sm text-gray-600 dark:text-gray-300">{category.count} courses</p>
-            </div>
-          ))}
-        </div>
-
         {/* CTA Section */}
-        <div className={`text-center bg-gradient-to-r from-[#007AFF]/10 to-[#00C897]/10 dark:from-[#007AFF]/20 dark:to-[#00C897]/20 rounded-2xl p-8 border border-[#007AFF]/20 dark:border-blue-400/20 backdrop-blur-lg relative overflow-hidden transform transition-all duration-1000 delay-500 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+        <div className="text-center bg-gradient-to-r from-[#007AFF]/10 to-[#00C897]/10 dark:from-[#007AFF]/20 dark:to-[#00C897]/20 rounded-2xl p-8 border border-[#007AFF]/20 dark:border-blue-400/20 backdrop-blur-lg relative overflow-hidden">
           {/* Background animation */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#007AFF]/5 via-[#00C897]/5 to-[#007AFF]/5 opacity-0 hover:opacity-100 transition-opacity duration-700 animate-gradient-x"></div>
           
