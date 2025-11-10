@@ -8,7 +8,7 @@ interface UpdatesProps {
   onNavigate: (page: PageType) => void;
 }
 
-export function Updates({ onNavigate }: UpdatesProps) {
+export function Updates({ onNavigate: _onNavigate }: UpdatesProps) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
   const [blogs, setBlogs] = useState<Blog[]>([]);

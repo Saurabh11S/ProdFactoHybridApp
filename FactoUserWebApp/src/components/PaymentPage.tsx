@@ -520,7 +520,11 @@ export function PaymentPage({ onNavigate, serviceId }: PaymentPageProps) {
                   </div>
                   <div className="flex-1">
                     <h4 className="font-medium text-gray-800 dark:text-white">{serviceDetails.title}</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{serviceDetails.serviceId?.category || 'Service'}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {typeof serviceDetails.serviceId === 'object' && serviceDetails.serviceId !== null
+                        ? (serviceDetails.serviceId.category || serviceDetails.serviceId.title || 'Service')
+                        : 'Service'}
+                    </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{serviceDetails.description}</p>
                   </div>
                 </div>

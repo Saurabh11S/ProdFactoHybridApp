@@ -218,7 +218,9 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
                           style={{ transform: `translateX(-${currentServiceIndex * 100}%)` }}
                         >
                           {services.map((service) => {
-                            const category = service.serviceId?.title || 'General';
+                            const category = typeof service.serviceId === 'object' && service.serviceId !== null
+                              ? (service.serviceId.title || service.serviceId.category || 'General')
+                              : 'General';
                             const minPrice = service.pricingStructure && service.pricingStructure.length > 0
                               ? Math.min(...service.pricingStructure.map(p => p.price))
                               : service.price || 0;

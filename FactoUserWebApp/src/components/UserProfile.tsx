@@ -97,7 +97,9 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
       title: service.title,
       description: service.description,
       price: `₹${service.price}`,
-      category: service.serviceId?.title || 'General Services',
+      category: typeof service.serviceId === 'object' && service.serviceId !== null
+        ? (service.serviceId.title || service.serviceId.category || 'General Services')
+        : 'General Services',
       duration: service.period,
       features: service.features || []
     };

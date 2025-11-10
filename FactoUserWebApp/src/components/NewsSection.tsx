@@ -13,7 +13,6 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
 
   // Fetch blogs from backend
@@ -21,14 +20,12 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
     const loadBlogs = async () => {
       try {
         setLoading(true);
-        setError(null);
         console.log('🔄 Fetching blogs for NewsSection...');
         const { blogs: fetchedBlogs } = await fetchBlogs(1, 50); // Fetch up to 50 blogs (same as Updates page)
         console.log('✅ Fetched blogs:', fetchedBlogs.length);
         setBlogs(fetchedBlogs);
       } catch (err: any) {
         console.error('❌ Error fetching blogs:', err);
-        setError('Failed to load latest updates');
         setBlogs([]);
       } finally {
         setLoading(false);

@@ -97,32 +97,32 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     return !!purchase;
   }, [subService, userPurchases, isAuthenticated]);
 
-  // Check if service is already paid
-  const isServicePaid = useMemo(() => {
-    if (!subService || !isAuthenticated || userPurchases.length === 0) {
-      return false;
-    }
+  // Check if service is already paid (commented out as not currently used)
+  // const isServicePaid = useMemo(() => {
+  //   if (!subService || !isAuthenticated || userPurchases.length === 0) {
+  //     return false;
+  //   }
 
-    const purchase = userPurchases.find(
-      p => p.itemId === subService._id && p.itemType === 'service' && p.status === 'active'
-    );
+  //   const purchase = userPurchases.find(
+  //     p => p.itemId === subService._id && p.itemType === 'service' && p.status === 'active'
+  //   );
 
-    if (!purchase) {
-      return false;
-    }
+  //   if (!purchase) {
+  //     return false;
+  //   }
 
-    // Check payment status (paymentOrderId is populated by the API)
-    const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
-      ? purchase.paymentOrderId
-      : null;
+  //   // Check payment status (paymentOrderId is populated by the API)
+  //   const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
+  //     ? purchase.paymentOrderId
+  //     : null;
 
-    if (payment && typeof payment === 'object' && 'status' in payment) {
-      // Service is paid if status is 'completed'
-      return payment.status === 'completed';
-    }
+  //   if (payment && typeof payment === 'object' && 'status' in payment) {
+  //     // Service is paid if status is 'completed'
+  //     return payment.status === 'completed';
+  //   }
 
-    return false;
-  }, [subService, userPurchases, isAuthenticated]);
+  //   return false;
+  // }, [subService, userPurchases, isAuthenticated]);
 
   // Fetch sub-service details
   useEffect(() => {
@@ -459,7 +459,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       
       // Extract selected features from options
       const selectedFeatures: string[] = [];
-      Object.entries(selectedRequestOptions).forEach(([key, value]) => {
+      Object.entries(selectedRequestOptions).forEach(([, value]) => {
         if (value) {
           if (Array.isArray(value)) {
             selectedFeatures.push(...value);
