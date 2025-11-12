@@ -44,8 +44,8 @@ export const getCourses = bigPromise(
       console.log('📦 Response structure:', {
         success: response.success,
         dataType: typeof response.data,
-        hasCourses: !!response.data?.courses,
-        coursesCount: response.data?.courses?.length || 0
+        hasCourses: !!(response.data as any)?.courses,
+        coursesCount: (response.data as any)?.courses?.length || 0
       });
       console.log('📚 === COURSES FETCH COMPLETE ===\n');
       

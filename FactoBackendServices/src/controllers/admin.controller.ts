@@ -1409,7 +1409,7 @@ export const getCourses = bigPromise(
         dataType: typeof response.data,
         isArray: Array.isArray(response.data),
         dataLength: Array.isArray(response.data) ? response.data.length : 'N/A',
-        message: response.message
+        message: (response.status as any)?.message || 'N/A'
       });
       console.log('📚 === ADMIN COURSES FETCH COMPLETE ===\n');
       
