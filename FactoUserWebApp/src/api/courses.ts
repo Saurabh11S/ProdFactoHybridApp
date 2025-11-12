@@ -37,6 +37,7 @@ export interface Course {
   description: string;
   lectures: Lecture[] | string[]; // Can be populated or just IDs
   status: 'draft' | 'published';
+  isPurchased?: boolean; // Indicates if the current user has purchased this course
   createdAt: string;
   updatedAt: string;
 }
@@ -123,9 +124,20 @@ export const fetchUserCourses = async (token: string): Promise<Course[]> => {
 };
 
 // Fetch course by ID with all lectures
-export const fetchCourseById = async (courseId: string): Promise<Course> => {
+export const fetchCourseById = async (courseId: string, token?: string): Promise<Course> => {
   try {
-    const response = await axios.get<{success: boolean; data: Course}>(`${API_BASE_URL}/course/${courseId}/lectures`);
+    const headers: any = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Include auth token if provided (for purchase status check)
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await axios.get<{success: boolean; data: Course}>(`${API_BASE_URL}/course/${courseId}/lectures`, {
+      headers
+    });
     return response.data.data;
   } catch (error) {
     console.error('Error fetching course by ID:', error);

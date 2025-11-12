@@ -5,11 +5,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { Search } from 'lucide-react';
 import CourseContent from './CourseContent';
 import { API_BASE_URL } from '../config/apiConfig';
+import axios from 'axios';
 
-type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
+type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details';
 
 interface LearningProps {
-  onNavigate: (page: PageType) => void;
+  onNavigate: (page: PageType, serviceId?: string, courseId?: string) => void;
 }
 
 export function Learning({ onNavigate }: LearningProps) {
@@ -20,6 +21,7 @@ export function Learning({ onNavigate }: LearningProps) {
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [purchasedCourseIds, setPurchasedCourseIds] = useState<Set<string>>(new Set());
   const { isAuthenticated, token } = useAuth();
 
   useEffect(() => {
@@ -39,12 +41,38 @@ export function Learning({ onNavigate }: LearningProps) {
           setActiveCategory('');
         }
 
-        // Fetch user's courses if authenticated
+        // Fetch user's courses and purchases if authenticated
         if (isAuthenticated && token) {
           try {
             const userCourses = await fetchUserCourses(token);
             setMyCourses(userCourses);
             console.log('Fetched user courses:', userCourses.length);
+            
+            // Fetch user purchases to determine which courses are purchased
+            try {
+              const purchasesResponse = await axios.get(`${API_BASE_URL}/user/purchases`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              const purchases = purchasesResponse.data?.data?.purchases || [];
+              const coursePurchases = purchases.filter((p: any) => p.itemType === 'course' && p.status === 'active');
+              const purchasedIds = new Set(coursePurchases.map((p: any) => p.itemId));
+              setPurchasedCourseIds(purchasedIds);
+              console.log('Fetched purchased course IDs:', Array.from(purchasedIds));
+              
+              // Mark courses as purchased
+              const coursesWithPurchaseStatus = allCourses.map(course => ({
+                ...course,
+                isPurchased: purchasedIds.has(course._id)
+              }));
+              setCourses(coursesWithPurchaseStatus);
+            } catch (purchaseError) {
+              console.error('Error fetching user purchases:', purchaseError);
+              // Continue without purchase status if fetch fails
+            }
           } catch (error) {
             console.error('Error fetching user courses:', error);
           }
@@ -216,7 +244,7 @@ export function Learning({ onNavigate }: LearningProps) {
               <CourseContent
                 key={course._id}
                 course={course}
-                isMyCourse={activeCategory === 'courses'}
+                isMyCourse={activeCategory === 'courses' || course.isPurchased === true}
                 onNavigate={onNavigate}
               />
             ))

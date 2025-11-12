@@ -1,16 +1,22 @@
 import { Capacitor } from '@capacitor/core';
 
 // Centralized API configuration
-// Uses shared .env file from root directory
-// FOR LOCAL DEVELOPMENT ONLY - Always uses localhost backend
+// Automatically detects environment (localhost vs production)
 const getApiBaseUrl = (): string => {
-  // Priority 1: Explicit environment variable from .env file
+  // Priority 1: Explicit environment variable (from Vercel or .env file)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Priority 2: Default to localhost for local development
-  // No production detection - always use localhost when running locally
+  // Priority 2: Detect if running on Vercel (production)
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname.includes('vercel.app') || hostname.includes('vercel.com')) {
+      return 'https://facto-backend-api.onrender.com/api/v1';
+    }
+  }
+  
+  // Priority 3: Default to localhost for local development
   return 'http://localhost:8080/api/v1';
 };
 
@@ -20,6 +26,6 @@ export const API_BASE_URL = getApiBaseUrl();
 if (typeof window !== 'undefined') {
   console.log('🌐 API Base URL:', API_BASE_URL);
   console.log('📱 Platform:', Capacitor.isNativePlatform() ? 'Mobile' : 'Web');
-  console.log('💡 Tip: Set VITE_API_URL in .env file to override this URL');
+  console.log('🌍 Environment:', window.location.hostname.includes('vercel') ? 'Production' : 'Development');
 }
 

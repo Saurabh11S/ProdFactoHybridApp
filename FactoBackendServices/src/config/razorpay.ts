@@ -10,7 +10,7 @@ function getRazorpayInstance(): Razorpay {
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     
     if (!keyId || !keySecret) {
-      throw new Error('Razorpay is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your .env file');
+      throw new Error('Razorpay is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your .env file. Get your keys from: https://dashboard.razorpay.com/app/keys');
     }
     
     razorpayInstance = new Razorpay({

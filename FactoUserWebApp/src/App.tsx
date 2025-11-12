@@ -16,10 +16,13 @@ import { SignupPage } from './components/SignupPage';
 import { ServiceDetailsPage } from './components/ServiceDetailsPage';
 import { DocumentUploadPage } from './components/DocumentUploadPage';
 import { PaymentPage } from './components/PaymentPage';
+import { CoursePaymentPage } from './components/CoursePaymentPage';
+import { CourseDetailsPage } from './components/CourseDetailsPage';
 import { Learning } from './components/Learning';
 import { Shorts } from './components/Shorts';
 import { Updates } from './components/Updates';
 import { UserProfile } from './components/UserProfile';
+import { WhatsAppChatButton } from './components/WhatsAppChatButton';
 import { SessionWarning } from './components/SessionWarning';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { useAppState } from './hooks/useAppState';
@@ -30,11 +33,12 @@ import { MobileLandingPage } from './components/mobile/MobileLandingPage';
 import { MobileLoginPage } from './components/mobile/MobileLoginPage';
 import { MobileSignupPage } from './components/mobile/MobileSignupPage';
 
-type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
+type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [selectedServiceId, setSelectedServiceId] = useState<string>('itr-1');
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [isMobile, setIsMobile] = useState(false);
   const [showLanding, setShowLanding] = useState(false);
   
@@ -57,10 +61,13 @@ function AppContent() {
     return () => window.removeEventListener('resize', checkMobile);
   }, [isMobile]);
 
-  const handleNavigation = (page: PageType, serviceId?: string) => {
+  const handleNavigation = (page: PageType, serviceId?: string, courseId?: string) => {
     setCurrentPage(page);
     if (serviceId) {
       setSelectedServiceId(serviceId);
+    }
+    if (courseId) {
+      setSelectedCourseId(courseId);
     }
   };
 
@@ -84,6 +91,10 @@ function AppContent() {
         return <DocumentUploadPage onNavigate={handleNavigation} />;
       case 'payment':
         return <PaymentPage onNavigate={handleNavigation} serviceId={selectedServiceId} />;
+      case 'course-payment':
+        return <CoursePaymentPage onNavigate={handleNavigation} courseId={selectedCourseId} />;
+      case 'course-details':
+        return <CourseDetailsPage onNavigate={handleNavigation} courseId={selectedCourseId} />;
       case 'profile':
         return <UserProfile onNavigate={handleNavigation} />;
       default:
@@ -148,6 +159,16 @@ function AppContent() {
         <BottomTabBar 
           currentPage={currentPage}
           onNavigate={handleNavigation}
+        />
+      )}
+
+      {/* WhatsApp Chat Button - Show on all pages except login/signup */}
+      {/* Always visible on mobile apps - position adjusts based on bottom tab bar presence */}
+      {currentPage !== 'login' && currentPage !== 'signup' && (
+        <WhatsAppChatButton 
+          phoneNumber="+918001234567" // Update this with your actual WhatsApp number
+          message="Hello! I need help with your services."
+          isMobile={isMobile && ['home', 'services', 'updates', 'profile'].includes(currentPage)}
         />
       )}
     </div>

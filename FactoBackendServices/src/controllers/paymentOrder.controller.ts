@@ -106,6 +106,7 @@ export const initiatePayment = bigPromise(
           amount: amountInRupees, // Send amount in rupees
           currency: razorpayOrder.currency,
           paymentOrderId: paymentOrder._id,
+          razorpayKeyId: process.env.RAZORPAY_KEY_ID, // Send Razorpay key ID to frontend
           isDevelopmentMode: false,
         },200);
         res.send(response);

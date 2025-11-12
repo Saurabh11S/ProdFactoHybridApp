@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { fetchAllSubServices, SubService } from '../api/services';
+import { fetchCourseById, Course } from '../api/courses';
 import { ServiceDocumentUpload } from './ServiceDocumentUpload';
 import { API_BASE_URL } from '../config/apiConfig';
 
-type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
+type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment';
 
 interface UserProfileProps {
   onNavigate: (page: PageType) => void;
@@ -62,7 +63,7 @@ interface Quotation {
 
 export function UserProfile({ onNavigate }: UserProfileProps) {
   const { user, logout, forceLogout, token, isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'services' | 'payments'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'services' | 'courses' | 'payments'>('profile');
   const [userPurchases, setUserPurchases] = useState<UserPurchase[]>([]);
   const [paymentOrders, setPaymentOrders] = useState<PaymentOrder[]>([]);
   const [, setQuotations] = useState<Quotation[]>([]);
@@ -72,6 +73,8 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
   const [serviceDocumentCounts, setServiceDocumentCounts] = useState<{[key: string]: number}>({});
   const [allServices, setAllServices] = useState<SubService[]>([]);
   const [_servicesLoading, setServicesLoading] = useState(true);
+  const [courseDetailsMap, setCourseDetailsMap] = useState<{[key: string]: Course}>({});
+  const [coursesLoading, setCoursesLoading] = useState(false);
 
   // Fetch all services for mapping
   useEffect(() => {
@@ -445,17 +448,39 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
         const purchases = purchasesRes.status === 'fulfilled' ? (purchasesRes.value.data.data || []) : [];
         const documentCounts: {[key: string]: number} = {};
         for (const purchase of purchases) {
-          try {
-            const docResponse = await axios.get(
-              `${API_BASE_URL}/document/service/${purchase._id}`,
-              { headers }
-            );
-            documentCounts[purchase._id] = docResponse.data.data.userDocuments?.length || 0;
-          } catch (error) {
-            documentCounts[purchase._id] = 0;
+          // Only fetch document counts for services, not courses
+          if (purchase.itemType === 'service') {
+            try {
+              const docResponse = await axios.get(
+                `${API_BASE_URL}/document/service/${purchase._id}`,
+                { headers }
+              );
+              documentCounts[purchase._id] = docResponse.data.data.userDocuments?.length || 0;
+            } catch (error) {
+              documentCounts[purchase._id] = 0;
+            }
           }
         }
         setServiceDocumentCounts(documentCounts);
+
+        // Fetch course details for course purchases
+        const coursePurchases = purchases.filter((p: UserPurchase) => p.itemType === 'course');
+        if (coursePurchases.length > 0) {
+          setCoursesLoading(true);
+          const courseDetails: {[key: string]: Course} = {};
+          await Promise.all(
+            coursePurchases.map(async (purchase: UserPurchase) => {
+              try {
+                const course = await fetchCourseById(purchase.itemId, token || undefined);
+                courseDetails[purchase.itemId] = course;
+              } catch (error) {
+                console.error(`Error fetching course ${purchase.itemId}:`, error);
+              }
+            })
+          );
+          setCourseDetailsMap(courseDetails);
+          setCoursesLoading(false);
+        }
 
       } catch (error: any) {
         console.error('Error fetching user data:', error);
@@ -542,7 +567,7 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
 
         {/* Summary Statistics */}
         <div className="max-w-6xl mx-auto mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Services Summary */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
               <div className="flex items-center">
@@ -554,7 +579,7 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Services</p>
                   <p className="text-2xl font-bold text-[#1F2937] dark:text-white">
-                    {loading ? '...' : userPurchases.filter(purchase => getServiceData(purchase.itemId) !== null).length}
+                    {loading ? '...' : userPurchases.filter(purchase => purchase.itemType === 'service' && getServiceData(purchase.itemId) !== null).length}
                   </p>
                 </div>
               </div>
@@ -572,6 +597,23 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Payments</p>
                   <p className="text-2xl font-bold text-[#1F2937] dark:text-white">
                     {loading ? '...' : paymentOrders.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Courses */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
+              <div className="flex items-center">
+                <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                  <svg className="w-6 h-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Courses</p>
+                  <p className="text-2xl font-bold text-[#1F2937] dark:text-white">
+                    {loading ? '...' : userPurchases.filter(purchase => purchase.itemType === 'course').length}
                   </p>
                 </div>
               </div>
@@ -647,6 +689,19 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
                 My Services
+              </button>
+              <button
+                onClick={() => setActiveTab('courses')}
+                className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+                  activeTab === 'courses'
+                    ? 'bg-[#007AFF] text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-[#007AFF] hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <svg className="w-5 h-5 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                My Courses
               </button>
               <button
                 onClick={() => setActiveTab('payments')}
@@ -1002,6 +1057,137 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
           </div>
         )}
 
+        {/* Courses Tab */}
+        {activeTab === 'courses' && (
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="p-8">
+                <h2 className="text-2xl font-bold text-[#1F2937] dark:text-white mb-6 flex items-center">
+                  <svg className="w-6 h-6 text-[#007AFF] mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  My Courses
+                </h2>
+
+                {loading || coursesLoading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#007AFF] mx-auto"></div>
+                    <p className="text-gray-600 dark:text-gray-400 mt-4">Loading your courses...</p>
+                  </div>
+                ) : (() => {
+                  const coursePurchases = userPurchases.filter(purchase => purchase.itemType === 'course');
+                  return coursePurchases.length === 0 ? (
+                    <div className="text-center py-12">
+                      <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Courses Yet</h3>
+                      <p className="text-gray-600 dark:text-gray-400 mb-6">You haven't purchased any courses yet. Explore our courses to get started!</p>
+                      <button
+                        onClick={() => onNavigate('learning')}
+                        className="bg-[#007AFF] text-white px-6 py-3 rounded-lg font-medium hover:bg-[#0056CC] transition-colors"
+                      >
+                        Explore Courses
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {coursePurchases.map((purchase) => {
+                        const course = courseDetailsMap[purchase.itemId];
+                        const paymentStatus = getPaymentStatus(purchase);
+                        
+                        if (!course) {
+                          return (
+                            <div key={purchase._id} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 border border-gray-200 dark:border-gray-600">
+                              <div className="text-center py-4">
+                                <p className="text-gray-600 dark:text-gray-400">Loading course details...</p>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        const formatDuration = (duration: { value: number; unit: string }) => {
+                          return `${duration.value} ${duration.unit}`;
+                        };
+
+                        return (
+                          <div key={purchase._id} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-shadow">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex-1">
+                                <h3 className="text-lg font-bold text-[#1F2937] dark:text-white mb-2">{course.title}</h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{course.description}</p>
+                              </div>
+                              <span className={`ml-2 px-3 py-1 rounded-full text-xs font-medium ${
+                                paymentStatus.color === 'green' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                paymentStatus.color === 'yellow' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                paymentStatus.color === 'red' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
+                              }`}>
+                                {paymentStatus.status}
+                              </span>
+                            </div>
+
+                            <div className="space-y-3 mb-4">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600 dark:text-gray-400">Price:</span>
+                                <span className="font-medium text-[#1F2937] dark:text-white">
+                                  {(() => {
+                                    const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
+                                      ? purchase.paymentOrderId
+                                      : paymentOrders.find(p => p._id === purchase.paymentOrderId);
+                                    
+                                    if (payment && typeof payment === 'object' && 'status' in payment) {
+                                      if (payment.amount !== undefined && payment.amount > 0) {
+                                        return `₹${payment.amount.toLocaleString('en-IN')}`;
+                                      }
+                                    }
+                                    return `₹${course.price.toLocaleString('en-IN')}`;
+                                  })()}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600 dark:text-gray-400">Duration:</span>
+                                <span className="font-medium text-[#1F2937] dark:text-white">{formatDuration(course.duration)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600 dark:text-gray-400">Lectures:</span>
+                                <span className="font-medium text-[#1F2937] dark:text-white">{course.totalLectures}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600 dark:text-gray-400">Language:</span>
+                                <span className="font-medium text-[#1F2937] dark:text-white capitalize">{course.language}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600 dark:text-gray-400">Category:</span>
+                                <span className="font-medium text-[#1F2937] dark:text-white">{course.category}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600 dark:text-gray-400">Purchased:</span>
+                                <span className="font-medium text-[#1F2937] dark:text-white">{formatDate(purchase.createdAt)}</span>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => onNavigate('learning')}
+                              className="w-full bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center"
+                            >
+                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              View Course
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Payments Tab */}
         {activeTab === 'payments' && (
           <div className="max-w-6xl mx-auto">
@@ -1081,17 +1267,31 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
                             <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Items:</h4>
                             <div className="space-y-2">
                               {payment.items.map((item: any, index: number) => {
-                                const serviceData = getServiceData(item.itemId);
-                                return (
-                                  <div key={index} className="flex justify-between items-center text-sm">
-                                    <span className="text-[#1F2937] dark:text-white">
-                                      {serviceData?.title || item.itemId}
-                                    </span>
-                                    <span className="text-gray-600 dark:text-gray-400">
-                                      {item.billingPeriod || 'One-time'}
-                                    </span>
-                                  </div>
-                                );
+                                if (item.itemType === 'course') {
+                                  const course = courseDetailsMap[item.itemId];
+                                  return (
+                                    <div key={index} className="flex justify-between items-center text-sm">
+                                      <span className="text-[#1F2937] dark:text-white">
+                                        {course?.title || `Course: ${item.itemId}`}
+                                      </span>
+                                      <span className="text-gray-600 dark:text-gray-400">
+                                        {item.billingPeriod || 'One-time'}
+                                      </span>
+                                    </div>
+                                  );
+                                } else {
+                                  const serviceData = getServiceData(item.itemId);
+                                  return (
+                                    <div key={index} className="flex justify-between items-center text-sm">
+                                      <span className="text-[#1F2937] dark:text-white">
+                                        {serviceData?.title || item.itemId}
+                                      </span>
+                                      <span className="text-gray-600 dark:text-gray-400">
+                                        {item.billingPeriod || 'One-time'}
+                                      </span>
+                                    </div>
+                                  );
+                                }
                               })}
                             </div>
                           </div>

@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Lock, Play } from 'lucide-react';
 import { Course, Lecture } from '../api/courses';
 
-type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
+type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details';
 
 interface CourseContentProps {
   course: Course;
   isMyCourse: boolean;
-  onNavigate: (page: PageType) => void;
+  onNavigate: (page: PageType, serviceId?: string, courseId?: string) => void;
 }
 
 const CourseContent: React.FC<CourseContentProps> = ({
@@ -130,16 +130,32 @@ const CourseContent: React.FC<CourseContentProps> = ({
                 <li>Category: {course.category}</li>
               </ul>
 
-              {!isMyCourse && (
+              {!isMyCourse ? (
                 <div className="flex gap-3">
                   <button
-                    onClick={() => onNavigate('payment')}
+                    onClick={() => onNavigate('course-payment', undefined, course._id)}
                     className="bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white rounded-full px-6 py-3 font-medium hover:shadow-lg transition-all duration-300 hover:scale-105"
                   >
                     Buy Now
                   </button>
                   <button className="bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-2 border-gray-300 dark:border-gray-600 rounded-full px-6 py-3 font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-300">
                     Watch Demo
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => onNavigate('course-details', undefined, course._id)}
+                    className="bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white rounded-full px-6 py-3 font-medium hover:shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2"
+                  >
+                    <Play className="w-5 h-5" />
+                    Start Learning
+                  </button>
+                  <button
+                    onClick={() => onNavigate('course-details', undefined, course._id)}
+                    className="bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-2 border-gray-300 dark:border-gray-600 rounded-full px-6 py-3 font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-300"
+                  >
+                    View Course
                   </button>
                 </div>
               )}

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import SuccessPopup from './SuccessPopup';
+import { UserInfoModal } from './UserInfoModal';
 import { API_BASE_URL } from '../config/apiConfig';
 import { fetchSubServiceById, fetchAllSubServices, SubService } from '../api/services';
 import { Browser } from '@capacitor/browser';
@@ -37,7 +38,7 @@ interface UserPurchase {
 }
 
 export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceDetailsPageProps) {
-  const { isAuthenticated, user, token } = useAuth();
+  const { isAuthenticated, user, token, refreshUser } = useAuth();
   const [subService, setSubService] = useState<SubService | null>(null);
   const [loadingService, setLoadingService] = useState(true);
   const [serviceError, setServiceError] = useState<string | null>(null);
@@ -59,6 +60,12 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
   });
   const [showMobileConfigurator, setShowMobileConfigurator] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); // Add refresh key to force re-fetch
+  const [showUserInfoModal, setShowUserInfoModal] = useState(false);
+  const [missingFields, setMissingFields] = useState<{
+    phoneNumber?: boolean;
+    email?: boolean;
+    fullName?: boolean;
+  }>({});
 
   // Fetch user purchases (paymentOrderId is already populated by the API)
   useEffect(() => {
@@ -506,10 +513,52 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     }
   };
 
+  // Check for missing user information
+  const checkMissingInfo = () => {
+    if (!user) return {};
+
+    const missing: {
+      phoneNumber?: boolean;
+      email?: boolean;
+      fullName?: boolean;
+    } = {};
+
+    // If user has email but no phone number (logged in with email/password)
+    if (user.email && !user.phoneNumber) {
+      missing.phoneNumber = true;
+    }
+
+    // If user has phone number but no email or name (logged in with phone/OTP)
+    if (user.phoneNumber && (!user.email || !user.fullName)) {
+      if (!user.email) missing.email = true;
+      if (!user.fullName) missing.fullName = true;
+    }
+
+    return missing;
+  };
+
   // Handle payment
   const handlePayment = async () => {
     if (!isAuthenticated || !user || !subService) {
       onNavigate('login');
+      return;
+    }
+
+    // Check for missing information
+    const missing = checkMissingInfo();
+    if (Object.keys(missing).length > 0) {
+      setMissingFields(missing);
+      setShowUserInfoModal(true);
+      return;
+    }
+
+    // Proceed with payment if all info is present
+    proceedWithPayment();
+  };
+
+  // Proceed with payment after user info is complete
+  const proceedWithPayment = async () => {
+    if (!isAuthenticated || !user || !subService) {
       return;
     }
 
@@ -536,7 +585,16 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
         }
       });
 
-      const { orderId, amount, currency } = paymentOrderResponse.data.data;
+      const { orderId, amount, currency, razorpayKeyId } = paymentOrderResponse.data.data;
+      
+      // Get Razorpay key from API response or fallback to environment variable or hardcoded test key
+      const razorpayKey = razorpayKeyId || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_RH6v2Ap0TDGOmM';
+      
+      if (!razorpayKey) {
+        setPaymentError('Razorpay is not configured. Please contact support.');
+        setIsProcessingPayment(false);
+        return;
+      }
       
       if (Capacitor.isNativePlatform()) {
         // Mobile: Open Razorpay in in-app browser
@@ -556,7 +614,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.onload = () => {
           const options = {
-            key: 'rzp_test_RH6v2Ap0TDGOmM',
+            key: razorpayKey,
             amount: amount,
             currency: currency,
             name: 'Facto Services',
@@ -616,6 +674,23 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       console.error('Payment initiation failed:', error);
       setPaymentError(error.response?.data?.message || 'Payment initiation failed. Please try again.');
       setIsProcessingPayment(false);
+    }
+  };
+
+  // Handle user info modal completion
+  const handleUserInfoComplete = async () => {
+    setShowUserInfoModal(false);
+    
+    // Refresh user data from backend
+    try {
+      await refreshUser();
+      // Small delay to ensure user state is updated
+      setTimeout(() => {
+        proceedWithPayment();
+      }, 100);
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+      proceedWithPayment();
     }
   };
 
@@ -1603,6 +1678,19 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
           </button>
         </div>
       )}
+
+      {/* User Info Modal */}
+      <UserInfoModal
+        isOpen={showUserInfoModal}
+        onClose={() => setShowUserInfoModal(false)}
+        onComplete={handleUserInfoComplete}
+        missingFields={missingFields}
+        currentUser={{
+          email: user?.email || '',
+          fullName: user?.fullName || '',
+          phoneNumber: user?.phoneNumber || ''
+        }}
+      />
     </div>
   );
 }

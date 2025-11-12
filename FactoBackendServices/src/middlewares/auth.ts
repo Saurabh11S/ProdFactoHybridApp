@@ -32,6 +32,35 @@ export const verifyToken = async (req: AuthRequest, res: Response, next: NextFun
   }
 };
 
+export const optionalVerifyToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    // If no token, continue without authentication
+    if (!token) {
+      return next();
+    }
+    
+    // If token exists, try to verify it
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as { userId: string };
+      const user = await db.User.findById(decoded.userId);
+      
+      if (user) {
+        req.user = user;
+      }
+    } catch (tokenError) {
+      // If token is invalid, just continue without user (don't fail the request)
+      console.log('Optional token verification failed:', tokenError);
+    }
+    
+    next();
+  } catch (error) {
+    // On any error, continue without authentication
+    next();
+  }
+};
+
 export const isAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
     if (req.user && req.user.role === 'admin') {
       next();

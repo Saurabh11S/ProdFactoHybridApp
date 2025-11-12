@@ -58,17 +58,39 @@ export const getCourses = bigPromise(
 );
 
 export const getCourseById = bigPromise(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request | AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { courseId } = req.params;
+      const userId = (req as AuthRequest).user?.id; // Get user ID if authenticated
 
+      // Check if user has purchased this course
+      let isPurchased = false;
+      if (userId) {
+        const userPurchase = await db.UserPurchase.findOne({
+          userId: userId,
+          itemId: courseId,
+          itemType: 'course',
+          status: 'active'
+        });
+        isPurchased = !!userPurchase;
+      }
+
+      // If user has purchased the course, return all lectures
+      // Otherwise, return only free lectures
       const course = await db.Course.findById(courseId).populate({
         path: "lectures",
-        match: { isFree: true },
+        match: isPurchased ? {} : { isFree: true }, // Return all lectures if purchased, only free if not
       });
+
+      // Add purchase status to course object
+      const courseWithPurchaseStatus = {
+        ...course.toObject(),
+        isPurchased: isPurchased
+      };
+
       const response = sendSuccessApiResponse(
         "Course Fetched Successfully",
-        course
+        courseWithPurchaseStatus
       );
       res.status(StatusCode.OK).send(response);
     } catch (error) {

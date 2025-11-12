@@ -34,6 +34,7 @@ interface AuthContextType {
   verifyOTP: (phoneNumber: string, otp: string) => Promise<void>;
   sendOTP: (phoneNumber: string) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   error: string | null;
   clearError: () => void;
   sessionWarning: { show: boolean; timeLeft: number };
@@ -610,6 +611,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Refresh user data from backend
+  const refreshUser = async () => {
+    if (!token) return;
+    
+    try {
+      const response = await axios.get(`${API_BASE_URL}/user/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success && response.data.data?.user) {
+        const updatedUser = response.data.data.user;
+        setUser(updatedUser);
+        await Storage.set('user', JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+  };
+
   // Logout
   const logout = async () => {
     setUser(null);
@@ -631,6 +654,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     verifyOTP,
     sendOTP,
     logout,
+    refreshUser,
     error,
     clearError,
     sessionWarning,
