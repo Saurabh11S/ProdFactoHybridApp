@@ -11,7 +11,7 @@
     "build-ts": "tsc -p tsconfig.release.json || npm run copy",
     "copy": "cp package.json ./dist/ && cp pm2.config.uat.json ./dist/pm2.config.json && cp .env.uat ./dist/ || copy package.json ./dist/ && copy pm2.config.uat.json ./dist/pm2.config.json && copy .env.uat ./dist/",
     "build-ts:prod": "tsc -p tsconfig.release.json && npm run copy:prod",
-    "copy:prod": "cp package.json ./dist/ && cp pm2.config.prod.json ./dist/pm2.config.json 2>/dev/null || true",
+    "copy:prod": "node -e \"const fs=require('fs'); fs.mkdirSync('dist',{recursive:true}); fs.copyFileSync('package.json','dist/package.json'); try{fs.copyFileSync('pm2.config.prod.json','dist/pm2.config.prod.json')}catch(e){}\"",
     "start:production-dummy": "set NODE_ENV=prod&& ts-node-dev --respawn --transpile-only ./src/server.ts",
     "seed:courses": "ts-node -r tsconfig-paths/register ./src/scripts/seedCourses.ts",
     "add:manual-courses": "ts-node -r tsconfig-paths/register ./src/scripts/addManualCourses.ts",
