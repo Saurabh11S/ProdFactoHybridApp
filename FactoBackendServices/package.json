@@ -4,7 +4,7 @@
   "scripts": {
     "start": "set NODE_ENV=dev&& ts-node-dev -r tsconfig-paths/register --respawn --transpile-only ./src/server.ts",
     "start:uat": "npm run build-ts && NODE_ENV=uat node ./dist/server.js",
-    "start:prod": "NODE_ENV=prod node ./dist/server.js",
+    "start:prod": "cd . && NODE_ENV=prod node dist/server.js",
     "test": "jest --forceExit --coverage --verbose",
     "check-format": "npx prettier -c src",
     "format": "npx prettier -w src",
