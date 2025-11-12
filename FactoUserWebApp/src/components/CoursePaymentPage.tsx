@@ -164,7 +164,7 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
             handler: async function (response: any) {
               try {
                 const token = await Storage.get('authToken');
-                const verifyResponse = await axios.post(`${API_BASE_URL}/payment/verify-payment`, {
+                await axios.post(`${API_BASE_URL}/payment/verify-payment`, {
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_signature: response.razorpay_signature

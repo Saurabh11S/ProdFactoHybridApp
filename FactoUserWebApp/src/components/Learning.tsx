@@ -21,7 +21,8 @@ export function Learning({ onNavigate }: LearningProps) {
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [purchasedCourseIds, setPurchasedCourseIds] = useState<Set<string>>(new Set());
+  // Track purchased course IDs (used internally for marking courses)
+  const [, setPurchasedCourseIds] = useState<Set<string>>(new Set());
   const { isAuthenticated, token } = useAuth();
 
   useEffect(() => {
@@ -59,7 +60,7 @@ export function Learning({ onNavigate }: LearningProps) {
               
               const purchases = purchasesResponse.data?.data?.purchases || [];
               const coursePurchases = purchases.filter((p: any) => p.itemType === 'course' && p.status === 'active');
-              const purchasedIds = new Set(coursePurchases.map((p: any) => p.itemId));
+              const purchasedIds = new Set<string>(coursePurchases.map((p: any) => String(p.itemId)));
               setPurchasedCourseIds(purchasedIds);
               console.log('Fetched purchased course IDs:', Array.from(purchasedIds));
               

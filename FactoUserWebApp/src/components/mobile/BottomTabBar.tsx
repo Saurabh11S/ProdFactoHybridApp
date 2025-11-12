@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { useDarkMode } from '../DarkModeContext';
 
-type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
+type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details';
 
 interface BottomTabBarProps {
   currentPage: PageType;

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Lock, Play, ArrowLeft } from 'lucide-react';
+import { Play, ArrowLeft } from 'lucide-react';
 import { fetchCourseById, Course, Lecture } from '../api/courses';
 import { useAuth } from '../contexts/AuthContext';
-import { API_BASE_URL } from '../config/apiConfig';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details';
 
@@ -12,7 +11,7 @@ interface CourseDetailsPageProps {
 }
 
 export function CourseDetailsPage({ onNavigate, courseId }: CourseDetailsPageProps) {
-  const { isAuthenticated, token } = useAuth();
+  const { token } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
   const [loading, setLoading] = useState(true);
