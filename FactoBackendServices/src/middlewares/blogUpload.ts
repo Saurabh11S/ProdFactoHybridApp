@@ -7,9 +7,9 @@ import { StatusCode } from "@/constants/constants";
  // Replace with your cloudinary configuration// Replace with your custom error utils
 
 const isFileDictionary = (
-  files: { [fieldname: string]: Express.Multer.File[] } | Express.Multer.File[]
+  files: { [fieldname: string]: Express.Multer.File[] } | Express.Multer.File[] | undefined
 ): files is { [fieldname: string]: Express.Multer.File[] } => {
-  return typeof files === "object" && !Array.isArray(files);
+  return typeof files === "object" && files !== null && !Array.isArray(files);
 };
 
 // Blog Storage Configuration

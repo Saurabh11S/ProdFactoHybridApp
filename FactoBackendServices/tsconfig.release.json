@@ -23,5 +23,6 @@
       "@utils/*": ["utils/*"]
     }
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "typeRoots": ["./node_modules/@types"]
 }

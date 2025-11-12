@@ -7,6 +7,8 @@ import { db } from '@/models';
 
 export interface AuthRequest extends Request {
   user?: any;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
 }
 
 export const verifyToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
