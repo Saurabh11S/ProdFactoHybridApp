@@ -10,7 +10,7 @@
     "format": "npx prettier -w src",
     "build-ts": "tsc -p tsconfig.release.json || npm run copy",
     "copy": "cp package.json ./dist/ && cp pm2.config.uat.json ./dist/pm2.config.json && cp .env.uat ./dist/ || copy package.json ./dist/ && copy pm2.config.uat.json ./dist/pm2.config.json && copy .env.uat ./dist/",
-    "build-ts:prod": "node_modules/.bin/tsc -p tsconfig.release.json || npx tsc -p tsconfig.release.json && npm run copy:prod",
+    "build-ts:prod": "node node_modules/typescript/lib/tsc.js -p tsconfig.release.json && npm run copy:prod",
     "copy:prod": "node -e \"require('fs').mkdirSync('dist', {recursive: true}); require('fs').copyFileSync('package.json', 'dist/package.json'); try { require('fs').copyFileSync('pm2.config.prod.json', 'dist/pm2.config.json'); } catch(e) {}\"",
     "start:production-dummy": "set NODE_ENV=prod&& ts-node-dev --respawn --transpile-only ./src/server.ts",
     "seed:courses": "ts-node -r tsconfig-paths/register ./src/scripts/seedCourses.ts",
