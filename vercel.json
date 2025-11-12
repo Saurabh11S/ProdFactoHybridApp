@@ -4,7 +4,6 @@
   "outputDirectory": "FactoUserWebApp/dist",
   "framework": "vite",
   "installCommand": "cd FactoUserWebApp && npm install",
-  "rootDirectory": "FactoUserWebApp",
   "rewrites": [
     {
       "source": "/(.*)",
