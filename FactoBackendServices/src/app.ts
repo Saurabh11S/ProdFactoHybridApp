@@ -26,19 +26,19 @@ import router from "@/routes";
 // Define CORS options with explicit typing
 // Automatically detects environment (development vs production)
 const getCorsOrigins = (): (string | RegExp)[] => {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const nodeEnv = process.env.NODE_ENV || '';
+  const isProduction = nodeEnv === 'production' || nodeEnv === 'prod';
   
   if (isProduction) {
     // Production: Only allow specific domains
     const origins: (string | RegExp)[] = [
-      // Vercel deployment domains
+      // Vercel deployment domains (allow all vercel.app subdomains)
       /^https:\/\/.*\.vercel\.app$/,
-      /^https:\/\/.*-factouserwebapps-projects\.vercel\.app$/,
     ];
     
     // Add custom production domains from CORS_ORIGIN env var
     if (process.env.CORS_ORIGIN) {
-      const customOrigins = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim());
+      const customOrigins = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(origin => origin);
       origins.push(...customOrigins);
     }
     
@@ -102,10 +102,33 @@ app.options("*", cors(corsOptions));
 
 // Add CORS headers manually as backup
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  const origin = req.headers.origin;
+  const nodeEnv = process.env.NODE_ENV || '';
+  const isProduction = nodeEnv === 'production' || nodeEnv === 'prod';
+  
+  // Determine allowed origin
+  let allowedOrigin = '*';
+  if (isProduction && origin) {
+    // Check if origin matches Vercel pattern
+    if (origin.match(/^https:\/\/.*\.vercel\.app$/)) {
+      allowedOrigin = origin;
+    } else if (process.env.CORS_ORIGIN) {
+      // Check if origin is in CORS_ORIGIN list
+      const allowedOrigins = process.env.CORS_ORIGIN.split(',').map(o => o.trim());
+      if (allowedOrigins.includes(origin)) {
+        allowedOrigin = origin;
+      }
+    }
+  } else if (!isProduction) {
+    // Development: allow any localhost
+    allowedOrigin = origin || '*';
+  }
+  
+  res.header("Access-Control-Allow-Origin", allowedOrigin);
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma, Expires");
   res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Expose-Headers", "Content-Length, Content-Type");
   
   if (req.method === "OPTIONS") {
     res.sendStatus(200);
