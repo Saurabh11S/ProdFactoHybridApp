@@ -15,6 +15,7 @@ import Query from '@/pages/Query/Query';
 import Employee from '@/pages/Employee/Employee';
 import ReqCall from '@/pages/ReqCall/ReqCall';
 import QuotationManagement  from '@/pages/Quotations/QuotationManagement';
+import Newsletter from '@/pages/Newsletter/Newsletter';
 // ProtectedRoute Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useGlobalContext();
@@ -143,6 +144,14 @@ const Router = () => {
             element={
               <ProtectedRoute>
                 <Query />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/newsletter"
+            element={
+              <ProtectedRoute>
+                <Newsletter />
               </ProtectedRoute>
             }
           />

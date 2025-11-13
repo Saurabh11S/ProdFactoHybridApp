@@ -15,6 +15,7 @@ import paymentRoute from "./paymnt.route"
 import quotationRoute from "./quotation.route"
 import applicationRoute from "./applicationRoute"
 import userPurchaseRoute from "./userPurchase.route"
+import newsletterSubscriptionRoute from "./newsletterSubscription.route"
 // import buttonEventRoute from "./buttonEvent.route"
 // import consultationRequestRoute from "./consultationRequest.route"
 import { handleMulterError, uploadIcon } from "@/middlewares/upload";
@@ -39,6 +40,7 @@ router.use("/payment",paymentRoute);
 router.use("/quotation",quotationRoute);
 router.use("/application",applicationRoute);
 router.use("/user-purchases",userPurchaseRoute);
+router.use("/newsletter",newsletterSubscriptionRoute);
 
 // Add aliases for frontend compatibility
 router.use("/payment-orders",paymentRoute);

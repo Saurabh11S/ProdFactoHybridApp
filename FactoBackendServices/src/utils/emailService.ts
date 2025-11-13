@@ -171,3 +171,107 @@ export const sendConsultationNotificationToAdmin = async (
   await sendEmail(adminEmail, subject, html);
 };
 
+/**
+ * Sends newsletter update email to all active subscribers
+ */
+export const sendNewsletterUpdate = async (
+  subscriberEmails: string[],
+  updateType: 'blog' | 'course',
+  updateData: {
+    title: string;
+    description?: string;
+    url?: string;
+    author?: string;
+  }
+): Promise<void> => {
+  if (subscriberEmails.length === 0) {
+    console.log('📧 No subscribers to notify');
+    return;
+  }
+
+  const updateTypeLabel = updateType === 'blog' ? 'New Blog Post' : 'New Course';
+  const subject = `${updateTypeLabel}: ${updateData.title}`;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #007AFF 0%, #00C897 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .button { display: inline-block; padding: 12px 30px; background: #007AFF; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px; }
+        .update-box { background: white; padding: 20px; margin: 20px 0; border-left: 4px solid #007AFF; border-radius: 5px; }
+        .title { font-size: 24px; font-weight: bold; color: #007AFF; margin-bottom: 10px; }
+        .description { color: #666; margin: 15px 0; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #999; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>📧 New Update from FACTO</h1>
+        </div>
+        <div class="content">
+          <p>Dear Subscriber,</p>
+          <p>We're excited to share a new ${updateType === 'blog' ? 'blog post' : 'course'} with you!</p>
+          
+          <div class="update-box">
+            <div class="title">${updateData.title}</div>
+            ${updateData.description ? `<div class="description">${updateData.description}</div>` : ''}
+            ${updateData.author ? `<p><strong>Author:</strong> ${updateData.author}</p>` : ''}
+          </div>
+          
+          ${updateData.url ? `
+            <div style="text-align: center;">
+              <a href="${updateData.url}" class="button">Read More →</a>
+            </div>
+          ` : ''}
+          
+          <p>Stay updated with the latest finance tips, tax strategies, and investment insights from FACTO Consultancy.</p>
+          
+          <div class="footer">
+            <p>You're receiving this email because you subscribed to our newsletter.</p>
+            <p>If you no longer wish to receive these updates, you can <a href="${process.env.FRONTEND_URL || 'https://facto.in'}/unsubscribe?email={{EMAIL}}">unsubscribe here</a>.</p>
+            <p>&copy; ${new Date().getFullYear()} FACTO Consultancy. All rights reserved.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Send emails to all subscribers
+  const emailPromises = subscriberEmails.map(async (email) => {
+    try {
+      // Replace {{EMAIL}} placeholder with actual email for unsubscribe link
+      const personalizedHtml = html.replace(/\{\{EMAIL\}\}/g, encodeURIComponent(email));
+      await sendEmail(email, subject, personalizedHtml);
+      console.log(`✅ Newsletter email sent to: ${email}`);
+    } catch (error: any) {
+      console.error(`❌ Failed to send newsletter email to ${email}:`, error.message);
+      // Continue sending to other subscribers even if one fails
+    }
+  });
+
+  await Promise.allSettled(emailPromises);
+  console.log(`📧 Newsletter update sent to ${subscriberEmails.length} subscribers`);
+};
+
+/**
+ * Sends newsletter update email to a single subscriber
+ */
+export const sendNewsletterUpdateToSubscriber = async (
+  subscriberEmail: string,
+  updateType: 'blog' | 'course',
+  updateData: {
+    title: string;
+    description?: string;
+    url?: string;
+    author?: string;
+  }
+): Promise<void> => {
+  await sendNewsletterUpdate([subscriberEmail], updateType, updateData);
+};
+

@@ -5,7 +5,7 @@ import logo from '../../assets/logo.png'
 import { LuChevronsLeft } from "react-icons/lu";
 import { LuChevronsRight } from "react-icons/lu";
 import { HiOutlineQuestionMarkCircle, HiOutlineUsers } from "react-icons/hi2";
-import { MdOutlineMiscellaneousServices,MdOutlineLibraryBooks,MdOutlineNotificationsActive  } from "react-icons/md";
+import { MdOutlineMiscellaneousServices,MdOutlineLibraryBooks,MdOutlineNotificationsActive, MdOutlineEmail  } from "react-icons/md";
 import { PiReadCvLogoLight } from "react-icons/pi";
 import { GoQuestion } from "react-icons/go";
 import { GrUserWorker } from "react-icons/gr";
@@ -48,6 +48,7 @@ const Sidebar: React.FC = () => {
     { key: '7', label: 'Blogs', icon: <PiReadCvLogoLight size={20} />, path: '/blogs' },
     { key: '8', label: 'Notifications', icon: <MdOutlineNotificationsActive  size={20} />, path: '/notifications' },
     { key: '9', label: 'Query', icon: <GoQuestion size={20} />, path: '/query' },
+    { key: '11', label: 'Newsletter', icon: <MdOutlineEmail size={20} />, path: '/newsletter' },
 
   ];
 

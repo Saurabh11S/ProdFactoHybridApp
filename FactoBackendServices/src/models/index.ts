@@ -16,6 +16,7 @@ import Application from "@/models/application.model";
 import ButtonEvent from "@/models/buttonEvent.model";
 import ConsultationRequest from "@/models/consultationRequest.model";
 import UserInteraction from "@/models/userInteraction.model";
+import NewsletterSubscription from "@/models/newsletterSubscription.model";
 
 export const db = {
   User,
@@ -36,4 +37,5 @@ export const db = {
   ButtonEvent,
   ConsultationRequest,
   UserInteraction,
+  NewsletterSubscription,
 };

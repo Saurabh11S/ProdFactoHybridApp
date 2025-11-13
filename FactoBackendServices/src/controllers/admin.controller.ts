@@ -1651,6 +1651,31 @@ export const publishCourse = bigPromise(
       course.status = "published";
       await course.save();
 
+      // Send newsletter notification to all active subscribers (async, don't block response)
+      (async () => {
+        try {
+          const { sendNewsletterUpdate } = await import("@/utils/emailService");
+          const activeSubscribers = await db.NewsletterSubscription.find({
+            isActive: true,
+          }).select("email");
+
+          if (activeSubscribers.length > 0) {
+            const subscriberEmails = activeSubscribers.map((sub) => sub.email);
+            const frontendUrl = process.env.FRONTEND_URL || "https://facto.in";
+            const courseUrl = `${frontendUrl}/courses/${course._id}`;
+
+            await sendNewsletterUpdate(subscriberEmails, "course", {
+              title: course.title,
+              description: course.description?.substring(0, 200) + "..." || "Check out our new course!",
+              url: courseUrl,
+            });
+          }
+        } catch (emailError: any) {
+          console.error("Error sending newsletter notifications:", emailError.message);
+          // Don't fail the course publication if email fails
+        }
+      })();
+
       const response = sendSuccessApiResponse("Course published successfully", {
         course,
       });
@@ -1690,8 +1715,7 @@ export const createBlog = bigPromise(
         !content ||
         !contentType ||
         !parsedReference ||
-        !parsedReference.title ||
-        !parsedReference.url
+        !parsedReference.title
       ) {
         // Clean up any uploaded file if validation fails
         if (req.file) {
@@ -1700,10 +1724,15 @@ export const createBlog = bigPromise(
         console.log("jsjs");
         return next(
           createCustomError(
-            "Title, content, content type, content URL, and valid reference are required",
+            "Title, content, content type, content URL, and reference title are required",
             StatusCode.BAD_REQ
           )
         );
+      }
+      
+      // Make reference URL optional, default to empty string if not provided
+      if (!parsedReference.url) {
+        parsedReference.url = "";
       }
 
       // Create blog
@@ -1721,6 +1750,32 @@ export const createBlog = bigPromise(
       });
 
       console.log(blog);
+
+      // Send newsletter notification to all active subscribers (async, don't block response)
+      (async () => {
+        try {
+          const { sendNewsletterUpdate } = await import("@/utils/emailService");
+          const activeSubscribers = await db.NewsletterSubscription.find({
+            isActive: true,
+          }).select("email");
+
+          if (activeSubscribers.length > 0) {
+            const subscriberEmails = activeSubscribers.map((sub) => sub.email);
+            const frontendUrl = process.env.FRONTEND_URL || "https://facto.in";
+            const blogUrl = `${frontendUrl}/blogs/${blog._id}`;
+
+            await sendNewsletterUpdate(subscriberEmails, "blog", {
+              title: blog.title,
+              description: blog.content.substring(0, 200) + "...",
+              url: blogUrl,
+              author: blog.author || "FACTO Team",
+            });
+          }
+        } catch (emailError: any) {
+          console.error("Error sending newsletter notifications:", emailError.message);
+          // Don't fail the blog creation if email fails
+        }
+      })();
 
       const response = sendSuccessApiResponse("Blog created successfully", {
         blog,

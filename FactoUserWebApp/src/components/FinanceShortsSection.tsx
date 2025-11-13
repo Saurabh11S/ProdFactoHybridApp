@@ -7,7 +7,7 @@ interface FinanceShortsSectionProps {
   onNavigate: (page: PageType, serviceId?: string) => void;
 }
 
-export function FinanceShortsSection({ onNavigate }: FinanceShortsSectionProps) {
+export function FinanceShortsSection({ onNavigate: _onNavigate }: FinanceShortsSectionProps) {
   const [activeVideo, setActiveVideo] = useState<number | null>(null);
   const [visibleVideos, setVisibleVideos] = useState<number[]>([]);
   const [isVisible, setIsVisible] = useState(false);
@@ -280,38 +280,6 @@ export function FinanceShortsSection({ onNavigate }: FinanceShortsSectionProps) 
           </div>
         </div>
 
-        {/* CTA Section */}
-        <div className={`text-center bg-gradient-to-r from-[#007AFF]/10 to-[#00C897]/10 dark:from-[#007AFF]/20 dark:to-[#00C897]/20 rounded-2xl p-8 border border-[#007AFF]/20 dark:border-blue-400/20 backdrop-blur-lg relative overflow-hidden transform transition-all duration-1000 delay-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-          {/* Background animation */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#007AFF]/5 via-[#00C897]/5 to-[#007AFF]/5 opacity-0 hover:opacity-100 transition-opacity duration-700 animate-gradient-x"></div>
-          
-          <div className="relative z-10">
-            <h3 className="text-2xl font-bold text-[#1F2937] dark:text-white mb-4">
-              Get Personalized Finance Tips
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto">
-              Subscribe to our newsletter and get daily finance tips directly in your inbox. Stay updated with the latest tax and investment strategies.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-blue-400 focus:border-transparent placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-300"
-              />
-              <button 
-                onClick={() => onNavigate('login')}
-                className="group bg-gradient-to-r from-[#007AFF] to-[#0056CC] text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all duration-300 whitespace-nowrap transform hover:-translate-y-1 hover:scale-105"
-              >
-                <span className="flex items-center justify-center">
-                  Subscribe Now
-                  <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
 
       <style>{`

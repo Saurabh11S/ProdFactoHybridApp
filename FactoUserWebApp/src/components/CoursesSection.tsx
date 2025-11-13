@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { fetchCourses, Course } from '../api/courses';
+import { useAuth } from '../contexts/AuthContext';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
@@ -9,6 +10,7 @@ interface CoursesSectionProps {
 }
 
 export function CoursesSection({ onNavigate }: CoursesSectionProps) {
+  const { isAuthenticated } = useAuth();
   const [progressValues, setProgressValues] = useState<number[]>([0, 0, 0, 0]);
   const [visibleCourses, setVisibleCourses] = useState<number[]>([]);
   const [isVisible, setIsVisible] = useState(true); // Start as true so header is always visible
@@ -376,7 +378,13 @@ export function CoursesSection({ onNavigate }: CoursesSectionProps) {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button 
-                onClick={() => onNavigate('login')}
+                onClick={() => {
+                  if (isAuthenticated) {
+                    onNavigate('learning');
+                  } else {
+                    onNavigate('login');
+                  }
+                }}
                 className="group bg-gradient-to-r from-[#007AFF] to-[#0056CC] text-white px-8 py-3 rounded-lg font-medium hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 hover:scale-105"
               >
                 <span className="flex items-center justify-center">

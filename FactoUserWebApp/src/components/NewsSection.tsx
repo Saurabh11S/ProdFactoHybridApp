@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { fetchBlogs, Blog } from '../api/blogs';
+import { subscribeToNewsletter } from '../api/newsletter';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
@@ -14,6 +15,9 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
+  const [email, setEmail] = useState('');
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [subscriptionMessage, setSubscriptionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Fetch blogs from backend
   useEffect(() => {
@@ -131,6 +135,49 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
       sectionObserver.disconnect();
     };
   }, [displayArticles.length]);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email.trim()) {
+      setSubscriptionMessage({
+        type: 'error',
+        text: 'Please enter a valid email address',
+      });
+      return;
+    }
+
+    setIsSubscribing(true);
+    setSubscriptionMessage(null);
+
+    try {
+      const response = await subscribeToNewsletter(email.trim());
+      if (response.success) {
+        setSubscriptionMessage({
+          type: 'success',
+          text: 'Successfully subscribed! You will receive updates via email.',
+        });
+        setEmail('');
+        // Clear success message after 5 seconds
+        setTimeout(() => {
+          setSubscriptionMessage(null);
+        }, 5000);
+      } else {
+        setSubscriptionMessage({
+          type: 'error',
+          text: response.message || 'Failed to subscribe. Please try again.',
+        });
+      }
+    } catch (error: any) {
+      console.error('Subscription error:', error);
+      setSubscriptionMessage({
+        type: 'error',
+        text: error.message || 'Failed to subscribe. Please try again.',
+      });
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -274,24 +321,46 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
             <p className="text-lg mb-8 opacity-90">
               Subscribe to our newsletter and get the latest finance news, tax updates, and expert insights delivered to your inbox.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto">
+            <form 
+              onSubmit={handleSubscribe}
+              className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto"
+            >
               <input
                 type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setSubscriptionMessage(null);
+                }}
                 placeholder="Enter your email address"
-                className="flex-1 px-6 py-4 rounded-xl text-[#1F2937] dark:text-gray-800 bg-white dark:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-white/30 transition-all duration-300"
+                required
+                disabled={isSubscribing}
+                className="flex-1 px-6 py-4 rounded-xl text-[#1F2937] dark:text-gray-800 bg-white dark:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-white/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button 
-                onClick={() => onNavigate('login')}
-                className="group bg-white dark:bg-gray-100 text-[#007AFF] dark:text-blue-600 px-8 py-4 rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-white transition-all duration-300 whitespace-nowrap transform hover:-translate-y-1 hover:scale-105"
+                type="submit"
+                disabled={isSubscribing || !email.trim()}
+                className="group bg-white dark:bg-gray-100 text-[#007AFF] dark:text-blue-600 px-8 py-4 rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-white transition-all duration-300 whitespace-nowrap transform hover:-translate-y-1 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
               >
                 <span className="flex items-center justify-center">
-                  Subscribe Now
-                  <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
+                  {isSubscribing ? 'Subscribing...' : 'Subscribe Now'}
+                  {!isSubscribing && (
+                    <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  )}
                 </span>
               </button>
-            </div>
+            </form>
+            {subscriptionMessage && (
+              <div className={`mt-4 px-4 py-2 rounded-lg max-w-lg mx-auto ${
+                subscriptionMessage.type === 'success' 
+                  ? 'bg-green-500/20 text-green-200' 
+                  : 'bg-red-500/20 text-red-200'
+              }`}>
+                {subscriptionMessage.text}
+              </div>
+            )}
             <p className="text-sm mt-4 opacity-75">
               Join 25,000+ professionals who stay updated with Facto
             </p>

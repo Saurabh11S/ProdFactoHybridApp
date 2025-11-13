@@ -90,8 +90,10 @@ export default function SignIn() {
         // Request made but no response
         console.error('❌ No response received:', error.request);
         
-        // Check if it's a network/CORS error (backend not running)
-        if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('CORS')) {
+        // Check if it's a timeout error
+        if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+          errorMessage = "Request timed out. The backend server may be slow or not responding. Please check:\n1. Backend is running on http://localhost:8080\n2. Database connection is working\n3. Try restarting the backend server";
+        } else if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('CORS')) {
           errorMessage = "Backend server is not running. Please start the backend server on http://localhost:8080";
         } else {
           errorMessage = "Unable to connect to server. Please ensure the backend is running on http://localhost:8080";
