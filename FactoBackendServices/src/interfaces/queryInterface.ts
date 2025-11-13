@@ -6,6 +6,7 @@ interface IQuery extends Document {
   phoneNo: number;
   query: string;
   comment: string;
+  category?: string; // service, course, updated, general, etc.
 }
 
 interface QueryModel extends mongoose.Model<IQuery> {}

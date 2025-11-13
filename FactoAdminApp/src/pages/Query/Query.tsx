@@ -16,7 +16,8 @@ interface QueryType{
   phoneNo: number,
   query: string,
   createdAt?:string;
-  comment?:string
+  comment?:string;
+  category?: string;
 }
 
 function Query() {

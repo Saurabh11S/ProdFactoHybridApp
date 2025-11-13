@@ -98,6 +98,22 @@ export function RecentQuery({ isOpen, onClose, query,fetchData }: RecentQueryPro
           className="space-y-4 border border-gray-300 p-5 rounded-md"
           onSubmit={handleSubmit}
         >
+          {queryData.category && (
+            <div className="flex">
+              <label htmlFor="category" className="w-2/5 text-sm font-medium">
+                Category:
+              </label>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                queryData.category === 'service' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                queryData.category === 'course' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                queryData.category === 'updated' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                queryData.category === 'consultation' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+              }`}>
+                {queryData.category}
+              </span>
+            </div>
+          )}
           <div className="flex">
             <label htmlFor="query" className="w-2/5 text-sm font-medium">
               Query:

@@ -23,6 +23,7 @@ interface QueryType{
   query: string,
   createdAt?:string,
   comment?:string,
+  category?: string,
 }
 export default function QueryTable({
   queries,
@@ -85,6 +86,7 @@ export default function QueryTable({
             </TableHead>
             <TableHead className="text-black">Sr. No</TableHead>
             <TableHead className="text-black">Name</TableHead>
+            <TableHead className="text-black">Category</TableHead>
             <TableHead className="text-black">Contact</TableHead>
             <TableHead className="text-black">Email ID</TableHead>
             <TableHead className="text-black">Query Date</TableHead>
@@ -104,6 +106,17 @@ export default function QueryTable({
               </TableCell>
               <TableCell>{index + 1}</TableCell> 
               <TableCell >{query.name}</TableCell>
+              <TableCell >
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  query.category === 'service' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                  query.category === 'course' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                  query.category === 'updated' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                  query.category === 'consultation' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                  'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                }`}>
+                  {query.category || 'general'}
+                </span>
+              </TableCell>
               <TableCell >{query.phoneNo}</TableCell>
               <TableCell >{query.email}</TableCell>
               <TableCell>{query.createdAt}</TableCell>

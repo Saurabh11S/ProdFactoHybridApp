@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchServices, Service } from '../api/services';
+import { ConsultationModal } from './ConsultationModal';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
@@ -86,6 +87,7 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
+  const [showConsultationModal, setShowConsultationModal] = useState(false);
 
   // Fetch main service categories from database with retry logic
   useEffect(() => {
@@ -422,7 +424,7 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button 
-                onClick={() => onNavigate('login')}
+                onClick={() => setShowConsultationModal(true)}
                 className="group bg-[#007AFF] hover:bg-[#0056CC] text-white px-8 py-3 rounded-lg font-medium transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 hover:scale-105"
               >
                 <span className="flex items-center justify-center">
@@ -464,6 +466,13 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
           animation: gradient-x 4s ease infinite;
         }
       `}</style>
+
+      {/* Consultation Modal */}
+      <ConsultationModal
+        isOpen={showConsultationModal}
+        onClose={() => setShowConsultationModal(false)}
+        category="service"
+      />
     </section>
   );
 }

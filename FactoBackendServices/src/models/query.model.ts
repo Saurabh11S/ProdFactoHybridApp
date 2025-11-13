@@ -44,6 +44,11 @@ const QuerySchema = new mongoose.Schema<IQuery, QueryModel>(
     },
     comment: {
         type: String,
+    },
+    category: {
+        type: String,
+        enum: ['service', 'course', 'updated', 'general', 'consultation'],
+        default: 'general',
     }
   },
   {
