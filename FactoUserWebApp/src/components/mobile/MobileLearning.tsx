@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchCourses, fetchUserCourses, Course } from '../../api/courses';
 import { useAuth } from '../../contexts/AuthContext';
-import { API_BASE_URL } from '../../config/apiConfig';
-import axios from 'axios';
-import { BookOpen, Clock, Play, Lock } from 'lucide-react';
+import { BookOpen, Clock, Play } from 'lucide-react';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details';
 
@@ -48,10 +46,6 @@ export function MobileLearning({ onNavigate }: MobileLearningProps) {
       return `${(count / 1000).toFixed(0)}k+`;
     }
     return `${count}+`;
-  };
-
-  const formatDuration = (duration: { value: number; unit: string }) => {
-    return `${duration.value}${duration.unit}`;
   };
 
   const getTotalModules = (course: Course) => {
@@ -121,11 +115,12 @@ export function MobileLearning({ onNavigate }: MobileLearningProps) {
         ) : (
           courses.map((course) => {
             const purchased = isCoursePurchased(course);
-            const learners = course.enrolledUsers?.length || Math.floor(Math.random() * 50000) + 10000;
+            // Use random learners count as fallback since enrolledUsers doesn't exist in Course interface
+            const learners = Math.floor(Math.random() * 50000) + 10000;
             const modules = getTotalModules(course);
             const videos = getTotalVideos(course);
             const duration = getTotalDuration(course);
-            const freeLectures = course.lectures?.filter((l: any) => l.isFree).length || 0;
+            const freeLectures = course.lectures?.filter((l: any) => typeof l === 'object' && l.isFree).length || 0;
 
             return (
               <div
@@ -143,17 +138,9 @@ export function MobileLearning({ onNavigate }: MobileLearningProps) {
                     </p>
                   </div>
                   <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center overflow-hidden ml-4">
-                    {course.instructorImage ? (
-                      <img
-                        src={course.instructorImage}
-                        alt={course.instructor || 'Instructor'}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-2xl font-bold">
-                        {course.instructor?.charAt(0) || 'F'}
-                      </div>
-                    )}
+                    <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-2xl font-bold">
+                      {course.title.charAt(0).toUpperCase()}
+                    </div>
                   </div>
                 </div>
 
