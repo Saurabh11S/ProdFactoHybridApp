@@ -8,15 +8,20 @@ const getApiBaseUrl = (): string => {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Priority 2: Detect if running on Vercel (production)
+  // Priority 2: Use production backend for mobile apps
+  if (Capacitor.isNativePlatform()) {
+    return 'https://facto-backend-api.onrender.com/api/v1';
+  }
+  
+  // Priority 3: Detect if running on Vercel (production web)
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
-    if (hostname.includes('vercel.app') || hostname.includes('vercel.com')) {
+    if (hostname.includes('vercel.app') || hostname.includes('vercel.com') || hostname.includes('facto.org.in')) {
       return 'https://facto-backend-api.onrender.com/api/v1';
     }
   }
   
-  // Priority 3: Default to localhost for local development
+  // Priority 4: Default to localhost for local development
   return 'http://localhost:8080/api/v1';
 };
 
@@ -26,6 +31,6 @@ export const API_BASE_URL = getApiBaseUrl();
 if (typeof window !== 'undefined') {
   console.log('🌐 API Base URL:', API_BASE_URL);
   console.log('📱 Platform:', Capacitor.isNativePlatform() ? 'Mobile' : 'Web');
-  console.log('🌍 Environment:', window.location.hostname.includes('vercel') ? 'Production' : 'Development');
+  console.log('🌍 Environment:', Capacitor.isNativePlatform() || window.location.hostname.includes('vercel') || window.location.hostname.includes('facto.org.in') ? 'Production' : 'Development');
 }
 

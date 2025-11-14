@@ -23,7 +23,7 @@ export function BottomTabBar({ currentPage, onNavigate }: BottomTabBarProps) {
     return null;
   }
 
-  const mainPages: PageType[] = ['home', 'services', 'shorts', 'updates', 'profile'];
+  const mainPages: PageType[] = ['home', 'services', 'shorts', 'updates', 'learning'];
   if (!mainPages.includes(currentPage)) {
     return null;
   }
@@ -86,16 +86,16 @@ export function BottomTabBar({ currentPage, onNavigate }: BottomTabBarProps) {
       ),
     },
     {
-      id: 'profile',
-      label: 'Profile',
+      id: 'learning',
+      label: 'Learning',
       icon: (active) => (
         <svg className={`w-6 h-6 ${active ? 'text-[#007AFF]' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
         </svg>
       ),
       activeIcon: (active) => (
         <svg className={`w-6 h-6 ${active ? 'text-[#007AFF]' : 'text-gray-500'}`} fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+          <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 2.18l8 4v8.82c0 4.54-3.07 8.79-7.09 9.82-.4-.09-.8-.2-1.18-.33C6.5 19.5 3 15.36 3 10.18V8.18l9-4z" />
         </svg>
       ),
     },

@@ -19,6 +19,7 @@ import { PaymentPage } from './components/PaymentPage';
 import { CoursePaymentPage } from './components/CoursePaymentPage';
 import { CourseDetailsPage } from './components/CourseDetailsPage';
 import { Learning } from './components/Learning';
+import { MobileLearning } from './components/mobile/MobileLearning';
 import { Shorts } from './components/Shorts';
 import { Updates } from './components/Updates';
 import { UserProfile } from './components/UserProfile';
@@ -76,6 +77,9 @@ function AppContent() {
       case 'services':
         return <ServicesPage onNavigate={handleNavigation} />;
       case 'learning':
+        if (isMobile) {
+          return <MobileLearning onNavigate={handleNavigation} />;
+        }
         return <Learning onNavigate={handleNavigation} />;
       case 'shorts':
         return isMobile ? <MobileShorts onNavigate={handleNavigation} /> : <Shorts onNavigate={handleNavigation} />;

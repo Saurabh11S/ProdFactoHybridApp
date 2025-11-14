@@ -20,20 +20,20 @@ export function MobileLandingPage({ onNavigate }: MobileLandingPageProps) {
     {
       icon: '📊',
       title: 'Tax Made Simple',
-      description: 'File your ITR in minutes with expert guidance',
-      color: 'from-blue-500 to-cyan-500'
+      description: 'Finance update with expert',
+      color: 'from-gray-900 to-black'
     },
     {
       icon: '📋',
       title: 'GST Compliance',
       description: 'Stay compliant with automated GST filing',
-      color: 'from-green-500 to-emerald-500'
+      color: 'from-gray-800 to-gray-900'
     },
     {
       icon: '💰',
       title: 'Save More',
       description: 'Maximize your tax savings with smart planning',
-      color: 'from-purple-500 to-pink-500'
+      color: 'from-black to-gray-800'
     }
   ];
 
@@ -54,9 +54,9 @@ export function MobileLandingPage({ onNavigate }: MobileLandingPageProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-[#007AFF] via-[#0056CC] to-[#003D7A] z-50 overflow-hidden">
+    <div className="fixed inset-0 bg-gradient-to-br from-black via-gray-900 to-gray-800 z-50 overflow-hidden">
       {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
+      <div className="absolute inset-0 opacity-20">
         <div className="absolute inset-0" style={{
           backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
           backgroundSize: '40px 40px'
@@ -68,7 +68,7 @@ export function MobileLandingPage({ onNavigate }: MobileLandingPageProps) {
         {/* Skip Button */}
         <button
           onClick={handleSkip}
-          className="absolute top-12 right-6 text-white/80 text-sm font-medium active:opacity-70 transition-opacity"
+          className="absolute top-12 right-6 text-white text-sm font-medium active:opacity-70 transition-opacity drop-shadow-md"
         >
           Skip
         </button>
@@ -90,10 +90,10 @@ export function MobileLandingPage({ onNavigate }: MobileLandingPageProps) {
             className={`text-center mb-12 transition-all duration-700 ${showContent ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}
             style={{ transitionDelay: '0.4s' }}
           >
-            <h1 className="text-4xl font-bold text-white mb-4">
+            <h1 className="text-4xl font-bold text-white mb-4 drop-shadow-lg">
               {slides[currentSlide].title}
             </h1>
-            <p className="text-lg text-white/90 leading-relaxed">
+            <p className="text-lg text-white leading-relaxed drop-shadow-md">
               {slides[currentSlide].description}
             </p>
           </div>
@@ -123,14 +123,14 @@ export function MobileLandingPage({ onNavigate }: MobileLandingPageProps) {
           {currentSlide === slides.length - 1 ? (
             <button
               onClick={handleGetStarted}
-              className="w-full bg-white text-[#007AFF] py-4 rounded-2xl font-bold text-lg shadow-2xl active:scale-95 transition-transform duration-200"
+              className="w-full bg-white text-black py-4 rounded-2xl font-bold text-lg shadow-2xl active:scale-95 transition-transform duration-200"
             >
               Get Started
             </button>
           ) : (
             <button
               onClick={handleNext}
-              className="w-full bg-white/20 backdrop-blur-lg text-white border-2 border-white/30 py-4 rounded-2xl font-bold text-lg active:scale-95 transition-transform duration-200"
+              className="w-full bg-white/10 backdrop-blur-lg text-white border-2 border-white/20 py-4 rounded-2xl font-bold text-lg active:scale-95 transition-transform duration-200"
             >
               Next
             </button>

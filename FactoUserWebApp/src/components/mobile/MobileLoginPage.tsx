@@ -125,7 +125,7 @@ export function MobileLoginPage({ onNavigate }: MobileLoginPageProps) {
   const displayError = error || localError;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#007AFF] via-[#0056CC] to-[#003D7A] flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         {/* Back to Home Button */}
         <button
@@ -157,7 +157,7 @@ export function MobileLoginPage({ onNavigate }: MobileLoginPageProps) {
             }}
             className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
               loginMethod === 'email'
-                ? 'bg-white text-[#007AFF] shadow-lg'
+                ? 'bg-white text-black shadow-lg'
                 : 'text-white/70'
             }`}
           >
@@ -171,7 +171,7 @@ export function MobileLoginPage({ onNavigate }: MobileLoginPageProps) {
             }}
             className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
               loginMethod === 'otp'
-                ? 'bg-white text-[#007AFF] shadow-lg'
+                ? 'bg-white text-black shadow-lg'
                 : 'text-white/70'
             }`}
           >
@@ -221,7 +221,7 @@ export function MobileLoginPage({ onNavigate }: MobileLoginPageProps) {
               <button
                 type="submit"
                 disabled={isSubmitting || isLoading}
-                className="w-full bg-white text-[#007AFF] py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-white text-black py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting || isLoading ? 'Signing in...' : 'Sign In'}
               </button>
@@ -248,7 +248,7 @@ export function MobileLoginPage({ onNavigate }: MobileLoginPageProps) {
                   <button
                     type="submit"
                     disabled={isSubmitting || isLoading}
-                    className="w-full bg-white text-[#007AFF] py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-white text-black py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? 'Sending...' : 'Send OTP'}
                   </button>
@@ -277,7 +277,7 @@ export function MobileLoginPage({ onNavigate }: MobileLoginPageProps) {
                   <button
                     type="submit"
                     disabled={isSubmitting || isLoading}
-                    className="w-full bg-white text-[#007AFF] py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-white text-black py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting || isLoading ? 'Verifying...' : 'Verify & Sign In'}
                   </button>

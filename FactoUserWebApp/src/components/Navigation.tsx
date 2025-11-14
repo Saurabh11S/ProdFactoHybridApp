@@ -234,6 +234,27 @@ export function Navigation({ currentPage, onNavigate, isShortsPage = false }: Na
 
           {/* Mobile menu button - Show on mobile */}
           <div className={`${isMobile ? 'flex' : 'md:hidden flex'} items-center space-x-2`}>
+            {/* Profile Button - Mobile Only */}
+            {isAuthenticated && (
+              <button
+                onClick={() => onNavigate('profile')}
+                className={`p-2 rounded-lg transition-all duration-200 ${
+                  currentPage === 'profile'
+                    ? isShortsPage
+                      ? 'text-white bg-white/20'
+                      : 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30'
+                    : isShortsPage
+                      ? 'text-white/80 hover:text-white hover:bg-white/10'
+                      : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+                aria-label="Profile"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </button>
+            )}
+            
             {/* Mobile Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}

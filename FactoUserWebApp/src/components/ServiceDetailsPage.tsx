@@ -48,6 +48,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isRequestingConsultation, setIsRequestingConsultation] = useState(false);
+  const [isNotifyingTeam, setIsNotifyingTeam] = useState(false);
   const [userPurchases, setUserPurchases] = useState<UserPurchase[]>([]);
   const [successPopup, setSuccessPopup] = useState({
     isOpen: false,
@@ -448,6 +449,53 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     } else {
       // Proceed with payment
       handlePayment();
+    }
+  };
+
+  // Handle Notify Team (for unauthenticated users)
+  const handleNotifyTeam = async () => {
+    if (!subService) return;
+
+    setIsNotifyingTeam(true);
+    setPaymentError(null);
+
+    try {
+      const serviceName = typeof subService.serviceId === 'object' && subService.serviceId !== null
+        ? subService.serviceId.title
+        : 'Service';
+
+      const response = await axios.post(
+        `${API_BASE_URL}/query/consultation`,
+        {
+          name: 'Guest User',
+          email: undefined,
+          phoneNo: undefined,
+          query: `Interested in ${subService.title} service. Total: ₹${priceCalculation.total.toLocaleString('en-IN')}`,
+          category: serviceName.toLowerCase(),
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setSuccessPopup({
+          isOpen: true,
+          title: 'Team Notified!',
+          message: 'Our team has been notified of your interest. We will contact you soon!',
+          serviceName: displayService.title,
+          purchaseId: 'N/A',
+          amount: priceCalculation.total,
+          currency: 'INR'
+        });
+      }
+    } catch (error: any) {
+      console.error('Notify team failed:', error);
+      setPaymentError(error.response?.data?.message || 'Failed to notify team. Please try again.');
+    } finally {
+      setIsNotifyingTeam(false);
     }
   };
 
@@ -1255,13 +1303,50 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                           </svg>
                           <span>Processing...</span>
                         </>
-                      ) : !isAuthenticated 
-                        ? 'Login to Pay and Activate' 
-                        : priceCalculation.needsQuotation 
-                          ? 'Pay and Activate — Request Quotation' 
-                          : priceCalculation.total === 0
-                            ? 'Get Started'
-                            : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
+                      ) : !isAuthenticated ? (
+                        <div className="space-y-3">
+                          <button
+                            onClick={() => {
+                              handleNotifyTeam();
+                            }}
+                            disabled={isNotifyingTeam || isProcessingPayment}
+                            className="w-full px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          >
+                            {isNotifyingTeam ? (
+                              <>
+                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span>Notifying...</span>
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                <span>Notify Team</span>
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => {
+                              onNavigate('login');
+                            }}
+                            disabled={isNotifyingTeam || isProcessingPayment}
+                            className="w-full px-6 py-3 bg-transparent border-2 border-[#1287ff] text-[#1287ff] rounded-full font-semibold hover:bg-[#1287ff]/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            <span>Pay Later (Login)</span>
+                          </button>
+                        </div>
+                      ) : priceCalculation.needsQuotation 
+                        ? 'Pay and Activate — Request Quotation' 
+                        : priceCalculation.total === 0
+                          ? 'Get Started'
+                          : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
                       }
                     </button>
                   ) : (
@@ -1274,14 +1359,14 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                   )}
 
                   {/* Info Messages */}
-                  {priceCalculation.needsQuotation && !isServicePurchased && (
+                  {priceCalculation.needsQuotation && !isServicePurchased && !isAuthenticated && (
                     <p className="text-xs text-[#98a0ad] text-center">
                       Some selected options require a quotation. Please login to proceed.
                     </p>
                   )}
                   {!isAuthenticated && !isServicePurchased && (
                     <p className="text-xs text-[#98a0ad] text-center">
-                      Please login to pay and activate this service.
+                      Notify our team or login to proceed with payment.
                     </p>
                   )}
 
@@ -1591,33 +1676,74 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
 
               {/* Action Buttons Section - Mobile */}
               <div className="mt-6 space-y-3">
-                {/* Primary CTA Button */}
+                  {/* Primary CTA Button */}
                 {!isServicePurchased ? (
-                  <button
-                    onClick={() => {
-                      setShowMobileConfigurator(false);
-                      handleGetQuotation();
-                    }}
-                    disabled={isProcessingPayment || priceCalculation.total === 0 || !isAuthenticated}
-                    className="w-full px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isProcessingPayment ? (
-                      <>
-                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  !isAuthenticated ? (
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => {
+                          setShowMobileConfigurator(false);
+                          handleNotifyTeam();
+                        }}
+                        disabled={isNotifyingTeam || isProcessingPayment}
+                        className="w-full px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {isNotifyingTeam ? (
+                          <>
+                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Notifying...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            <span>Notify Team</span>
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMobileConfigurator(false);
+                          onNavigate('login');
+                        }}
+                        disabled={isNotifyingTeam || isProcessingPayment}
+                        className="w-full px-6 py-3 bg-transparent border-2 border-[#1287ff] text-[#1287ff] rounded-full font-semibold hover:bg-[#1287ff]/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
-                        <span>Processing...</span>
-                      </>
-                    ) : !isAuthenticated 
-                      ? 'Login to Pay and Activate' 
-                      : priceCalculation.needsQuotation 
+                        <span>Pay Later (Login)</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setShowMobileConfigurator(false);
+                        handleGetQuotation();
+                      }}
+                      disabled={isProcessingPayment || priceCalculation.total === 0}
+                      className="w-full px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isProcessingPayment ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Processing...</span>
+                        </>
+                      ) : priceCalculation.needsQuotation 
                         ? 'Pay and Activate — Request Quotation' 
                         : priceCalculation.total === 0
                           ? 'Get Started'
                           : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
-                    }
-                  </button>
+                      }
+                    </button>
+                  )
                 ) : (
                   <div className="w-full px-6 py-4 bg-green-500/20 border-2 border-green-500/50 text-green-400 rounded-full font-semibold text-center flex items-center justify-center gap-2">
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
