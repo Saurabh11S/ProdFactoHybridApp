@@ -254,7 +254,7 @@ export const sendNewsletterUpdate = async (
           
           <div class="footer">
             <p>You're receiving this email because you subscribed to our newsletter.</p>
-            <p>If you no longer wish to receive these updates, you can <a href="${process.env.FRONTEND_URL || 'https://facto.in'}/unsubscribe?email={{EMAIL}}">unsubscribe here</a>.</p>
+            <p>If you no longer wish to receive these updates, you can <a href="${process.env.FRONTEND_URL || 'https://facto.org.in'}/unsubscribe?email={{EMAIL}}">unsubscribe here</a>.</p>
             <p>&copy; ${new Date().getFullYear()} FACTO Consultancy. All rights reserved.</p>
           </div>
         </div>

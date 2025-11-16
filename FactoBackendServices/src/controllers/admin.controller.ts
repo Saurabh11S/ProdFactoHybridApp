@@ -1661,7 +1661,7 @@ export const publishCourse = bigPromise(
 
           if (activeSubscribers.length > 0) {
             const subscriberEmails = activeSubscribers.map((sub) => sub.email);
-            const frontendUrl = process.env.FRONTEND_URL || "https://facto.in";
+            const frontendUrl = process.env.FRONTEND_URL || "https://facto.org.in";
             const courseUrl = `${frontendUrl}/courses/${course._id}`;
 
             await sendNewsletterUpdate(subscriberEmails, "course", {
