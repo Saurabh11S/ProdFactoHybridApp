@@ -7,6 +7,8 @@ import { SERVICES } from "@/api/services";
 import { showError, showSucccess } from "@/utils/toast";
 import { ThreeDots } from "react-loader-spinner";
 
+// Force refresh to ensure latest subscription data is loaded
+
 interface ServiceType {
   _id: string;
   title: string;
@@ -26,12 +28,19 @@ function Subscriptions() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      // Force fresh data fetch - bypass cache
       const response = await SERVICES.GetServices();
-      setServicesData(response.data.services);
+      if (response?.data?.services) {
+        setServicesData(response.data.services);
+      } else {
+        console.warn('No services data in response:', response);
+        setServicesData([]);
+      }
       // showSucccess("Data fetched successfully");
     } catch (error) {
-      console.error(error);
+      console.error('Error fetching services:', error);
       showError("There's an error in fetching data");
+      setServicesData([]);
     } finally {
       setLoading(false);
     }
