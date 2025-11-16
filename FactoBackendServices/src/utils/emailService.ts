@@ -184,13 +184,34 @@ export const sendNewsletterUpdate = async (
     author?: string;
   }
 ): Promise<void> => {
+  console.log('\n📧 === SEND NEWSLETTER UPDATE START ===');
+  console.log(`📊 Subscribers count: ${subscriberEmails.length}`);
+  console.log(`📝 Update type: ${updateType}`);
+  console.log(`📄 Title: ${updateData.title}`);
+  
   if (subscriberEmails.length === 0) {
-    console.log('📧 No subscribers to notify');
+    console.log('⚠️ No subscribers to notify');
     return;
   }
 
+  // Check email configuration
+  const emailUser = process.env.EMAIL_USER || process.env.GMAIL_USER;
+  const emailPassword = process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD;
+  
+  if (!emailUser || !emailPassword) {
+    console.error('❌ Email service not configured!');
+    console.error('❌ EMAIL_USER:', !!emailUser);
+    console.error('❌ EMAIL_PASSWORD:', !!emailPassword);
+    throw new Error('Email service not configured. Please set EMAIL_USER and EMAIL_PASSWORD in environment variables');
+  }
+
+  console.log('✅ Email service configured');
+  console.log('📧 From email:', emailUser);
+
   const updateTypeLabel = updateType === 'blog' ? 'New Blog Post' : 'New Course';
   const subject = `${updateTypeLabel}: ${updateData.title}`;
+  
+  console.log('📧 Email subject:', subject);
   
   const html = `
     <!DOCTYPE html>
@@ -243,20 +264,42 @@ export const sendNewsletterUpdate = async (
   `;
 
   // Send emails to all subscribers
-  const emailPromises = subscriberEmails.map(async (email) => {
+  console.log(`\n📤 Starting to send emails to ${subscriberEmails.length} subscribers...`);
+  
+  const emailPromises = subscriberEmails.map(async (email, index) => {
     try {
+      console.log(`\n📧 [${index + 1}/${subscriberEmails.length}] Sending to: ${email}`);
       // Replace {{EMAIL}} placeholder with actual email for unsubscribe link
       const personalizedHtml = html.replace(/\{\{EMAIL\}\}/g, encodeURIComponent(email));
       await sendEmail(email, subject, personalizedHtml);
-      console.log(`✅ Newsletter email sent to: ${email}`);
+      console.log(`✅ [${index + 1}/${subscriberEmails.length}] Newsletter email sent successfully to: ${email}`);
+      return { email, success: true };
     } catch (error: any) {
-      console.error(`❌ Failed to send newsletter email to ${email}:`, error.message);
+      console.error(`❌ [${index + 1}/${subscriberEmails.length}] Failed to send newsletter email to ${email}:`, error.message);
+      console.error(`❌ Error details:`, error);
       // Continue sending to other subscribers even if one fails
+      return { email, success: false, error: error.message };
     }
   });
 
-  await Promise.allSettled(emailPromises);
-  console.log(`📧 Newsletter update sent to ${subscriberEmails.length} subscribers`);
+  const results = await Promise.allSettled(emailPromises);
+  
+  // Count successes and failures
+  let successCount = 0;
+  let failureCount = 0;
+  
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled' && result.value.success) {
+      successCount++;
+    } else {
+      failureCount++;
+    }
+  });
+  
+  console.log(`\n📊 === NEWSLETTER UPDATE SUMMARY ===`);
+  console.log(`✅ Successfully sent: ${successCount}/${subscriberEmails.length}`);
+  console.log(`❌ Failed: ${failureCount}/${subscriberEmails.length}`);
+  console.log(`📧 Newsletter update process completed`);
 };
 
 /**

@@ -1754,15 +1754,23 @@ export const createBlog = bigPromise(
       // Send newsletter notification to all active subscribers (async, don't block response)
       (async () => {
         try {
+          console.log('\n📧 === BLOG NEWSLETTER NOTIFICATION START ===');
           const { sendNewsletterUpdate } = await import("@/utils/emailService");
+          
           const activeSubscribers = await db.NewsletterSubscription.find({
             isActive: true,
           }).select("email");
 
+          console.log(`📊 Found ${activeSubscribers.length} active subscribers`);
+
           if (activeSubscribers.length > 0) {
             const subscriberEmails = activeSubscribers.map((sub) => sub.email);
-            const frontendUrl = process.env.FRONTEND_URL || "https://facto.in";
+            const frontendUrl = process.env.FRONTEND_URL || "https://facto.org.in";
             const blogUrl = `${frontendUrl}/blogs/${blog._id}`;
+
+            console.log(`📧 Preparing to send newsletter to ${subscriberEmails.length} subscribers`);
+            console.log(`🔗 Blog URL: ${blogUrl}`);
+            console.log(`📝 Blog Title: ${blog.title}`);
 
             await sendNewsletterUpdate(subscriberEmails, "blog", {
               title: blog.title,
@@ -1770,9 +1778,16 @@ export const createBlog = bigPromise(
               url: blogUrl,
               author: blog.author || "FACTO Team",
             });
+
+            console.log('✅ Newsletter notification process completed');
+          } else {
+            console.log('⚠️ No active subscribers found to notify');
           }
         } catch (emailError: any) {
-          console.error("Error sending newsletter notifications:", emailError.message);
+          console.error('\n❌ === ERROR SENDING NEWSLETTER NOTIFICATIONS ===');
+          console.error('❌ Error message:', emailError.message);
+          console.error('❌ Error stack:', emailError.stack);
+          console.error('❌ Full error:', JSON.stringify(emailError, null, 2));
           // Don't fail the blog creation if email fails
         }
       })();
