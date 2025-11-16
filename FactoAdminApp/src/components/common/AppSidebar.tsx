@@ -49,7 +49,6 @@ const Sidebar: React.FC = () => {
     { key: '8', label: 'Notifications', icon: <MdOutlineNotificationsActive  size={20} />, path: '/notifications' },
     { key: '9', label: 'Query', icon: <GoQuestion size={20} />, path: '/query' },
     { key: '11', label: 'Newsletter', icon: <MdOutlineEmail size={20} />, path: '/newsletter' },
-
   ];
 
   const renderMenuItem = (item: MenuItem) => {
