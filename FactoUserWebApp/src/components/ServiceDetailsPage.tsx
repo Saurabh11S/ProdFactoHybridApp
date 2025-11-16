@@ -93,7 +93,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     fetchUserPurchases();
   }, [isAuthenticated, user, token, refreshKey]);
 
-  // Check if service is already purchased (regardless of payment status)
+  // Check if service is already purchased (excluding free consultations)
   const isServicePurchased = useMemo(() => {
     if (!subService || !isAuthenticated || userPurchases.length === 0) {
       return false;
@@ -103,7 +103,53 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       p => p.itemId === subService._id && p.itemType === 'service' && p.status === 'active'
     );
 
-    return !!purchase;
+    if (!purchase) {
+      return false;
+    }
+
+    // Check if it's a free consultation - if so, don't mark as "purchased"
+    const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
+      ? purchase.paymentOrderId
+      : null;
+    
+    if (payment && typeof payment === 'object' && 'status' in payment) {
+      // If it's a free consultation, it's not fully purchased yet - user needs to pay
+      if (payment.status === 'free_consultation') {
+        return false;
+      }
+      // If it's paid (completed), then it's purchased
+      if (payment.status === 'completed') {
+        return true;
+      }
+    }
+
+    // Default: if there's a purchase, consider it purchased (for backward compatibility)
+    return true;
+  }, [subService, userPurchases, isAuthenticated]);
+
+  // Check if service has free consultation request
+  const hasFreeConsultation = useMemo(() => {
+    if (!subService || !isAuthenticated || userPurchases.length === 0) {
+      return false;
+    }
+
+    const purchase = userPurchases.find(
+      p => p.itemId === subService._id && p.itemType === 'service' && p.status === 'active'
+    );
+
+    if (!purchase) {
+      return false;
+    }
+
+    const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
+      ? purchase.paymentOrderId
+      : null;
+    
+    if (payment && typeof payment === 'object' && 'status' in payment) {
+      return payment.status === 'free_consultation';
+    }
+
+    return false;
   }, [subService, userPurchases, isAuthenticated]);
 
   // Check if service is already paid (commented out as not currently used)
@@ -942,10 +988,35 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                       ✓ Service Already Purchased
                     </div>
                   )}
+                  {/* Show Payment button for free consultations */}
+                  {hasFreeConsultation && !isServicePurchased && (
+                    <button
+                      onClick={handlePayment}
+                      disabled={isProcessingPayment}
+                      className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isProcessingPayment ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                          </svg>
+                          <span>Pay Now</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
                 
                 {/* Free Consultation Button - Hero Section */}
-                {!isServicePurchased && (
+                {!isServicePurchased && !hasFreeConsultation && (
                   <div className="mt-3 sm:mt-0 sm:flex sm:justify-end">
                     <button
                       onClick={() => {
@@ -971,7 +1042,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                           </svg>
-                          <span>{!isAuthenticated ? 'Login to Request Free Consultation' : 'Request Free Consultation'}</span>
+                          <span>{!isAuthenticated ? 'Login to Request Free Consultation' : hasFreeConsultation ? 'Consultation Requested ✓' : 'Request Free Consultation'}</span>
                         </>
                       )}
                     </button>
@@ -1287,8 +1358,33 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
 
                 {/* Action Buttons Section */}
                 <div className="mt-6 space-y-3">
+                  {/* Payment button for free consultations */}
+                  {hasFreeConsultation && !isServicePurchased && (
+                    <button
+                      onClick={handlePayment}
+                      disabled={isProcessingPayment}
+                      className="w-full px-6 py-4 bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isProcessingPayment ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                          </svg>
+                          <span>Pay Now</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                   {/* Primary CTA Button */}
-                  {!isServicePurchased ? (
+                  {!isServicePurchased && !hasFreeConsultation && (
                     <button
                       onClick={handleGetQuotation}
                       disabled={isProcessingPayment || priceCalculation.total === 0 || !isAuthenticated}
@@ -1348,7 +1444,32 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                           : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
                       }
                     </button>
-                  ) : (
+                  )}
+                  {hasFreeConsultation && !isServicePurchased && (
+                    <button
+                      onClick={handlePayment}
+                      disabled={isProcessingPayment}
+                      className="w-full px-6 py-4 bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isProcessingPayment ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                          </svg>
+                          <span>Pay Now</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                  {isServicePurchased && !hasFreeConsultation && (
                     <div className="w-full px-6 py-4 bg-green-500/20 border-2 border-green-500/50 text-green-400 rounded-full font-semibold text-center flex items-center justify-center gap-2">
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -1370,7 +1491,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                   )}
 
                   {/* Free Consultation Button */}
-                  {!isServicePurchased && (
+                  {!isServicePurchased && !hasFreeConsultation && (
                     <button
                       onClick={() => {
                         if (!isAuthenticated) {
@@ -1395,7 +1516,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                           </svg>
-                          <span>{!isAuthenticated ? 'Login to Request Free Consultation' : 'Request Free Consultation'}</span>
+                          <span>{!isAuthenticated ? 'Login to Request Free Consultation' : hasFreeConsultation ? 'Consultation Requested ✓' : 'Request Free Consultation'}</span>
                         </>
                       )}
                     </button>
@@ -1743,6 +1864,32 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                       }
                     </button>
                   )
+                ) : hasFreeConsultation ? (
+                  <button
+                    onClick={() => {
+                      setShowMobileConfigurator(false);
+                      handlePayment();
+                    }}
+                    disabled={isProcessingPayment}
+                    className="w-full px-6 py-4 bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isProcessingPayment ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        <span>Pay Now</span>
+                      </>
+                    )}
+                  </button>
                 ) : (
                   <div className="w-full px-6 py-4 bg-green-500/20 border-2 border-green-500/50 text-green-400 rounded-full font-semibold text-center flex items-center justify-center gap-2">
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -1753,7 +1900,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                 )}
 
                 {/* Free Consultation Button - Mobile */}
-                {!isServicePurchased && (
+                {!isServicePurchased && !hasFreeConsultation && (
                   <button
                     onClick={() => {
                       setShowMobileConfigurator(false);
