@@ -9,48 +9,78 @@ let transporter: nodemailer.Transporter | null = null;
 
 function getEmailTransporter(): nodemailer.Transporter {
   if (!transporter) {
-    // Using Gmail SMTP with increased timeout and connection settings
-    // Render may have network restrictions, so we need longer timeouts
-    // Try port 465 first (more reliable), fallback to 587
-    const usePort465 = process.env.EMAIL_USE_PORT_465 !== 'false'; // Default to true
+    // Check if SendGrid is configured (Twilio SendGrid)
+    const sendGridApiKey = process.env.SENDGRID_API_KEY;
+    const emailService = process.env.EMAIL_SERVICE || 'gmail'; // Default to gmail
     
-    // Clean email password - remove spaces (Gmail App Passwords don't have spaces)
-    const emailPassword = (process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
-    const emailUser = process.env.EMAIL_USER || process.env.GMAIL_USER;
-    
-    if (!emailPassword || emailPassword.length !== 16) {
-      console.warn(`⚠️ EMAIL_PASSWORD length is ${emailPassword.length} (should be 16 characters, no spaces)`);
+    if (emailService === 'sendgrid' && sendGridApiKey) {
+      // Use Twilio SendGrid (more reliable on cloud platforms)
+      console.log('📧 Using Twilio SendGrid for email service');
+      
+      const transportOptions: any = {
+        host: 'smtp.sendgrid.net',
+        port: 587,
+        secure: false, // STARTTLS
+        auth: {
+          user: 'apikey', // SendGrid requires 'apikey' as username
+          pass: sendGridApiKey, // Your SendGrid API key
+        },
+        connectionTimeout: 30000, // 30 seconds (SendGrid is faster)
+        greetingTimeout: 10000, // 10 seconds
+        socketTimeout: 30000, // 30 seconds
+        tls: {
+          rejectUnauthorized: true,
+          minVersion: 'TLSv1.2'
+        },
+      };
+      
+      transporter = nodemailer.createTransport(transportOptions);
+      console.log('✅ SendGrid email transporter configured');
+      console.log('📧 SendGrid API Key: Configured');
+    } else {
+      // Fallback to Gmail SMTP
+      console.log('📧 Using Gmail SMTP for email service');
+      
+      // Try port 465 first (more reliable), fallback to 587
+      const usePort465 = process.env.EMAIL_USE_PORT_465 !== 'false'; // Default to true
+      
+      // Clean email password - remove spaces (Gmail App Passwords don't have spaces)
+      const emailPassword = (process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+      const emailUser = process.env.EMAIL_USER || process.env.GMAIL_USER;
+      
+      if (!emailPassword || emailPassword.length !== 16) {
+        console.warn(`⚠️ EMAIL_PASSWORD length is ${emailPassword.length} (should be 16 characters, no spaces)`);
+      }
+      
+      const transportOptions: any = {
+        host: 'smtp.gmail.com',
+        port: usePort465 ? 465 : 587,
+        secure: usePort465, // true for 465, false for 587
+        auth: {
+          user: emailUser,
+          pass: emailPassword, // Use cleaned password
+        },
+        // Increased timeouts for Render's network
+        connectionTimeout: 90000, // 90 seconds (increased from 60)
+        greetingTimeout: 30000, // 30 seconds
+        socketTimeout: 90000, // 90 seconds (increased from 60)
+        // Retry configuration
+        pool: false, // Disable pooling for better connection handling
+        // Additional options for better reliability
+        tls: {
+          rejectUnauthorized: true, // Verify SSL certificates
+          minVersion: 'TLSv1.2' // Use modern TLS
+        },
+        debug: false, // Disable debug to reduce logs
+        logger: false, // Disable logger
+      };
+      
+      transporter = nodemailer.createTransport(transportOptions);
+      
+      console.log(`📧 Email transporter configured: Port ${usePort465 ? 465 : 587}, Secure: ${usePort465}`);
+      console.log(`📧 Email user: ${emailUser}`);
+      console.log(`📧 Password length: ${emailPassword.length} characters`);
     }
-    
-    // When using host and port explicitly, don't use 'service' property
-    const transportOptions: any = {
-      host: 'smtp.gmail.com',
-      port: usePort465 ? 465 : 587,
-      secure: usePort465, // true for 465, false for 587
-      auth: {
-        user: emailUser,
-        pass: emailPassword, // Use cleaned password
-      },
-      // Increased timeouts for Render's network
-      connectionTimeout: 90000, // 90 seconds (increased from 60)
-      greetingTimeout: 30000, // 30 seconds
-      socketTimeout: 90000, // 90 seconds (increased from 60)
-      // Retry configuration
-      pool: false, // Disable pooling for better connection handling
-      // Additional options for better reliability
-      tls: {
-        rejectUnauthorized: true, // Verify SSL certificates
-        minVersion: 'TLSv1.2' // Use modern TLS
-      },
-      debug: false, // Disable debug to reduce logs
-      logger: false, // Disable logger
-    };
-    
-    transporter = nodemailer.createTransport(transportOptions);
-    
-    console.log(`📧 Email transporter configured: Port ${usePort465 ? 465 : 587}, Secure: ${usePort465}`);
-    console.log(`📧 Email user: ${emailUser}`);
-    console.log(`📧 Password length: ${emailPassword.length} characters`);
   }
   return transporter;
 }
@@ -69,25 +99,43 @@ export const sendEmail = async (
   text?: string,
   retries: number = 3
 ): Promise<void> => {
+  // Check email service configuration
+  const emailService = process.env.EMAIL_SERVICE || 'gmail';
+  const sendGridApiKey = process.env.SENDGRID_API_KEY;
   const emailUser = process.env.EMAIL_USER || process.env.GMAIL_USER;
   const emailPassword = process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD;
-
-  if (!emailUser || !emailPassword) {
-    console.warn('⚠️ Email service not configured. EMAIL_USER and EMAIL_PASSWORD not set.');
-    console.log('📧 Email would have been sent to:', to);
-    console.log('📧 Subject:', subject);
-    throw new Error('Email service not configured. Please set EMAIL_USER and EMAIL_PASSWORD in .env file');
+  
+  // Validate configuration based on service type
+  if (emailService === 'sendgrid') {
+    if (!sendGridApiKey) {
+      console.warn('⚠️ SendGrid not configured. SENDGRID_API_KEY not set.');
+      console.log('📧 Email would have been sent to:', to);
+      console.log('📧 Subject:', subject);
+      throw new Error('SendGrid not configured. Please set SENDGRID_API_KEY in environment variables');
+    }
+  } else {
+    if (!emailUser || !emailPassword) {
+      console.warn('⚠️ Email service not configured. EMAIL_USER and EMAIL_PASSWORD not set.');
+      console.log('📧 Email would have been sent to:', to);
+      console.log('📧 Subject:', subject);
+      throw new Error('Email service not configured. Please set EMAIL_USER and EMAIL_PASSWORD in .env file');
+    }
   }
 
+  // Determine from email address
+  const fromEmail = emailService === 'sendgrid' 
+    ? (process.env.SENDGRID_FROM_EMAIL || process.env.EMAIL_USER || 'noreply@facto.org.in')
+    : emailUser;
+
   console.log('📧 Attempting to send email to:', to);
-  console.log('📧 From:', emailUser);
+  console.log('📧 From:', fromEmail);
   console.log('📧 Subject:', subject);
   console.log(`🔄 Retry attempt: ${4 - retries}/3`);
 
   const emailTransporter = getEmailTransporter();
-
+  
   const mailOptions = {
-    from: `"FACTO Consultancy" <${emailUser}>`,
+    from: `"FACTO Consultancy" <${fromEmail}>`,
     to,
     subject,
     html,
@@ -271,18 +319,29 @@ export const sendNewsletterUpdate = async (
   }
 
   // Check email configuration
+  const emailService = process.env.EMAIL_SERVICE || 'gmail';
+  const sendGridApiKey = process.env.SENDGRID_API_KEY;
   const emailUser = process.env.EMAIL_USER || process.env.GMAIL_USER;
   const emailPassword = process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD;
   
-  if (!emailUser || !emailPassword) {
-    console.error('❌ Email service not configured!');
-    console.error('❌ EMAIL_USER:', !!emailUser);
-    console.error('❌ EMAIL_PASSWORD:', !!emailPassword);
-    throw new Error('Email service not configured. Please set EMAIL_USER and EMAIL_PASSWORD in environment variables');
+  if (emailService === 'sendgrid') {
+    if (!sendGridApiKey) {
+      console.error('❌ SendGrid not configured!');
+      console.error('❌ SENDGRID_API_KEY:', !!sendGridApiKey);
+      throw new Error('SendGrid not configured. Please set SENDGRID_API_KEY in environment variables');
+    }
+    console.log('✅ SendGrid email service configured');
+    console.log('📧 From email:', process.env.SENDGRID_FROM_EMAIL || emailUser || 'noreply@facto.org.in');
+  } else {
+    if (!emailUser || !emailPassword) {
+      console.error('❌ Email service not configured!');
+      console.error('❌ EMAIL_USER:', !!emailUser);
+      console.error('❌ EMAIL_PASSWORD:', !!emailPassword);
+      throw new Error('Email service not configured. Please set EMAIL_USER and EMAIL_PASSWORD in environment variables');
+    }
+    console.log('✅ Gmail email service configured');
+    console.log('📧 From email:', emailUser);
   }
-
-  console.log('✅ Email service configured');
-  console.log('📧 From email:', emailUser);
 
   const updateTypeLabel = updateType === 'blog' ? 'New Blog Post' : 'New Course';
   const subject = `${updateTypeLabel}: ${updateData.title}`;
