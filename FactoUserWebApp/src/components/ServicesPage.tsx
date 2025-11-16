@@ -20,18 +20,26 @@ interface UserPurchase {
 }
 
 interface ServicesPageProps {
-  onNavigate: (page: PageType, serviceId?: string) => void;
+  onNavigate: (page: PageType, serviceId?: string, courseId?: string, filter?: string) => void;
+  initialFilter?: string;
 }
 
-export function ServicesPage({ onNavigate }: ServicesPageProps) {
+export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
   const { isAuthenticated, user, token } = useAuth();
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(initialFilter || 'all');
   const [userPurchases, setUserPurchases] = useState<UserPurchase[]>([]);
   const [services, setServices] = useState<SubService[]>([]);
   const [mainServices, setMainServices] = useState<Service[]>([]);
   const [servicesLoading, setServicesLoading] = useState(true);
   const [_loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Update selectedCategory when initialFilter changes
+  useEffect(() => {
+    if (initialFilter) {
+      setSelectedCategory(initialFilter);
+    }
+  }, [initialFilter]);
 
   // Fetch both main services and sub-services when component mounts
   useEffect(() => {

@@ -53,7 +53,9 @@ export const fetchCourses = async (): Promise<Course[]> => {
   try {
     const url = `${API_BASE_URL}/course`;
     console.log('🔄 Fetching courses from:', url);
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+      timeout: 60000, // 60 seconds timeout for mobile (to handle Render.com wake-up time)
+    });
     console.log('📦 Full API Response:', JSON.stringify(response.data, null, 2));
     
     // Handle different response formats

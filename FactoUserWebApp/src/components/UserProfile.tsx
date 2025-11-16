@@ -62,7 +62,7 @@ interface Quotation {
 }
 
 export function UserProfile({ onNavigate }: UserProfileProps) {
-  const { user, logout, forceLogout, token, isAuthenticated } = useAuth();
+  const { user, logout, token, isAuthenticated, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'services' | 'courses' | 'payments'>('profile');
   const [userPurchases, setUserPurchases] = useState<UserPurchase[]>([]);
   const [paymentOrders, setPaymentOrders] = useState<PaymentOrder[]>([]);
@@ -75,6 +75,25 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
   const [_servicesLoading, setServicesLoading] = useState(true);
   const [courseDetailsMap, setCourseDetailsMap] = useState<{[key: string]: Course}>({});
   const [coursesLoading, setCoursesLoading] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    fullName: '',
+    gstNumber: ''
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Initialize edit form data when user data is available
+  useEffect(() => {
+    if (user) {
+      // Extract GST number from gstProfile if it exists
+      const gstNumber = (user as any).gstProfile?.gstNumber || '';
+      setEditFormData({
+        fullName: user.fullName || '',
+        gstNumber: gstNumber
+      });
+    }
+  }, [user]);
 
   // Fetch all services for mapping
   useEffect(() => {
@@ -92,6 +111,97 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
 
     loadAllServices();
   }, []);
+
+  // Handle edit profile
+  const handleEditProfile = () => {
+    setIsEditingProfile(true);
+    setSaveError(null);
+  };
+
+  // Handle cancel edit
+  const handleCancelEdit = () => {
+    setIsEditingProfile(false);
+    setSaveError(null);
+    // Reset form data to original user data
+    if (user) {
+      const gstNumber = (user as any).gstProfile?.gstNumber || '';
+      setEditFormData({
+        fullName: user.fullName || '',
+        gstNumber: gstNumber
+      });
+    }
+  };
+
+  // Handle save profile
+  const handleSaveProfile = async () => {
+    if (!token || !user) {
+      setSaveError('You must be logged in to update your profile');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const updateData: any = {};
+      if (editFormData.fullName.trim()) {
+        updateData.fullName = editFormData.fullName.trim();
+      }
+      // Email and Phone Number are not editable - excluded from update
+      // Update GST Profile - preserve existing gstProfile data and update gstNumber
+      const existingGstProfile = (user as any).gstProfile || {};
+      const trimmedGstNumber = editFormData.gstNumber.trim().toUpperCase();
+      
+      if (trimmedGstNumber) {
+        // Update or add GST number
+        updateData.gstProfile = {
+          ...existingGstProfile,
+          gstNumber: trimmedGstNumber
+        };
+      } else if (existingGstProfile && Object.keys(existingGstProfile).length > 0) {
+        // If GST number is cleared but other gstProfile fields exist, remove only gstNumber
+        const { gstNumber, ...restGstProfile } = existingGstProfile;
+        if (Object.keys(restGstProfile).length > 0) {
+          updateData.gstProfile = restGstProfile;
+        } else {
+          // If only gstNumber existed, set it to empty string
+          updateData.gstProfile = {
+            ...existingGstProfile,
+            gstNumber: ''
+          };
+        }
+      }
+
+      const response = await axios.put(
+        `${API_BASE_URL}/user/profile`,
+        updateData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        // Refresh user data
+        await refreshUser();
+        setIsEditingProfile(false);
+        setSaveError(null);
+      } else {
+        throw new Error(response.data.message || 'Failed to update profile');
+      }
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      setSaveError(
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to update profile. Please try again.'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Create service data mapping from fetched services
   const serviceDataMap: { [key: string]: ServiceData } = allServices.reduce((acc, service) => {
@@ -768,32 +878,134 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Personal Information */}
                 <div>
-                  <h3 className="text-xl font-bold text-[#1F2937] dark:text-white mb-6 flex items-center">
-                    <svg className="w-6 h-6 text-[#007AFF] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    Personal Information
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-600">
-                      <span className="font-medium text-gray-600 dark:text-gray-400">Full Name</span>
-                      <span className="text-[#1F2937] dark:text-white">{user.fullName}</span>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-[#1F2937] dark:text-white flex items-center">
+                      <svg className="w-6 h-6 text-[#007AFF] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      Personal Information
+                    </h3>
+                    {!isEditingProfile && (
+                      <button
+                        onClick={handleEditProfile}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#007AFF] text-white rounded-lg font-medium hover:bg-[#0056CC] transition-all duration-200 text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                  
+                  {isEditingProfile ? (
+                    <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.fullName}
+                        onChange={(e) => setEditFormData({ ...editFormData, fullName: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[#1F2937] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]"
+                        placeholder="Enter your full name"
+                      />
                     </div>
-                    <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-600">
-                      <span className="font-medium text-gray-600 dark:text-gray-400">Email</span>
-                      <span className="text-[#1F2937] dark:text-white">{user.email}</span>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Email <span className="text-gray-500 text-xs">(Not editable)</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={user.email}
+                        disabled
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                        placeholder="Email cannot be changed"
+                      />
                     </div>
                     {user.phoneNumber && (
-                      <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-600">
-                        <span className="font-medium text-gray-600 dark:text-gray-400">Phone</span>
-                        <span className="text-[#1F2937] dark:text-white">+91 {user.phoneNumber}</span>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Phone Number <span className="text-gray-500 text-xs">(Not editable)</span>
+                        </label>
+                        <input
+                          type="tel"
+                          value={`+91 ${user.phoneNumber}`}
+                          disabled
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                          placeholder="Phone number cannot be changed"
+                        />
                       </div>
                     )}
-                    <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-600">
-                      <span className="font-medium text-gray-600 dark:text-gray-400">Role</span>
-                      <span className="text-[#1F2937] dark:text-white capitalize">{user.role}</span>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        GST Number <span className="text-gray-500 text-xs">(Optional - for Corporate users)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.gstNumber}
+                        onChange={(e) => setEditFormData({ ...editFormData, gstNumber: e.target.value.toUpperCase() })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[#1F2937] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]"
+                        placeholder="Enter GST number (e.g., 27ABCDE1234F1Z5)"
+                        maxLength={15}
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        15-character alphanumeric GST number
+                      </p>
+                    </div>
+                    
+                    {saveError && (
+                      <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={handleSaveProfile}
+                        disabled={isSaving}
+                        className="flex-1 bg-gradient-to-r from-[#007AFF] to-[#0056CC] text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isSaving ? 'Saving...' : 'Save Changes'}
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        disabled={isSaving}
+                        className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Cancel
+                      </button>
                     </div>
                   </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-600">
+                        <span className="font-medium text-gray-600 dark:text-gray-400">Full Name</span>
+                        <span className="text-[#1F2937] dark:text-white">{user.fullName}</span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-600">
+                        <span className="font-medium text-gray-600 dark:text-gray-400">Email</span>
+                        <span className="text-[#1F2937] dark:text-white">{user.email}</span>
+                      </div>
+                      {user.phoneNumber && (
+                        <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-600">
+                          <span className="font-medium text-gray-600 dark:text-gray-400">Phone</span>
+                          <span className="text-[#1F2937] dark:text-white">+91 {user.phoneNumber}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-600">
+                        <span className="font-medium text-gray-600 dark:text-gray-400">GST Number</span>
+                        <span className="text-[#1F2937] dark:text-white">
+                          {((user as any).gstProfile?.gstNumber) ? (user as any).gstProfile.gstNumber : 'Not provided'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-600">
+                        <span className="font-medium text-gray-600 dark:text-gray-400">Role</span>
+                        <span className="text-[#1F2937] dark:text-white capitalize">{user.role}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Account Information */}
@@ -877,38 +1089,6 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
                 >
                   Logout
                 </button>
-              </div>
-              
-              {/* Test Button - Remove in production */}
-              <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
-                  🧪 Testing: Force logout to test session expiration
-                </p>
-                <button
-                  onClick={forceLogout}
-                  className="bg-yellow-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-yellow-600 transition-colors"
-                >
-                  Force Logout (Test)
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Success Message */}
-          <div className="mt-8 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-8 w-8 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-medium text-green-800 dark:text-green-200">
-                  Account Created Successfully! 🎉
-                </h3>
-                <p className="text-green-700 dark:text-green-300 mt-1">
-                  Welcome to Facto! You can now access all our services and features. Your account is ready to use.
-                </p>
               </div>
             </div>
           </div>

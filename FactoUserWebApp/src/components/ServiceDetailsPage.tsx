@@ -8,6 +8,7 @@ import { fetchSubServiceById, fetchAllSubServices, SubService } from '../api/ser
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { Storage } from '../utils/storage';
+import { initializeRazorpayPayment } from '../utils/razorpay';
 
 type PageType = 'home' | 'services' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
@@ -657,17 +658,20 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
         setPaymentError('Payment opened in browser. Please complete the payment and return to the app.');
         setIsProcessingPayment(false);
       } else {
-        // Web: Use existing Razorpay script
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.onload = () => {
-          const options = {
+        // Web: Use Razorpay utility for proper script loading
+        try {
+          await initializeRazorpayPayment({
             key: razorpayKey,
             amount: amount,
             currency: currency,
             name: 'Facto Services',
             description: `Payment for ${displayService.title}`,
             order_id: orderId,
+            prefill: {
+              name: user.fullName || '',
+              email: user.email || '',
+              contact: user.phoneNumber || ''
+            },
             handler: async function (response: any) {
               try {
                 const token = await Storage.get('authToken');
@@ -696,27 +700,22 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                 
                 // Refresh user purchases to update the UI
                 setRefreshKey(prev => prev + 1);
+                setIsProcessingPayment(false);
               } catch (error) {
                 console.error('Payment verification failed:', error);
                 setPaymentError('Payment successful, but verification failed. Please contact support.');
-              }
-            },
-            prefill: {
-              name: user.fullName || '',
-              email: user.email || '',
-              contact: user.phoneNumber || ''
-            },
-            modal: {
-              ondismiss: function() {
                 setIsProcessingPayment(false);
               }
+            },
+            onDismiss: function() {
+              setIsProcessingPayment(false);
             }
-          };
-
-          const rzp = new (window as any).Razorpay(options);
-          rzp.open();
-        };
-        document.body.appendChild(script);
+          });
+        } catch (error: any) {
+          console.error('Razorpay initialization error:', error);
+          setPaymentError(error.message || 'Failed to initialize payment gateway. Please refresh the page and try again.');
+          setIsProcessingPayment(false);
+        }
       }
     } catch (error: any) {
       console.error('Payment initiation failed:', error);

@@ -170,7 +170,7 @@ export function MobileShorts({ onNavigate }: MobileShortsProps = {}) {
   return (
     <div 
       ref={containerRef}
-      className="fixed inset-0 bg-black z-40 overflow-hidden"
+      className="fixed inset-0 bg-black z-40 overflow-hidden pb-16"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -244,7 +244,7 @@ export function MobileShorts({ onNavigate }: MobileShortsProps = {}) {
           )}
 
           {/* Creator Info - Left Side (YouTube Shorts Style) */}
-          <div className="absolute bottom-0 left-0 p-4 pb-20 z-10 max-w-[60%]">
+          <div className="absolute bottom-0 left-0 p-4 pb-24 z-10 max-w-[60%]">
             {/* Creator Profile */}
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-10 h-10 bg-gradient-to-br from-[#007AFF] to-[#00C897] rounded-full flex items-center justify-center text-white font-bold text-sm overflow-hidden">
@@ -267,7 +267,7 @@ export function MobileShorts({ onNavigate }: MobileShortsProps = {}) {
           </div>
 
           {/* Action Buttons - Right Side (YouTube Shorts Style) */}
-          <div className="absolute right-3 bottom-20 flex flex-col items-center space-y-5 z-10">
+          <div className="absolute right-3 bottom-28 flex flex-col items-center space-y-4 z-10">
             {/* Like Button */}
             <button
               onClick={() => handleLike(currentShortData.id)}
@@ -392,7 +392,7 @@ export function MobileShorts({ onNavigate }: MobileShortsProps = {}) {
           </div>
 
           {/* Download Button - Bottom Right */}
-          <button className="absolute bottom-4 right-3 w-12 h-12 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white active:scale-95 transition-all z-10">
+          <button className="absolute bottom-24 right-3 w-12 h-12 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white active:scale-95 transition-all z-10">
             <svg
               className="w-6 h-6"
               fill="none"

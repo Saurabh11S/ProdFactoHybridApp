@@ -45,60 +45,60 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
   const [uploading, setUploading] = useState(false);
   const [requiredDocuments, setRequiredDocuments] = useState<RequiredDocument[]>([]);
 
-  // Get required documents based on service type
+  // Get available documents based on service type (all optional)
   const getRequiredDocumentsForService = (serviceName: string): RequiredDocument[] => {
     const serviceType = serviceName.toLowerCase();
     
     if (serviceType.includes('itr')) {
       return [
-        { name: 'Form 16', description: 'TDS certificate from your employer', required: true, uploaded: false },
-        { name: 'PAN Card', description: 'Copy of your PAN card', required: true, uploaded: false },
-        { name: 'Aadhaar Card', description: 'Copy of your Aadhaar card', required: true, uploaded: false },
-        { name: 'Bank Statement', description: 'Last 3 months bank statements', required: true, uploaded: false },
+        { name: 'Form 16', description: 'TDS certificate from your employer', required: false, uploaded: false },
+        { name: 'PAN Card', description: 'Copy of your PAN card', required: false, uploaded: false },
+        { name: 'Aadhaar Card', description: 'Copy of your Aadhaar card', required: false, uploaded: false },
+        { name: 'Bank Statement', description: 'Last 3 months bank statements', required: false, uploaded: false },
         { name: 'Investment Proofs', description: '80C, 80D investment certificates', required: false, uploaded: false },
         { name: 'Interest Certificates', description: 'FD, Savings account interest certificates', required: false, uploaded: false },
         { name: 'Rent Receipts', description: 'House rent receipts (if applicable)', required: false, uploaded: false }
       ];
     } else if (serviceType.includes('gst')) {
       return [
-        { name: 'PAN Card', description: 'Copy of PAN card', required: true, uploaded: false },
-        { name: 'Aadhaar Card', description: 'Copy of Aadhaar card', required: true, uploaded: false },
-        { name: 'Bank Account Details', description: 'Bank account statement or cancelled cheque', required: true, uploaded: false },
-        { name: 'Business Address Proof', description: 'Electricity bill, rent agreement, or property documents', required: true, uploaded: false },
-        { name: 'Business Registration', description: 'Partnership deed, MOA, AOA, or LLP agreement', required: true, uploaded: false },
+        { name: 'PAN Card', description: 'Copy of PAN card', required: false, uploaded: false },
+        { name: 'Aadhaar Card', description: 'Copy of Aadhaar card', required: false, uploaded: false },
+        { name: 'Bank Account Details', description: 'Bank account statement or cancelled cheque', required: false, uploaded: false },
+        { name: 'Business Address Proof', description: 'Electricity bill, rent agreement, or property documents', required: false, uploaded: false },
+        { name: 'Business Registration', description: 'Partnership deed, MOA, AOA, or LLP agreement', required: false, uploaded: false },
         { name: 'Digital Signature', description: 'DSC certificate (if available)', required: false, uploaded: false }
       ];
     } else if (serviceType.includes('company') || serviceType.includes('llp') || serviceType.includes('partnership')) {
       return [
-        { name: 'PAN Card', description: 'PAN card of all directors/partners', required: true, uploaded: false },
-        { name: 'Aadhaar Card', description: 'Aadhaar card of all directors/partners', required: true, uploaded: false },
-        { name: 'Address Proof', description: 'Address proof of all directors/partners', required: true, uploaded: false },
-        { name: 'Business Address', description: 'Registered office address proof', required: true, uploaded: false },
-        { name: 'Digital Signature', description: 'DSC of authorized signatory', required: true, uploaded: false },
+        { name: 'PAN Card', description: 'PAN card of all directors/partners', required: false, uploaded: false },
+        { name: 'Aadhaar Card', description: 'Aadhaar card of all directors/partners', required: false, uploaded: false },
+        { name: 'Address Proof', description: 'Address proof of all directors/partners', required: false, uploaded: false },
+        { name: 'Business Address', description: 'Registered office address proof', required: false, uploaded: false },
+        { name: 'Digital Signature', description: 'DSC of authorized signatory', required: false, uploaded: false },
         { name: 'MOA/AOA', description: 'Memorandum and Articles of Association', required: false, uploaded: false }
       ];
     } else if (serviceType.includes('trademark')) {
       return [
-        { name: 'Trademark Logo', description: 'High-resolution logo/design file', required: true, uploaded: false },
-        { name: 'PAN Card', description: 'PAN card of applicant', required: true, uploaded: false },
-        { name: 'Address Proof', description: 'Address proof of applicant', required: true, uploaded: false },
+        { name: 'Trademark Logo', description: 'High-resolution logo/design file', required: false, uploaded: false },
+        { name: 'PAN Card', description: 'PAN card of applicant', required: false, uploaded: false },
+        { name: 'Address Proof', description: 'Address proof of applicant', required: false, uploaded: false },
         { name: 'Business Registration', description: 'Company/LLP registration certificate', required: false, uploaded: false },
         { name: 'Power of Attorney', description: 'POA if filed through attorney', required: false, uploaded: false }
       ];
     } else if (serviceType.includes('lut')) {
       return [
-        { name: 'GST Registration Certificate', description: 'GST registration certificate', required: true, uploaded: false },
-        { name: 'PAN Card', description: 'PAN card copy', required: true, uploaded: false },
-        { name: 'Bank Account Details', description: 'Bank account statement', required: true, uploaded: false },
+        { name: 'GST Registration Certificate', description: 'GST registration certificate', required: false, uploaded: false },
+        { name: 'PAN Card', description: 'PAN card copy', required: false, uploaded: false },
+        { name: 'Bank Account Details', description: 'Bank account statement', required: false, uploaded: false },
         { name: 'Export Documents', description: 'Previous export invoices (if any)', required: false, uploaded: false },
-        { name: 'Business Address Proof', description: 'Address proof of business', required: true, uploaded: false }
+        { name: 'Business Address Proof', description: 'Address proof of business', required: false, uploaded: false }
       ];
     } else {
       // Default documents for other services
       return [
-        { name: 'PAN Card', description: 'Copy of PAN card', required: true, uploaded: false },
-        { name: 'Aadhaar Card', description: 'Copy of Aadhaar card', required: true, uploaded: false },
-        { name: 'Address Proof', description: 'Address proof document', required: true, uploaded: false },
+        { name: 'PAN Card', description: 'Copy of PAN card', required: false, uploaded: false },
+        { name: 'Aadhaar Card', description: 'Copy of Aadhaar card', required: false, uploaded: false },
+        { name: 'Address Proof', description: 'Address proof document', required: false, uploaded: false },
         { name: 'Business Documents', description: 'Relevant business documents', required: false, uploaded: false }
       ];
     }
@@ -490,14 +490,14 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
 
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column - Required Documents Checklist */}
+            {/* Left Column - Available Documents Checklist */}
             <div className="space-y-6">
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
                 <h3 className="text-xl font-bold text-[#1F2937] dark:text-white mb-4 flex items-center">
                   <svg className="w-6 h-6 text-[#007AFF] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Required Documents
+                  Available Documents
                 </h3>
                 <div className="space-y-3">
                   {requiredDocuments.map((doc, index) => (
@@ -505,9 +505,7 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
                       <div className={`w-5 h-5 rounded border-2 mr-3 mt-1 flex items-center justify-center ${
                         doc.uploaded 
                           ? 'bg-[#00C897] border-[#00C897]' 
-                          : doc.required 
-                          ? 'border-[#007AFF]' 
-                          : 'border-gray-300'
+                          : 'border-gray-300 dark:border-gray-500'
                       }`}>
                         {doc.uploaded && (
                           <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -518,9 +516,6 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
                       <div className="flex-1">
                         <div className="flex items-center">
                           <p className="font-medium text-[#1F2937] dark:text-white">{doc.name}</p>
-                          {doc.required && (
-                            <span className="ml-2 text-red-500 text-sm">*</span>
-                          )}
                           {doc.uploaded && (
                             <span className="ml-2 text-[#00C897] text-xs bg-[#00C897]/10 px-2 py-1 rounded-full">
                               ✓ Uploaded

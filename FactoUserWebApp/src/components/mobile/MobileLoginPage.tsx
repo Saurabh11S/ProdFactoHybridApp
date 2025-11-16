@@ -125,7 +125,7 @@ export function MobileLoginPage({ onNavigate }: MobileLoginPageProps) {
   const displayError = error || localError;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-black flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         {/* Back to Home Button */}
         <button

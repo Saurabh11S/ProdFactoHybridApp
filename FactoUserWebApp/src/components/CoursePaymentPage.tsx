@@ -7,6 +7,7 @@ import { Storage } from '../utils/storage';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { UserInfoModal } from './UserInfoModal';
+import { initializeRazorpayPayment } from '../utils/razorpay';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment';
 
@@ -16,7 +17,7 @@ interface CoursePaymentPageProps {
 }
 
 export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPageProps) {
-  const { isAuthenticated, user, token, refreshUser } = useAuth();
+  const { isAuthenticated, user, token, refreshUser, isLoading } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,22 +40,51 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
         return;
       }
 
+      // Don't load if not authenticated (will show login prompt)
+      if (!isAuthenticated || !token) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
-        const courseData = await fetchCourseById(courseId, token || undefined);
+        
+        // Get fresh token from storage to ensure it's current
+        const authToken = await Storage.get('authToken');
+        if (!authToken) {
+          setError('Please log in to view course details');
+          setLoading(false);
+          return;
+        }
+        
+        const courseData = await fetchCourseById(courseId, authToken);
         setCourse(courseData);
       } catch (err: any) {
         console.error('Error loading course details:', err);
-        setError('Failed to load course details. Please try again.');
+        
+        // Show actual error message from API if available
+        const errorMessage = err.response?.data?.message || 
+                           err.response?.data?.error?.message ||
+                           err.message ||
+                           'Failed to load course details. Please try again.';
+        
+        // Check if it's an authentication error
+        if (err.response?.status === 401 || errorMessage.toLowerCase().includes('token') || errorMessage.toLowerCase().includes('unauthorized')) {
+          setError('Your session has expired. Please log in again.');
+        } else {
+          setError(errorMessage);
+        }
         setCourse(null);
       } finally {
         setLoading(false);
       }
     };
 
-    loadCourseDetails();
-  }, [courseId]);
+    if (isAuthenticated && token) {
+      loadCourseDetails();
+    }
+  }, [courseId, isAuthenticated, token]);
 
   // Check for missing user information
   const checkMissingInfo = () => {
@@ -102,6 +132,7 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
   // Proceed with payment after user info is complete
   const proceedWithPayment = async () => {
     if (!isAuthenticated || !user || !course) {
+      setPaymentError('Please log in to proceed with payment');
       return;
     }
 
@@ -109,6 +140,15 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
     setPaymentError(null);
 
     try {
+      // Get fresh token from storage to ensure it's current
+      const authToken = await Storage.get('authToken');
+      if (!authToken) {
+        setPaymentError('Your session has expired. Please log in again.');
+        setIsProcessingPayment(false);
+        onNavigate('login');
+        return;
+      }
+
       const paymentOrderData = {
         userId: user._id,
         items: [{
@@ -120,7 +160,6 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
         }]
       };
 
-      const authToken = await Storage.get('authToken');
       const paymentOrderResponse = await axios.post(`${API_BASE_URL}/payment/initiate-payment`, paymentOrderData, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -150,17 +189,20 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
         setPaymentError('Payment opened in browser. Please complete the payment and return to the app.');
         setIsProcessingPayment(false);
       } else {
-        // Web: Use Razorpay script
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.onload = () => {
-          const options = {
+        // Web: Use Razorpay utility for proper script loading
+        try {
+          await initializeRazorpayPayment({
             key: razorpayKey,
             amount: amount * 100, // Convert to paise
             currency: currency,
             name: 'FACTO',
             description: `Payment for ${course.title}`,
             order_id: orderId,
+            prefill: {
+              name: user.fullName || '',
+              email: user.email || '',
+              contact: user.phoneNumber || ''
+            },
             handler: async function (response: any) {
               try {
                 const token = await Storage.get('authToken');
@@ -183,26 +225,36 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
                 setIsProcessingPayment(false);
               }
             },
-            prefill: {
-              name: user.fullName || '',
-              email: user.email || '',
-              contact: user.phoneNumber || ''
-            },
-            modal: {
-              ondismiss: function() {
-                setIsProcessingPayment(false);
-              }
+            onDismiss: function() {
+              setIsProcessingPayment(false);
             }
-          };
-
-          const rzp = new (window as any).Razorpay(options);
-          rzp.open();
-        };
-        document.body.appendChild(script);
+          });
+        } catch (error: any) {
+          console.error('Razorpay initialization error:', error);
+          setPaymentError(error.message || 'Failed to initialize payment gateway. Please refresh the page and try again.');
+          setIsProcessingPayment(false);
+        }
       }
     } catch (error: any) {
       console.error('Payment initiation failed:', error);
-      setPaymentError(error.response?.data?.message || 'Payment initiation failed. Please try again.');
+      
+      // Show actual error message from API if available
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error?.message ||
+                          error.message ||
+                          'Payment initiation failed. Please try again.';
+      
+      // Check if it's an authentication error
+      if (error.response?.status === 401 || errorMessage.toLowerCase().includes('token') || errorMessage.toLowerCase().includes('unauthorized')) {
+        setPaymentError('Your session has expired. Please log in again.');
+        // Redirect to login after a short delay
+        setTimeout(() => {
+          onNavigate('login');
+        }, 2000);
+      } else {
+        setPaymentError(errorMessage);
+      }
+      
       setIsProcessingPayment(false);
     }
   };
@@ -228,8 +280,15 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
     return `${duration.value} ${duration.unit}`;
   };
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      onNavigate('login');
+    }
+  }, [isLoading, isAuthenticated, onNavigate]);
+
   // Loading state
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 pt-20 flex items-center justify-center">
         <div className="text-center">
@@ -240,18 +299,73 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
     );
   }
 
-  // Error state
-  if (error || !course) {
+  // Show login prompt if not authenticated
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 pt-20 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-500 text-lg mb-4">{error || 'Course not found'}</div>
+        <div className="text-center max-w-md mx-4">
+          <div className="text-red-500 text-lg mb-4">Please log in to purchase this course</div>
           <button 
-            onClick={() => onNavigate('learning')}
+            onClick={() => onNavigate('login')}
             className="bg-[#007AFF] text-white px-6 py-2 rounded-lg hover:bg-[#0056CC] transition-colors"
           >
-            Back to Courses
+            Go to Login
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || (!loading && !course)) {
+    const isAuthError = error?.toLowerCase().includes('token') || 
+                       error?.toLowerCase().includes('session') || 
+                       error?.toLowerCase().includes('unauthorized') ||
+                       error?.toLowerCase().includes('log in');
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 pt-20 flex items-center justify-center">
+        <div className="text-center max-w-md mx-4">
+          <div className="text-red-500 text-lg mb-4">{error || 'Course not found'}</div>
+          <div className="flex gap-3 justify-center">
+            {isAuthError ? (
+              <button 
+                onClick={() => onNavigate('login')}
+                className="bg-[#007AFF] text-white px-6 py-2 rounded-lg hover:bg-[#0056CC] transition-colors"
+              >
+                Go to Login
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => {
+                    setError(null);
+                    setLoading(true);
+                    const authToken = Storage.get('authToken').then(token => {
+                      if (token && courseId) {
+                        fetchCourseById(courseId, token)
+                          .then(setCourse)
+                          .catch(err => {
+                            console.error('Error loading course:', err);
+                            setError(err.response?.data?.message || 'Failed to load course');
+                          })
+                          .finally(() => setLoading(false));
+                      }
+                    });
+                  }}
+                  className="bg-[#007AFF] text-white px-6 py-2 rounded-lg hover:bg-[#0056CC] transition-colors"
+                >
+                  Retry
+                </button>
+                <button 
+                  onClick={() => onNavigate('learning')}
+                  className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Back to Courses
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );

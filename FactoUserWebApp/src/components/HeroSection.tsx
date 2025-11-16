@@ -4,7 +4,7 @@ import { fetchAllSubServices, SubService } from '../api/services';
 type PageType = 'home' | 'services' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment';
 
 interface HeroSectionProps {
-  onNavigate: (page: PageType, serviceId?: string) => void;
+  onNavigate: (page: PageType, serviceId?: string, courseId?: string, filter?: string) => void;
 }
 
 export function HeroSection({ onNavigate }: HeroSectionProps) {
@@ -131,7 +131,7 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
             <div className={`transform transition-all duration-1000 delay-600 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
                 <button
-                  onClick={() => onNavigate('service-details')}
+                  onClick={() => onNavigate('services', undefined, undefined, 'itr')}
                   className="group relative bg-gradient-to-r from-[#007AFF] to-[#0056CC] text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-2xl transform hover:-translate-y-2 transition-all duration-300 flex items-center justify-center overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-[#0056CC] to-[#007AFF] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -144,7 +144,7 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
                 </button>
                 
                 <button
-                  onClick={() => onNavigate('services')}
+                  onClick={() => onNavigate('services', undefined, undefined, 'gst')}
                   className="group relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg text-[#007AFF] dark:text-blue-400 px-8 py-4 rounded-xl font-semibold text-lg border-2 border-[#007AFF]/30 dark:border-blue-400/30 hover:bg-[#007AFF] hover:text-white dark:hover:bg-blue-500 dark:hover:text-white transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-2xl transform hover:-translate-y-2"
                 >
                   <span className="mr-2">🏢</span>

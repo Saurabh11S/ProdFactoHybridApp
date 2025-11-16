@@ -13,31 +13,64 @@ export function MobileLearning({ onNavigate }: MobileLearningProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [myCourses, setMyCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { isAuthenticated, token } = useAuth();
 
-  useEffect(() => {
-    async function loadCourses() {
-      try {
-        setLoading(true);
-        const allCourses = await fetchCourses();
-        setCourses(allCourses);
+  const loadCourses = async (retryAttempt = 0) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const allCourses = await fetchCourses();
+      setCourses(allCourses);
+      setRetryCount(0); // Reset retry count on success
 
-        if (isAuthenticated && token) {
-          try {
-            const userCourses = await fetchUserCourses(token);
-            setMyCourses(userCourses);
-          } catch (error) {
-            console.error('Error fetching user courses:', error);
-          }
+      if (isAuthenticated && token) {
+        try {
+          const userCourses = await fetchUserCourses(token);
+          setMyCourses(userCourses);
+        } catch (error) {
+          console.error('Error fetching user courses:', error);
+          // Don't fail the whole page if user courses fail
         }
-      } catch (error) {
-        console.error('Error fetching courses:', error);
-        setCourses([]);
-      } finally {
-        setLoading(false);
       }
+    } catch (error: any) {
+      console.error('Error fetching courses:', error);
+      
+      // Check if it's a network error and we should retry
+      const isNetworkError = error?.code === 'ERR_NETWORK' || 
+                            error?.code === 'ECONNABORTED' || 
+                            error?.message?.includes('Network') ||
+                            error?.message?.includes('timeout');
+      
+      // Retry up to 2 times for network errors (total 3 attempts)
+      if (isNetworkError && retryAttempt < 2) {
+        console.log(`Retrying courses fetch (attempt ${retryAttempt + 1}/2)...`);
+        setTimeout(() => {
+          loadCourses(retryAttempt + 1);
+        }, 2000 * (retryAttempt + 1)); // Exponential backoff: 2s, 4s
+        return;
+      }
+      
+      // Set user-friendly error message
+      let errorMessage = 'Failed to load courses. ';
+      if (isNetworkError) {
+        errorMessage += 'Please check your internet connection or the backend service may be starting up.';
+      } else if (error?.message) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += 'Please try again later.';
+      }
+      
+      setError(errorMessage);
+      setCourses([]);
+      setRetryCount(retryAttempt);
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     loadCourses();
   }, [isAuthenticated, token]);
 
@@ -108,7 +141,32 @@ export function MobileLearning({ onNavigate }: MobileLearningProps) {
 
       {/* Courses List */}
       <div className="px-4 py-4 space-y-4">
-        {courses.length === 0 ? (
+        {error ? (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 text-center border border-red-200 dark:border-red-800">
+            <div className="mb-4">
+              <svg className="w-12 h-12 text-red-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-red-600 dark:text-red-400 font-medium mb-2">Unable to Load Courses</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{error}</p>
+            </div>
+            <button
+              onClick={() => {
+                setError(null);
+                setRetryCount(0);
+                loadCourses(0);
+              }}
+              className="bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-xl font-medium active:scale-98 transition-transform"
+            >
+              Retry
+            </button>
+            {retryCount > 0 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Retried {retryCount} time{retryCount > 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+        ) : courses.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">No courses available</p>
           </div>

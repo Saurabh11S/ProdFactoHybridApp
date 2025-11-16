@@ -134,7 +134,7 @@ export function MobileSignupPage({ onNavigate }: MobileSignupPageProps) {
   const displayError = error || localError;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#007AFF] via-[#0056CC] to-[#003D7A] flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-black flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         {/* Back to Home Button */}
         <button
@@ -166,7 +166,7 @@ export function MobileSignupPage({ onNavigate }: MobileSignupPageProps) {
             }}
             className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
               signupMethod === 'email'
-                ? 'bg-white text-[#007AFF] shadow-lg'
+                ? 'bg-white text-black shadow-lg'
                 : 'text-white/70'
             }`}
           >
@@ -180,7 +180,7 @@ export function MobileSignupPage({ onNavigate }: MobileSignupPageProps) {
             }}
             className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
               signupMethod === 'phone'
-                ? 'bg-white text-[#007AFF] shadow-lg'
+                ? 'bg-white text-black shadow-lg'
                 : 'text-white/70'
             }`}
           >
@@ -260,7 +260,7 @@ export function MobileSignupPage({ onNavigate }: MobileSignupPageProps) {
               <button
                 type="submit"
                 disabled={isSubmitting || isLoading}
-                className="w-full bg-white text-[#007AFF] py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-white text-black py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting || isLoading ? 'Creating Account...' : 'Sign Up'}
               </button>
@@ -317,7 +317,7 @@ export function MobileSignupPage({ onNavigate }: MobileSignupPageProps) {
                   <button
                     type="submit"
                     disabled={isSubmitting || isLoading}
-                    className="w-full bg-white text-[#007AFF] py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-white text-black py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? 'Sending...' : 'Send OTP'}
                   </button>
@@ -346,7 +346,7 @@ export function MobileSignupPage({ onNavigate }: MobileSignupPageProps) {
                   <button
                     type="submit"
                     disabled={isSubmitting || isLoading}
-                    className="w-full bg-white text-[#007AFF] py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-white text-black py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting || isLoading ? 'Verifying...' : 'Verify & Sign Up'}
                   </button>

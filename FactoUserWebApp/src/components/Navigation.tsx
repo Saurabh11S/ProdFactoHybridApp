@@ -16,7 +16,7 @@ export function Navigation({ currentPage, onNavigate, isShortsPage = false }: Na
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { isDarkMode, toggleDarkMode } = useDarkMode();
-  const { logout, isAuthenticated } = useAuth();
+  const { logout, isAuthenticated, user } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -234,27 +234,6 @@ export function Navigation({ currentPage, onNavigate, isShortsPage = false }: Na
 
           {/* Mobile menu button - Show on mobile */}
           <div className={`${isMobile ? 'flex' : 'md:hidden flex'} items-center space-x-2`}>
-            {/* Profile Button - Mobile Only */}
-            {isAuthenticated && (
-              <button
-                onClick={() => onNavigate('profile')}
-                className={`p-2 rounded-lg transition-all duration-200 ${
-                  currentPage === 'profile'
-                    ? isShortsPage
-                      ? 'text-white bg-white/20'
-                      : 'text-[#007AFF] bg-blue-50 dark:bg-blue-900/30'
-                    : isShortsPage
-                      ? 'text-white/80 hover:text-white hover:bg-white/10'
-                      : 'text-gray-800 dark:text-white hover:text-[#007AFF] hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-                aria-label="Profile"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </button>
-            )}
-            
             {/* Mobile Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
@@ -276,21 +255,43 @@ export function Navigation({ currentPage, onNavigate, isShortsPage = false }: Na
               )}
             </button>
             
+            {/* Profile Icon Button - Gmail Style (Replaces hamburger menu) */}
             <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`p-2 rounded-lg transition-colors ${
+              onClick={() => {
+                if (isAuthenticated) {
+                  onNavigate('profile');
+                } else {
+                  onNavigate('login');
+                }
+              }}
+              className={`relative transition-all duration-200 ${
                 isShortsPage 
-                  ? 'text-white/80 hover:text-white hover:bg-white/10' 
-                  : 'text-gray-800 dark:text-white hover:text-[#007AFF]'
-              }`}
+                  ? 'hover:bg-white/10' 
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+              } rounded-full`}
+              aria-label={isAuthenticated ? "Profile" : "Login"}
             >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                {isMobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
+              {isAuthenticated ? (
+                // Show user's profile picture or initial
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm ${
+                  isShortsPage 
+                    ? 'bg-white/20 border-2 border-white/30' 
+                    : 'bg-gradient-to-br from-[#007AFF] to-[#00C897] border-2 border-white dark:border-gray-700'
+                } shadow-lg`}>
+                  {user?.fullName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              ) : (
+                // Show default profile icon for unauthenticated users
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  isShortsPage 
+                    ? 'bg-white/20 border-2 border-white/30 text-white' 
+                    : 'bg-gray-200 dark:bg-gray-700 border-2 border-white dark:border-gray-600 text-gray-600 dark:text-gray-300'
+                } shadow-lg`}>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+              )}
             </button>
           </div>
         </div>

@@ -28,6 +28,9 @@ export function BottomTabBar({ currentPage, onNavigate }: BottomTabBarProps) {
     return null;
   }
 
+  // For shorts page, use a semi-transparent overlay style
+  const isShortsPage = currentPage === 'shorts';
+
   const tabs: TabItem[] = [
     {
       id: 'home',
@@ -103,9 +106,11 @@ export function BottomTabBar({ currentPage, onNavigate }: BottomTabBarProps) {
 
   return (
     <nav className={`fixed bottom-0 left-0 right-0 z-50 ${
-      isDarkMode 
-        ? 'bg-gray-900 border-t border-gray-800' 
-        : 'bg-white border-t border-gray-200'
+      isShortsPage
+        ? 'bg-black/60 backdrop-blur-md border-t border-white/10'
+        : isDarkMode 
+          ? 'bg-gray-900 border-t border-gray-800' 
+          : 'bg-white border-t border-gray-200'
     } pb-safe`}>
       <div className="flex items-center justify-around h-16 px-1">
         {tabs.map((tab) => {
@@ -116,24 +121,45 @@ export function BottomTabBar({ currentPage, onNavigate }: BottomTabBarProps) {
             <button
               key={tab.id}
               onClick={() => onNavigate(tab.id)}
-              className={`flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition-all duration-200 ${
-                isActive 
-                  ? 'text-[#007AFF]' 
-                  : 'text-gray-500 dark:text-gray-400'
+              className={`relative flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition-all duration-200 ${
+                isShortsPage
+                  ? isActive
+                    ? 'text-white'
+                    : 'text-white/70'
+                  : isActive 
+                    ? 'text-[#007AFF]' 
+                    : isDarkMode
+                      ? 'text-gray-300'
+                      : 'text-gray-500'
               }`}
               aria-label={tab.label}
             >
-              <div className="mb-1">
-                {IconComponent(isActive)}
+              {isActive && (
+                <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 w-10 h-1 rounded-b-full ${
+                  isShortsPage ? 'bg-white' : 'bg-[#007AFF]'
+                }`} />
+              )}
+              <div className="mb-1 relative z-10">
+                <div 
+                  className={isShortsPage ? (isActive ? 'text-white' : 'text-white/70') : ''}
+                  style={isShortsPage ? { color: isActive ? 'white' : 'rgba(255, 255, 255, 0.7)' } : undefined}
+                >
+                  {IconComponent(isActive)}
+                </div>
               </div>
-              <span className={`text-xs font-medium transition-colors ${
-                isActive ? 'text-[#007AFF]' : 'text-gray-500 dark:text-gray-400'
+              <span className={`text-xs font-medium transition-colors relative z-10 ${
+                isShortsPage
+                  ? isActive
+                    ? 'text-white'
+                    : 'text-white/70'
+                  : isActive 
+                    ? 'text-[#007AFF]' 
+                    : isDarkMode
+                      ? 'text-gray-300'
+                      : 'text-gray-500'
               }`}>
                 {tab.label}
               </span>
-              {isActive && (
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-10 h-1 bg-[#007AFF] rounded-b-full" />
-              )}
             </button>
           );
         })}

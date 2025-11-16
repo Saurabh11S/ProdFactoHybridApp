@@ -33,6 +33,7 @@ import { MobileShorts } from './components/mobile/MobileShorts';
 import { MobileLandingPage } from './components/mobile/MobileLandingPage';
 import { MobileLoginPage } from './components/mobile/MobileLoginPage';
 import { MobileSignupPage } from './components/mobile/MobileSignupPage';
+import { MobileUpdates } from './components/mobile/MobileUpdates';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details';
 
@@ -40,6 +41,7 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [selectedServiceId, setSelectedServiceId] = useState<string>('itr-1');
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [servicesFilter, setServicesFilter] = useState<string | undefined>(undefined);
   const [isMobile, setIsMobile] = useState(false);
   const [showLanding, setShowLanding] = useState(false);
   
@@ -62,7 +64,7 @@ function AppContent() {
     return () => window.removeEventListener('resize', checkMobile);
   }, [isMobile]);
 
-  const handleNavigation = (page: PageType, serviceId?: string, courseId?: string) => {
+  const handleNavigation = (page: PageType, serviceId?: string, courseId?: string, filter?: string) => {
     setCurrentPage(page);
     if (serviceId) {
       setSelectedServiceId(serviceId);
@@ -70,12 +72,19 @@ function AppContent() {
     if (courseId) {
       setSelectedCourseId(courseId);
     }
+    // Set filter for services page
+    if (page === 'services' && filter) {
+      setServicesFilter(filter);
+    } else if (page !== 'services') {
+      // Clear filter when navigating away from services page
+      setServicesFilter(undefined);
+    }
   };
 
   const renderPage = () => {
     switch (currentPage) {
       case 'services':
-        return <ServicesPage onNavigate={handleNavigation} />;
+        return <ServicesPage onNavigate={handleNavigation} initialFilter={servicesFilter} />;
       case 'learning':
         if (isMobile) {
           return <MobileLearning onNavigate={handleNavigation} />;
@@ -84,7 +93,7 @@ function AppContent() {
       case 'shorts':
         return isMobile ? <MobileShorts onNavigate={handleNavigation} /> : <Shorts onNavigate={handleNavigation} />;
       case 'updates':
-        return <Updates onNavigate={handleNavigation} />;
+        return isMobile ? <MobileUpdates onNavigate={handleNavigation} /> : <Updates onNavigate={handleNavigation} />;
       case 'login':
         return isMobile ? <MobileLoginPage onNavigate={handleNavigation} /> : <LoginPage onNavigate={handleNavigation} />;
       case 'signup':
@@ -159,7 +168,7 @@ function AppContent() {
       </div>
 
       {/* Bottom Tab Bar - Mobile only */}
-      {isMobile && currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'shorts' && (
+      {isMobile && currentPage !== 'login' && currentPage !== 'signup' && (
         <BottomTabBar 
           currentPage={currentPage}
           onNavigate={handleNavigation}
@@ -172,7 +181,7 @@ function AppContent() {
         <WhatsAppChatButton 
           phoneNumber="+918001234567" // Update this with your actual WhatsApp number
           message="Hello! I need help with your services."
-          isMobile={isMobile && ['home', 'services', 'updates', 'profile'].includes(currentPage)}
+          isMobile={isMobile && ['home', 'services', 'updates', 'profile', 'learning', 'shorts'].includes(currentPage)}
         />
       )}
     </div>

@@ -3,10 +3,10 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { fetchCourses, Course } from '../api/courses';
 import { useAuth } from '../contexts/AuthContext';
 
-type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
+type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-details' | 'course-payment';
 
 interface CoursesSectionProps {
-  onNavigate: (page: PageType, serviceId?: string) => void;
+  onNavigate: (page: PageType, serviceId?: string, courseId?: string, filter?: string) => void;
 }
 
 export function CoursesSection({ onNavigate }: CoursesSectionProps) {
@@ -351,7 +351,13 @@ export function CoursesSection({ onNavigate }: CoursesSectionProps) {
                         <span className="font-bold text-[#007AFF] dark:text-blue-400 text-lg">₹{course.price}</span>
                       </div>
                       <button 
-                        onClick={() => onNavigate('login')}
+                        onClick={() => {
+                          if (isAuthenticated) {
+                            onNavigate('course-details', undefined, course._id);
+                          } else {
+                            onNavigate('login');
+                          }
+                        }}
                         className="bg-gradient-to-r from-[#007AFF] to-[#0056CC] text-white px-4 py-2 rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5 hover:scale-105"
                       >
                         Enroll Now

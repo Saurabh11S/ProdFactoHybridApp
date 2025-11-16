@@ -63,7 +63,9 @@ export const fetchServices = async (): Promise<Service[]> => {
   try {
     const url = `${API_BASE_URL}/services`;
     console.log('🔄 Fetching services from:', url);
-    const response = await axios.get<ServiceResponse>(url);
+    const response = await axios.get<ServiceResponse>(url, {
+      timeout: 60000, // 60 seconds timeout for mobile (to handle Render.com wake-up time)
+    });
     console.log('📦 Full API Response:', JSON.stringify(response.data, null, 2));
     
     // Handle different response structures
@@ -98,8 +100,8 @@ export const fetchServices = async (): Promise<Service[]> => {
     // Check for specific error conditions
     if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network Error')) {
       const errorMsg = error?.config?.url?.includes('onrender.com') 
-        ? 'Backend service is unavailable. Please check if the backend server is running or reactivate the Render.com service.'
-        : 'Cannot connect to backend server. Please ensure the backend is running on http://localhost:8080';
+        ? 'Backend service is unavailable. Please check if the backend server is running or reactivate the Render.com service. The service may be starting up (can take 30-60 seconds).'
+        : 'Cannot connect to backend server. Please check your internet connection and try again.';
       throw new Error(errorMsg);
     }
     
@@ -247,8 +249,8 @@ export const fetchAllSubServices = async (): Promise<SubService[]> => {
       // Provide helpful error message
       if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network Error')) {
         const errorMsg = error?.config?.url?.includes('onrender.com') 
-          ? 'Backend service is unavailable. Please check if the backend server is running or reactivate the Render.com service.'
-          : 'Cannot connect to backend server. Please ensure the backend is running on http://localhost:8080';
+          ? 'Backend service is unavailable. Please check if the backend server is running or reactivate the Render.com service. The service may be starting up (can take 30-60 seconds).'
+          : 'Cannot connect to backend server. Please check your internet connection and try again.';
         throw new Error(errorMsg);
       }
       

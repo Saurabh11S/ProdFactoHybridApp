@@ -19,15 +19,23 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [subscriptionMessage, setSubscriptionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Fetch blogs from backend
+  // Fetch blogs from backend - only latest 5 for homepage
   useEffect(() => {
     const loadBlogs = async () => {
       try {
         setLoading(true);
         console.log('🔄 Fetching blogs for NewsSection...');
-        const { blogs: fetchedBlogs } = await fetchBlogs(1, 50); // Fetch up to 50 blogs (same as Updates page)
+        const { blogs: fetchedBlogs } = await fetchBlogs(1, 50); // Fetch up to 50 blogs to get latest
         console.log('✅ Fetched blogs:', fetchedBlogs.length);
-        setBlogs(fetchedBlogs);
+        // Sort by createdAt (newest first) and take only the latest 5
+        const sortedBlogs = [...fetchedBlogs].sort((a, b) => {
+          const dateA = new Date(a.createdAt).getTime();
+          const dateB = new Date(b.createdAt).getTime();
+          return dateB - dateA; // Descending order (newest first)
+        });
+        const latest5 = sortedBlogs.slice(0, 5);
+        console.log('✅ Showing latest 5 updates on homepage:', latest5.length);
+        setBlogs(latest5);
       } catch (err: any) {
         console.error('❌ Error fetching blogs:', err);
         setBlogs([]);
@@ -213,10 +221,10 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
           </p>
         </div>
 
-        {/* News Grid - Show all articles in grid format (same as Updates page) */}
+        {/* News Grid - Show latest 5 articles on homepage */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {Array.from({ length: 6 }).map((_, index) => (
+            {Array.from({ length: 5 }).map((_, index) => (
               <div key={index} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden animate-pulse">
                 <div className="h-48 bg-gray-200 dark:bg-gray-700"></div>
                 <div className="p-6 space-y-4">
@@ -345,9 +353,9 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
                 <span className="flex items-center justify-center">
                   {isSubscribing ? 'Subscribing...' : 'Subscribe Now'}
                   {!isSubscribing && (
-                    <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
+                  <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
                   )}
                 </span>
               </button>
@@ -359,7 +367,7 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
                   : 'bg-red-500/20 text-red-200'
               }`}>
                 {subscriptionMessage.text}
-              </div>
+            </div>
             )}
             <p className="text-sm mt-4 opacity-75">
               Join 25,000+ professionals who stay updated with Facto

@@ -8,27 +8,60 @@ import { useAuth } from '../../contexts/AuthContext';
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
 interface MobileHomeScreenProps {
-  onNavigate: (page: PageType, serviceId?: string) => void;
+  onNavigate: (page: PageType, serviceId?: string, courseId?: string, filter?: string) => void;
 }
 
 export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
   const { isAuthenticated } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [_refreshing, setRefreshing] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     loadServices();
   }, []);
 
-  const loadServices = async () => {
+  const loadServices = async (retryAttempt = 0) => {
     try {
       setLoading(true);
+      setError(null);
       const data = await fetchServices();
       const activeServices = data.filter(service => service.isActive !== false).slice(0, 6);
       setServices(activeServices);
-    } catch (error) {
+      setRetryCount(0); // Reset retry count on success
+    } catch (error: any) {
       console.error('Error loading services:', error);
+      
+      // Check if it's a network error and we should retry
+      const isNetworkError = error?.code === 'ERR_NETWORK' || 
+                            error?.code === 'ECONNABORTED' || 
+                            error?.message?.includes('Network') ||
+                            error?.message?.includes('timeout');
+      
+      // Retry up to 2 times for network errors (total 3 attempts)
+      if (isNetworkError && retryAttempt < 2) {
+        console.log(`Retrying service fetch (attempt ${retryAttempt + 1}/2)...`);
+        setTimeout(() => {
+          loadServices(retryAttempt + 1);
+        }, 2000 * (retryAttempt + 1)); // Exponential backoff: 2s, 4s
+        return;
+      }
+      
+      // Set user-friendly error message
+      let errorMessage = 'Failed to load services. ';
+      if (isNetworkError) {
+        errorMessage += 'Please check your internet connection or the backend service may be starting up.';
+      } else if (error?.message) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += 'Please try again later.';
+      }
+      
+      setError(errorMessage);
+      setServices([]);
+      setRetryCount(retryAttempt);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -79,14 +112,14 @@ export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
         {/* Call-to-Action Buttons */}
         <div className="flex gap-3 mt-6 mb-6">
           <button
-            onClick={() => onNavigate('services')}
+            onClick={() => onNavigate('services', undefined, undefined, 'itr')}
             className="flex-1 bg-[#007AFF] text-white py-3.5 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-98 transition-transform shadow-lg"
           >
             <span>File ITR Now</span>
             <ArrowRight className="w-4 h-4" />
           </button>
           <button
-            onClick={() => onNavigate('services')}
+            onClick={() => onNavigate('services', undefined, undefined, 'gst')}
             className="flex-1 bg-transparent border-2 border-white text-white py-3.5 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-98 transition-transform"
           >
             <span>Start GST Filing</span>
@@ -176,6 +209,37 @@ export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
                 </div>
               </div>
             ))}
+          </div>
+        ) : error ? (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 text-center border border-red-200 dark:border-red-800">
+            <div className="mb-4">
+              <svg className="w-12 h-12 text-red-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-red-600 dark:text-red-400 font-medium mb-2">Unable to Load Services</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{error}</p>
+            </div>
+            <button
+              onClick={() => loadServices(0)}
+              className="bg-[#007AFF] text-white px-6 py-3 rounded-xl font-medium active:scale-98 transition-transform"
+            >
+              Retry
+            </button>
+            {retryCount > 0 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Retried {retryCount} time{retryCount > 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+        ) : services.length === 0 ? (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 text-center">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">No services available at the moment.</p>
+            <button
+              onClick={() => onNavigate('services')}
+              className="text-[#007AFF] font-medium"
+            >
+              View All Services →
+            </button>
           </div>
         ) : (
           <div className="space-y-4">

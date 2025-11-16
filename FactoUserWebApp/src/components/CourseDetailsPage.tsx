@@ -199,10 +199,25 @@ export function CourseDetailsPage({ onNavigate, courseId }: CourseDetailsPagePro
                 <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-4">
                   Course Information
                 </h3>
-                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400 mb-4">
                   <p><strong>Price:</strong> ₹{course.price}</p>
-                  <p><strong>Status:</strong> <span className="text-green-500 font-medium">Purchased</span></p>
+                  <p>
+                    <strong>Status:</strong>{' '}
+                    {course.isPurchased ? (
+                      <span className="text-green-500 font-medium">Purchased</span>
+                    ) : (
+                      <span className="text-gray-500 font-medium">Not Purchased</span>
+                    )}
+                  </p>
                 </div>
+                {!course.isPurchased && (
+                  <button
+                    onClick={() => onNavigate('course-payment', undefined, course._id)}
+                    className="w-full bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all duration-300 hover:scale-105"
+                  >
+                    Buy Now
+                  </button>
+                )}
               </div>
             </div>
           </div>

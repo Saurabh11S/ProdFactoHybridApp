@@ -53,7 +53,9 @@ export const fetchBlogs = async (page = 1, limit = 10, search = '', tag = ''): P
 
     const url = `${API_BASE_URL}/blogs?${params}`;
     console.log('🔄 Fetching blogs from:', url);
-    const response = await axios.get<BlogResponse>(url);
+    const response = await axios.get<BlogResponse>(url, {
+      timeout: 60000, // 60 seconds timeout for mobile (to handle Render.com wake-up time)
+    });
     console.log('📦 Blogs API Response:', response.data);
     
     // Handle response structure: { success: true, data: { blogs: [...], pagination: {...} } }
