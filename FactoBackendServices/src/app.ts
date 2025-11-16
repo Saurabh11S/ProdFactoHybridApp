@@ -34,6 +34,8 @@ const getCorsOrigins = (): (string | RegExp)[] => {
     const origins: (string | RegExp)[] = [
       // Vercel deployment domains (allow all vercel.app subdomains)
       /^https:\/\/.*\.vercel\.app$/,
+      // Custom domain facto.org.in (with and without www)
+      /^https:\/\/(www\.)?facto\.org\.in$/,
     ];
     
     // Add custom production domains from CORS_ORIGIN env var
@@ -111,6 +113,9 @@ app.use((req, res, next) => {
   if (isProduction && origin) {
     // Check if origin matches Vercel pattern
     if (origin.match(/^https:\/\/.*\.vercel\.app$/)) {
+      allowedOrigin = origin;
+    } else if (origin.match(/^https:\/\/(www\.)?facto\.org\.in$/)) {
+      // Check if origin matches custom domain facto.org.in
       allowedOrigin = origin;
     } else if (process.env.CORS_ORIGIN) {
       // Check if origin is in CORS_ORIGIN list
