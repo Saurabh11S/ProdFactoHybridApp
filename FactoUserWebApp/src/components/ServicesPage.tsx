@@ -283,13 +283,57 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
     fetchUserPurchases();
   }, [isAuthenticated, user, token]);
 
-  // Helper function to check if a service is already purchased
-  const isServicePurchased = (serviceId: string): boolean => {
-    return userPurchases.some(purchase => 
-      purchase.itemId === serviceId && 
-      purchase.itemType === 'service' && 
-      purchase.status === 'active'
+  // Helper function to check if a service has free consultation
+  const hasFreeConsultation = (serviceId: string): boolean => {
+    const purchase = userPurchases.find(
+      p => p.itemId === serviceId && p.itemType === 'service' && p.status === 'active'
     );
+    
+    if (!purchase) {
+      return false;
+    }
+    
+    // Check if it's a free consultation
+    const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
+      ? purchase.paymentOrderId
+      : null;
+    
+    if (payment && typeof payment === 'object' && 'status' in payment) {
+      return (payment as any).status === 'free_consultation';
+    }
+    
+    return false;
+  };
+
+  // Helper function to check if a service is already purchased (excluding free consultations)
+  const isServicePurchased = (serviceId: string): boolean => {
+    const purchase = userPurchases.find(
+      p => p.itemId === serviceId && p.itemType === 'service' && p.status === 'active'
+    );
+    
+    if (!purchase) {
+      return false;
+    }
+    
+    // Check if it's a free consultation - if so, don't mark as "purchased"
+    const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
+      ? purchase.paymentOrderId
+      : null;
+    
+    if (payment && typeof payment === 'object' && 'status' in payment) {
+      const paymentStatus = (payment as any).status;
+      // If it's a free consultation, it's not fully purchased yet
+      if (paymentStatus === 'free_consultation') {
+        return false;
+      }
+      // If it's paid (completed), then it's purchased
+      if (paymentStatus === 'completed') {
+        return true;
+      }
+    }
+    
+    // Default: if there's a purchase, consider it purchased (for backward compatibility)
+    return true;
   };
 
   // Generate categories dynamically from sub-services
@@ -565,7 +609,11 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
                         <h3 className="font-bold text-[#1F2937] dark:text-white text-lg group-hover:text-[#007AFF] transition-colors">
                           {service.title}
                         </h3>
-                        {isServicePurchased(service._id) && (
+                        {hasFreeConsultation(service._id) ? (
+                          <span className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded-full text-xs font-bold">
+                            Free Consultation
+                          </span>
+                        ) : isServicePurchased(service._id) && (
                           <span className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded-full text-xs font-bold">
                             Already Purchased
                           </span>
