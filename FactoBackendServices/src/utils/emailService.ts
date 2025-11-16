@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import { configDotenv } from 'dotenv';
 import path from 'path';
 
@@ -17,30 +18,9 @@ function getEmailTransporter(): nodemailer.Transporter {
     // Default to SendGrid if no service is specified and API key exists
     const useSendGrid = (emailService === 'sendgrid' || (!emailService && sendGridApiKey)) && sendGridApiKey;
     
+    // This function is only for Gmail SMTP - SendGrid uses REST API in sendEmail function
     if (useSendGrid) {
-      // Use Twilio SendGrid (more reliable on cloud platforms)
-      console.log('📧 Using Twilio SendGrid for email service');
-      
-      const transportOptions: any = {
-        host: 'smtp.sendgrid.net',
-        port: 587,
-        secure: false, // STARTTLS
-        auth: {
-          user: 'apikey', // SendGrid requires 'apikey' as username
-          pass: sendGridApiKey, // Your SendGrid API key
-        },
-        connectionTimeout: 30000, // 30 seconds (SendGrid is faster)
-        greetingTimeout: 10000, // 10 seconds
-        socketTimeout: 30000, // 30 seconds
-        tls: {
-          rejectUnauthorized: true,
-          minVersion: 'TLSv1.2'
-        },
-      };
-      
-      transporter = nodemailer.createTransport(transportOptions);
-      console.log('✅ SendGrid email transporter configured');
-      console.log('📧 SendGrid API Key: Configured');
+      throw new Error('SendGrid should use REST API, not SMTP transporter. This function is for Gmail only.');
     } else {
       // Fallback to Gmail SMTP (only if SendGrid is not available or explicitly disabled)
       console.log('📧 Using Gmail SMTP for email service (SendGrid not configured)');
@@ -137,8 +117,83 @@ export const sendEmail = async (
   console.log('📧 Subject:', subject);
   console.log(`🔄 Retry attempt: ${4 - retries}/3`);
 
-  const emailTransporter = getEmailTransporter();
-  
+  // Use SendGrid REST API if configured (works on Render - uses HTTPS instead of SMTP)
+  if (emailService === 'sendgrid' || sendGridApiKey) {
+    console.log('📧 Using SendGrid REST API (works on Render/cloud platforms)');
+    
+    // Set SendGrid API key
+    sgMail.setApiKey(sendGridApiKey!);
+    
+    const msg = {
+      to,
+      from: fromEmail,
+      subject,
+      html,
+      text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML tags for plain text
+    };
+
+    // Retry logic for SendGrid REST API
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`📤 Sending email via SendGrid REST API (attempt ${attempt}/${retries})...`);
+        console.log(`⏱️  Starting email send at: ${new Date().toISOString()}`);
+        
+        const timeoutDuration = attempt === 1 ? 30000 : 20000; // 30s for first attempt, 20s for retries
+        
+        const response = await Promise.race([
+          sgMail.send(msg),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error(`Email send timeout after ${timeoutDuration/1000} seconds`)), timeoutDuration)
+          )
+        ]) as any;
+
+        console.log('✅ Email sent successfully via SendGrid REST API!');
+        if (Array.isArray(response) && response[0]) {
+          console.log('📧 Status Code:', response[0].statusCode || 'N/A');
+          console.log('📧 Response Headers:', response[0].headers ? JSON.stringify(response[0].headers) : 'N/A');
+        } else {
+          console.log('📧 SendGrid Response:', JSON.stringify(response, null, 2));
+        }
+        return; // Success, exit function
+      } catch (error: any) {
+        const isTimeout = error.code === 'ETIMEDOUT' || 
+                         error.message.includes('timeout') ||
+                         error.code === 'ECONNRESET' ||
+                         error.code === 'ENOTFOUND';
+        
+        console.error(`❌ Attempt ${attempt}/${retries} failed:`);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error code:', error.code);
+        
+        if (error.response) {
+          console.error('❌ SendGrid Response:', JSON.stringify(error.response.body, null, 2));
+        }
+
+        // If it's a timeout/network error and we have retries left, wait and retry
+        if (isTimeout && attempt < retries) {
+          const waitTime = attempt * 2000; // Exponential backoff: 2s, 4s, 6s
+          console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          console.log(`🔄 Retrying... (${attempt + 1}/${retries})`);
+          continue;
+        }
+
+        // If all retries exhausted or non-timeout error, throw
+        if (attempt === retries) {
+          console.error('❌ All retry attempts exhausted');
+          throw new Error(`Failed to send email after ${retries} attempts: ${error.message}`);
+        }
+        
+        // For non-timeout errors, throw immediately
+        if (!isTimeout) {
+          throw new Error(`Failed to send email: ${error.message}`);
+        }
+      }
+    }
+    return; // Should never reach here, but TypeScript needs it
+  }
+
+  // Use nodemailer for Gmail SMTP (fallback)
   const mailOptions = {
     from: `"FACTO Consultancy" <${fromEmail}>`,
     to,
@@ -147,10 +202,13 @@ export const sendEmail = async (
     text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML tags for plain text
   };
 
-  // Retry logic for connection timeouts
+  // Retry logic for SMTP (Gmail)
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      console.log(`📤 Sending email (attempt ${attempt}/${retries})...`);
+      // Get fresh transporter for each attempt (will reuse if not reset)
+      const emailTransporter = getEmailTransporter();
+      
+      console.log(`📤 Sending email via SMTP (attempt ${attempt}/${retries})...`);
       console.log(`⏱️  Starting email send at: ${new Date().toISOString()}`);
       
       // Use a longer timeout for the first connection attempt
@@ -187,11 +245,22 @@ export const sendEmail = async (
 
       // If it's a timeout and we have retries left, wait and retry
       if (isTimeout && attempt < retries) {
+        // Reset transporter to get a fresh connection on retry
+        console.log('🔄 Resetting email transporter for fresh connection...');
+        try {
+          const currentTransporter = getEmailTransporter();
+          currentTransporter.close(); // Close existing connection if any
+        } catch (closeError) {
+          // Ignore errors when closing (connection might already be closed)
+          console.log('⚠️ Could not close transporter (may already be closed)');
+        }
+        transporter = null; // Force recreation of transporter on next call
+        
         const waitTime = attempt * 2000; // Exponential backoff: 2s, 4s, 6s
         console.log(`⏳ Waiting ${waitTime}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         console.log(`🔄 Retrying... (${attempt + 1}/${retries})`);
-        continue;
+        continue; // Continue to next iteration with fresh transporter
       }
 
       // If all retries exhausted or non-timeout error, throw
