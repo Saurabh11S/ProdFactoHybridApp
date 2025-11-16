@@ -338,20 +338,21 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
             ) : (
               <>
                 <button 
-                  onClick={() => {
+                  onClick={async () => {
                     setError(null);
                     setLoading(true);
-                    const authToken = Storage.get('authToken').then(token => {
-                      if (token && courseId) {
-                        fetchCourseById(courseId, token)
-                          .then(setCourse)
-                          .catch(err => {
-                            console.error('Error loading course:', err);
-                            setError(err.response?.data?.message || 'Failed to load course');
-                          })
-                          .finally(() => setLoading(false));
+                    try {
+                      const authToken = await Storage.get('authToken');
+                      if (authToken && courseId) {
+                        const courseData = await fetchCourseById(courseId, authToken);
+                        setCourse(courseData);
                       }
-                    });
+                    } catch (err: any) {
+                      console.error('Error loading course:', err);
+                      setError(err.response?.data?.message || 'Failed to load course');
+                    } finally {
+                      setLoading(false);
+                    }
                   }}
                   className="bg-[#007AFF] text-white px-6 py-2 rounded-lg hover:bg-[#0056CC] transition-colors"
                 >
@@ -373,6 +374,16 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
 
   // Success popup
   if (showSuccessPopup) {
+    if (!course) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 pt-16 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-600 dark:text-gray-400">Loading course information...</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 pt-16 flex items-center justify-center">
         <div className="max-w-md w-full mx-4">
@@ -413,6 +424,23 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Ensure course is not null before rendering
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 pt-16 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-400">Course not found</p>
+          <button 
+            onClick={() => onNavigate('learning')}
+            className="mt-4 bg-[#007AFF] text-white px-6 py-2 rounded-lg hover:bg-[#0056CC] transition-colors"
+          >
+            Back to Courses
+          </button>
         </div>
       </div>
     );
