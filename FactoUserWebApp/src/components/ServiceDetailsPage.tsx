@@ -682,8 +682,8 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
 
       const { orderId, amount, currency, razorpayKeyId } = paymentOrderResponse.data.data;
       
-      // Get Razorpay key from API response or fallback to environment variable or hardcoded test key
-      const razorpayKey = razorpayKeyId || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_RH6v2Ap0TDGOmM';
+      // Get Razorpay key from API response or fallback to environment variable
+      const razorpayKey = razorpayKeyId || import.meta.env.VITE_RAZORPAY_KEY_ID;
       
       if (!razorpayKey) {
         setPaymentError('Razorpay is not configured. Please contact support.');

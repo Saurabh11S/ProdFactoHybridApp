@@ -92,11 +92,11 @@ export default function SignIn() {
         
         // Check if it's a timeout error
         if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-          errorMessage = "Request timed out. The backend server may be slow or not responding. Please check:\n1. Backend is running on http://localhost:8080\n2. Database connection is working\n3. Try restarting the backend server";
+          errorMessage = "Request timed out. The backend server may be slow or not responding. Please try again later or contact support.";
         } else if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('CORS')) {
-          errorMessage = "Backend server is not running. Please start the backend server on http://localhost:8080";
+          errorMessage = "Unable to connect to the server. Please check your internet connection and try again.";
         } else {
-          errorMessage = "Unable to connect to server. Please ensure the backend is running on http://localhost:8080";
+          errorMessage = "Unable to connect to server. Please try again later or contact support.";
         }
       } else {
         // Error setting up request
