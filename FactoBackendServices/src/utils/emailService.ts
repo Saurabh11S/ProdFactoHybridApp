@@ -14,33 +14,41 @@ function getEmailTransporter(): nodemailer.Transporter {
     // Try port 465 first (more reliable), fallback to 587
     const usePort465 = process.env.EMAIL_USE_PORT_465 !== 'false'; // Default to true
     
+    // Clean email password - remove spaces (Gmail App Passwords don't have spaces)
+    const emailPassword = (process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+    const emailUser = process.env.EMAIL_USER || process.env.GMAIL_USER;
+    
+    if (!emailPassword || emailPassword.length !== 16) {
+      console.warn(`⚠️ EMAIL_PASSWORD length is ${emailPassword.length} (should be 16 characters, no spaces)`);
+    }
+    
     transporter = nodemailer.createTransport({
       service: 'gmail',
       host: 'smtp.gmail.com',
       port: usePort465 ? 465 : 587,
       secure: usePort465, // true for 465, false for 587
       auth: {
-        user: process.env.EMAIL_USER || process.env.GMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD,
+        user: emailUser,
+        pass: emailPassword, // Use cleaned password
       },
       // Increased timeouts for Render's network
-      connectionTimeout: 60000, // 60 seconds
+      connectionTimeout: 90000, // 90 seconds (increased from 60)
       greetingTimeout: 30000, // 30 seconds
-      socketTimeout: 60000, // 60 seconds
+      socketTimeout: 90000, // 90 seconds (increased from 60)
       // Retry configuration
-      pool: true,
-      maxConnections: 1,
-      maxMessages: 3,
+      pool: false, // Disable pooling for better connection handling
       // Additional options for better reliability
       tls: {
         rejectUnauthorized: true, // Verify SSL certificates
         minVersion: 'TLSv1.2' // Use modern TLS
       },
-      debug: process.env.NODE_ENV === 'development', // Enable debug in development
-      logger: process.env.NODE_ENV === 'development', // Enable logger in development
+      debug: false, // Disable debug to reduce logs
+      logger: false, // Disable logger
     });
     
     console.log(`📧 Email transporter configured: Port ${usePort465 ? 465 : 587}, Secure: ${usePort465}`);
+    console.log(`📧 Email user: ${emailUser}`);
+    console.log(`📧 Password length: ${emailPassword.length} characters`);
   }
   return transporter;
 }
@@ -88,11 +96,15 @@ export const sendEmail = async (
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       console.log(`📤 Sending email (attempt ${attempt}/${retries})...`);
+      console.log(`⏱️  Starting email send at: ${new Date().toISOString()}`);
+      
+      // Use a longer timeout for the first connection attempt
+      const timeoutDuration = attempt === 1 ? 90000 : 60000; // 90s for first attempt, 60s for retries
       
       const info = await Promise.race([
         emailTransporter.sendMail(mailOptions),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Email send timeout after 60 seconds')), 60000)
+          setTimeout(() => reject(new Error(`Email send timeout after ${timeoutDuration/1000} seconds`)), timeoutDuration)
         )
       ]) as any;
 
