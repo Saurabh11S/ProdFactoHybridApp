@@ -9,14 +9,38 @@ let transporter: nodemailer.Transporter | null = null;
 
 function getEmailTransporter(): nodemailer.Transporter {
   if (!transporter) {
-    // Using Gmail SMTP (you can configure this based on your email provider)
+    // Using Gmail SMTP with increased timeout and connection settings
+    // Render may have network restrictions, so we need longer timeouts
+    // Try port 465 first (more reliable), fallback to 587
+    const usePort465 = process.env.EMAIL_USE_PORT_465 !== 'false'; // Default to true
+    
     transporter = nodemailer.createTransport({
       service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: usePort465 ? 465 : 587,
+      secure: usePort465, // true for 465, false for 587
       auth: {
         user: process.env.EMAIL_USER || process.env.GMAIL_USER,
         pass: process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD,
       },
+      // Increased timeouts for Render's network
+      connectionTimeout: 60000, // 60 seconds
+      greetingTimeout: 30000, // 30 seconds
+      socketTimeout: 60000, // 60 seconds
+      // Retry configuration
+      pool: true,
+      maxConnections: 1,
+      maxMessages: 3,
+      // Additional options for better reliability
+      tls: {
+        rejectUnauthorized: true, // Verify SSL certificates
+        minVersion: 'TLSv1.2' // Use modern TLS
+      },
+      debug: process.env.NODE_ENV === 'development', // Enable debug in development
+      logger: process.env.NODE_ENV === 'development', // Enable logger in development
     });
+    
+    console.log(`📧 Email transporter configured: Port ${usePort465 ? 465 : 587}, Secure: ${usePort465}`);
   }
   return transporter;
 }
@@ -32,50 +56,88 @@ export const sendEmail = async (
   to: string,
   subject: string,
   html: string,
-  text?: string
+  text?: string,
+  retries: number = 3
 ): Promise<void> => {
-  try {
-    const emailUser = process.env.EMAIL_USER || process.env.GMAIL_USER;
-    const emailPassword = process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD;
+  const emailUser = process.env.EMAIL_USER || process.env.GMAIL_USER;
+  const emailPassword = process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD;
 
-    if (!emailUser || !emailPassword) {
-      console.warn('⚠️ Email service not configured. EMAIL_USER and EMAIL_PASSWORD not set.');
-      console.log('📧 Email would have been sent to:', to);
-      console.log('📧 Subject:', subject);
-      throw new Error('Email service not configured. Please set EMAIL_USER and EMAIL_PASSWORD in .env file');
-    }
-
-    console.log('📧 Attempting to send email to:', to);
-    console.log('📧 From:', emailUser);
+  if (!emailUser || !emailPassword) {
+    console.warn('⚠️ Email service not configured. EMAIL_USER and EMAIL_PASSWORD not set.');
+    console.log('📧 Email would have been sent to:', to);
     console.log('📧 Subject:', subject);
+    throw new Error('Email service not configured. Please set EMAIL_USER and EMAIL_PASSWORD in .env file');
+  }
 
-    const emailTransporter = getEmailTransporter();
+  console.log('📧 Attempting to send email to:', to);
+  console.log('📧 From:', emailUser);
+  console.log('📧 Subject:', subject);
+  console.log(`🔄 Retry attempt: ${4 - retries}/3`);
 
-    const mailOptions = {
-      from: `"FACTO Consultancy" <${emailUser}>`,
-      to,
-      subject,
-      html,
-      text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML tags for plain text
-    };
+  const emailTransporter = getEmailTransporter();
 
-    const info = await emailTransporter.sendMail(mailOptions);
-    console.log('✅ Email sent successfully!');
-    console.log('📧 Message ID:', info.messageId);
-    console.log('📧 Response:', info.response);
-    console.log('📧 Accepted recipients:', info.accepted);
-    if (info.rejected && info.rejected.length > 0) {
-      console.warn('⚠️ Rejected recipients:', info.rejected);
+  const mailOptions = {
+    from: `"FACTO Consultancy" <${emailUser}>`,
+    to,
+    subject,
+    html,
+    text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML tags for plain text
+  };
+
+  // Retry logic for connection timeouts
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(`📤 Sending email (attempt ${attempt}/${retries})...`);
+      
+      const info = await Promise.race([
+        emailTransporter.sendMail(mailOptions),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Email send timeout after 60 seconds')), 60000)
+        )
+      ]) as any;
+
+      console.log('✅ Email sent successfully!');
+      console.log('📧 Message ID:', info.messageId);
+      console.log('📧 Response:', info.response);
+      console.log('📧 Accepted recipients:', info.accepted);
+      if (info.rejected && info.rejected.length > 0) {
+        console.warn('⚠️ Rejected recipients:', info.rejected);
+      }
+      return; // Success, exit function
+    } catch (error: any) {
+      const isTimeout = error.code === 'ETIMEDOUT' || 
+                       error.message.includes('timeout') || 
+                       error.command === 'CONN';
+      
+      console.error(`❌ Attempt ${attempt}/${retries} failed:`);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error code:', error.code);
+      console.error('❌ Error command:', error.command);
+      
+      if (error.response) {
+        console.error('❌ SMTP Response:', error.response);
+      }
+
+      // If it's a timeout and we have retries left, wait and retry
+      if (isTimeout && attempt < retries) {
+        const waitTime = attempt * 2000; // Exponential backoff: 2s, 4s, 6s
+        console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        console.log(`🔄 Retrying... (${attempt + 1}/${retries})`);
+        continue;
+      }
+
+      // If all retries exhausted or non-timeout error, throw
+      if (attempt === retries) {
+        console.error('❌ All retry attempts exhausted');
+        throw new Error(`Failed to send email after ${retries} attempts: ${error.message}`);
+      }
+      
+      // For non-timeout errors, throw immediately
+      if (!isTimeout) {
+        throw new Error(`Failed to send email: ${error.message}`);
+      }
     }
-  } catch (error: any) {
-    console.error('❌ Error sending email:');
-    console.error('❌ Error message:', error.message);
-    console.error('❌ Error code:', error.code);
-    console.error('❌ Error command:', error.command);
-    if (error.response) {
-      console.error('❌ SMTP Response:', error.response);
-    }
-    throw new Error(`Failed to send email: ${error.message}`);
   }
 };
 
