@@ -22,8 +22,8 @@ function getEmailTransporter(): nodemailer.Transporter {
       console.warn(`⚠️ EMAIL_PASSWORD length is ${emailPassword.length} (should be 16 characters, no spaces)`);
     }
     
-    transporter = nodemailer.createTransport({
-      service: 'gmail',
+    // When using host and port explicitly, don't use 'service' property
+    const transportOptions: any = {
       host: 'smtp.gmail.com',
       port: usePort465 ? 465 : 587,
       secure: usePort465, // true for 465, false for 587
@@ -44,7 +44,9 @@ function getEmailTransporter(): nodemailer.Transporter {
       },
       debug: false, // Disable debug to reduce logs
       logger: false, // Disable logger
-    });
+    };
+    
+    transporter = nodemailer.createTransport(transportOptions);
     
     console.log(`📧 Email transporter configured: Port ${usePort465 ? 465 : 587}, Secure: ${usePort465}`);
     console.log(`📧 Email user: ${emailUser}`);
