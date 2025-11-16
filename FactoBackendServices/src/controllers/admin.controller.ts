@@ -1752,9 +1752,28 @@ export const createBlog = bigPromise(
       console.log(blog);
 
       // Send newsletter notification to all active subscribers (async, don't block response)
-      (async () => {
+      // Use setImmediate to ensure it runs after response is sent
+      setImmediate(async () => {
         try {
           console.log('\n📧 === BLOG NEWSLETTER NOTIFICATION START ===');
+          console.log('📅 Timestamp:', new Date().toISOString());
+          console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
+          
+          // Check email configuration first
+          const emailUser = process.env.EMAIL_USER || process.env.GMAIL_USER;
+          const emailPassword = process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD;
+          
+          if (!emailUser || !emailPassword) {
+            console.error('\n❌ === EMAIL SERVICE NOT CONFIGURED ===');
+            console.error('❌ EMAIL_USER:', !!emailUser, emailUser ? '✓' : '✗');
+            console.error('❌ EMAIL_PASSWORD:', !!emailPassword, emailPassword ? '✓' : '✗');
+            console.error('❌ Cannot send newsletter emails. Please set EMAIL_USER and EMAIL_PASSWORD in Render environment variables.');
+            return;
+          }
+          
+          console.log('✅ Email service configured');
+          console.log('📧 From email:', emailUser);
+          
           const { sendNewsletterUpdate } = await import("@/utils/emailService");
           
           const activeSubscribers = await db.NewsletterSubscription.find({
@@ -1769,6 +1788,7 @@ export const createBlog = bigPromise(
             const blogUrl = `${frontendUrl}/blogs/${blog._id}`;
 
             console.log(`📧 Preparing to send newsletter to ${subscriberEmails.length} subscribers`);
+            console.log(`📧 Subscriber emails:`, subscriberEmails);
             console.log(`🔗 Blog URL: ${blogUrl}`);
             console.log(`📝 Blog Title: ${blog.title}`);
 
@@ -1787,10 +1807,15 @@ export const createBlog = bigPromise(
           console.error('\n❌ === ERROR SENDING NEWSLETTER NOTIFICATIONS ===');
           console.error('❌ Error message:', emailError.message);
           console.error('❌ Error stack:', emailError.stack);
-          console.error('❌ Full error:', JSON.stringify(emailError, null, 2));
+          console.error('❌ Error name:', emailError.name);
+          console.error('❌ Error code:', emailError.code);
+          if (emailError.response) {
+            console.error('❌ SMTP Response:', emailError.response);
+          }
+          console.error('❌ Full error:', JSON.stringify(emailError, Object.getOwnPropertyNames(emailError), 2));
           // Don't fail the blog creation if email fails
         }
-      })();
+      });
 
       const response = sendSuccessApiResponse("Blog created successfully", {
         blog,
