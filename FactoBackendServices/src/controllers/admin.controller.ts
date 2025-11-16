@@ -1759,20 +1759,32 @@ export const createBlog = bigPromise(
           console.log('📅 Timestamp:', new Date().toISOString());
           console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
           
-          // Check email configuration first
+          // Check email configuration first - prioritize SendGrid
+          const sendGridApiKey = process.env.SENDGRID_API_KEY;
+          const emailService = process.env.EMAIL_SERVICE || (sendGridApiKey ? 'sendgrid' : 'gmail');
           const emailUser = process.env.EMAIL_USER || process.env.GMAIL_USER;
           const emailPassword = process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD;
           
-          if (!emailUser || !emailPassword) {
-            console.error('\n❌ === EMAIL SERVICE NOT CONFIGURED ===');
-            console.error('❌ EMAIL_USER:', !!emailUser, emailUser ? '✓' : '✗');
-            console.error('❌ EMAIL_PASSWORD:', !!emailPassword, emailPassword ? '✓' : '✗');
-            console.error('❌ Cannot send newsletter emails. Please set EMAIL_USER and EMAIL_PASSWORD in Render environment variables.');
-            return;
+          if (emailService === 'sendgrid' || sendGridApiKey) {
+            if (!sendGridApiKey) {
+              console.error('\n❌ === SENDGRID NOT CONFIGURED ===');
+              console.error('❌ SENDGRID_API_KEY:', !!sendGridApiKey, sendGridApiKey ? '✓' : '✗');
+              console.error('❌ Cannot send newsletter emails. Please set SENDGRID_API_KEY in environment variables.');
+              return;
+            }
+            console.log('✅ SendGrid email service configured');
+            console.log('📧 From email:', process.env.SENDGRID_FROM_EMAIL || emailUser || 'noreply@facto.org.in');
+          } else {
+            if (!emailUser || !emailPassword) {
+              console.error('\n❌ === EMAIL SERVICE NOT CONFIGURED ===');
+              console.error('❌ EMAIL_USER:', !!emailUser, emailUser ? '✓' : '✗');
+              console.error('❌ EMAIL_PASSWORD:', !!emailPassword, emailPassword ? '✓' : '✗');
+              console.error('❌ Cannot send newsletter emails. Please set EMAIL_USER and EMAIL_PASSWORD in environment variables.');
+              return;
+            }
+            console.log('✅ Gmail email service configured');
+            console.log('📧 From email:', emailUser);
           }
-          
-          console.log('✅ Email service configured');
-          console.log('📧 From email:', emailUser);
           
           const { sendNewsletterUpdate } = await import("@/utils/emailService");
           

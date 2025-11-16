@@ -11,9 +11,13 @@ function getEmailTransporter(): nodemailer.Transporter {
   if (!transporter) {
     // Check if SendGrid is configured (Twilio SendGrid)
     const sendGridApiKey = process.env.SENDGRID_API_KEY;
-    const emailService = process.env.EMAIL_SERVICE || 'gmail'; // Default to gmail
+    const emailService = process.env.EMAIL_SERVICE;
     
-    if (emailService === 'sendgrid' && sendGridApiKey) {
+    // Prioritize SendGrid: Use it if API key is available (unless explicitly set to 'gmail')
+    // Default to SendGrid if no service is specified and API key exists
+    const useSendGrid = (emailService === 'sendgrid' || (!emailService && sendGridApiKey)) && sendGridApiKey;
+    
+    if (useSendGrid) {
       // Use Twilio SendGrid (more reliable on cloud platforms)
       console.log('📧 Using Twilio SendGrid for email service');
       
@@ -38,8 +42,8 @@ function getEmailTransporter(): nodemailer.Transporter {
       console.log('✅ SendGrid email transporter configured');
       console.log('📧 SendGrid API Key: Configured');
     } else {
-      // Fallback to Gmail SMTP
-      console.log('📧 Using Gmail SMTP for email service');
+      // Fallback to Gmail SMTP (only if SendGrid is not available or explicitly disabled)
+      console.log('📧 Using Gmail SMTP for email service (SendGrid not configured)');
       
       // Try port 465 first (more reliable), fallback to 587
       const usePort465 = process.env.EMAIL_USE_PORT_465 !== 'false'; // Default to true
@@ -100,13 +104,14 @@ export const sendEmail = async (
   retries: number = 3
 ): Promise<void> => {
   // Check email service configuration
-  const emailService = process.env.EMAIL_SERVICE || 'gmail';
   const sendGridApiKey = process.env.SENDGRID_API_KEY;
+  // Default to sendgrid if API key is available, otherwise use configured service or fallback to gmail
+  const emailService = process.env.EMAIL_SERVICE || (sendGridApiKey ? 'sendgrid' : 'gmail');
   const emailUser = process.env.EMAIL_USER || process.env.GMAIL_USER;
   const emailPassword = process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD;
   
   // Validate configuration based on service type
-  if (emailService === 'sendgrid') {
+  if (emailService === 'sendgrid' || sendGridApiKey) {
     if (!sendGridApiKey) {
       console.warn('⚠️ SendGrid not configured. SENDGRID_API_KEY not set.');
       console.log('📧 Email would have been sent to:', to);
@@ -319,12 +324,13 @@ export const sendNewsletterUpdate = async (
   }
 
   // Check email configuration
-  const emailService = process.env.EMAIL_SERVICE || 'gmail';
   const sendGridApiKey = process.env.SENDGRID_API_KEY;
+  // Default to sendgrid if API key is available, otherwise use configured service or fallback to gmail
+  const emailService = process.env.EMAIL_SERVICE || (sendGridApiKey ? 'sendgrid' : 'gmail');
   const emailUser = process.env.EMAIL_USER || process.env.GMAIL_USER;
   const emailPassword = process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD;
   
-  if (emailService === 'sendgrid') {
+  if (emailService === 'sendgrid' || sendGridApiKey) {
     if (!sendGridApiKey) {
       console.error('❌ SendGrid not configured!');
       console.error('❌ SENDGRID_API_KEY:', !!sendGridApiKey);
