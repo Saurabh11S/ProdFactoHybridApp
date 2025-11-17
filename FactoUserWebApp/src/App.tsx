@@ -34,6 +34,7 @@ import { MobileLandingPage } from './components/mobile/MobileLandingPage';
 import { MobileLoginPage } from './components/mobile/MobileLoginPage';
 import { MobileSignupPage } from './components/mobile/MobileSignupPage';
 import { MobileUpdates } from './components/mobile/MobileUpdates';
+import { MobileUserProfile } from './components/mobile/MobileUserProfile';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details';
 
@@ -120,6 +121,11 @@ function AppContent() {
     let touchStartY = 0;
     
     const handleTouchStart = (e: TouchEvent) => {
+      // Only handle swipe on main pages
+      if (['login', 'signup', 'service-details', 'documents', 'payment', 'profile', 'course-payment', 'course-details'].includes(currentPage)) {
+        return;
+      }
+      
       touchStartX.current = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
       touchStartTime = Date.now();
@@ -127,52 +133,79 @@ function AppContent() {
     };
     
     const handleTouchMove = (e: TouchEvent) => {
+      // Only handle swipe on main pages
+      if (['login', 'signup', 'service-details', 'documents', 'payment', 'profile', 'course-payment', 'course-details'].includes(currentPage)) {
+        return;
+      }
+      
+      if (!touchStartX.current) return; // Guard against missing start position
+      
       const deltaX = Math.abs(e.touches[0].clientX - touchStartX.current);
       const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
       
-      // If vertical movement is greater, it's a scroll, not a swipe
-      if (deltaY > deltaX && deltaY > 10) {
+      // If vertical movement is significantly greater than horizontal, it's a scroll
+      // Use a ratio to be more lenient with diagonal swipes
+      if (deltaY > deltaX * 1.5 && deltaY > 15) {
         isScrolling = true;
       }
       
       touchEndX.current = e.touches[0].clientX;
     };
     
-    const handleTouchEnd = () => {
-      // Don't handle swipe if user was scrolling
-      if (isScrolling) return;
-      
-      const touchDuration = Date.now() - touchStartTime;
-      const swipeDistance = touchStartX.current - touchEndX.current;
-      const minSwipeDistance = 100;
-      const maxSwipeDuration = 300; // Max 300ms for a swipe
-      
-      // Only handle swipe on main pages (not login/signup/service-details)
+    const handleTouchEnd = (e: TouchEvent) => {
+      // Only handle swipe on main pages
       if (['login', 'signup', 'service-details', 'documents', 'payment', 'profile', 'course-payment', 'course-details'].includes(currentPage)) {
         return;
       }
       
+      // Don't handle swipe if user was scrolling
+      if (isScrolling) {
+        return;
+      }
+      
+      // Get the final touch position from changedTouches (the finger that was lifted)
+      const finalX = e.changedTouches[0]?.clientX || touchEndX.current;
+      
+      // Guard against missing start position
+      if (!touchStartX.current) {
+        return;
+      }
+      
+      const touchDuration = Date.now() - touchStartTime;
+      const swipeDistance = touchStartX.current - finalX;
+      const minSwipeDistance = 50; // Reduced for easier swiping
+      const maxSwipeDuration = 600; // Increased for more tolerance
+      
       // Only process if it's a quick swipe (not a slow drag)
-      if (touchDuration > maxSwipeDuration) return;
+      if (touchDuration > maxSwipeDuration) {
+        return;
+      }
       
       if (Math.abs(swipeDistance) > minSwipeDistance && !isNavigating.current) {
         const pages: PageType[] = ['home', 'services', 'learning', 'shorts', 'updates'];
         const currentIndex = pages.indexOf(currentPage);
         
+        if (currentIndex === -1) {
+          return;
+        }
+        
         if (swipeDistance > 0 && currentIndex < pages.length - 1) {
-          // Swipe left - next page
+          // Swipe left (finger moves left) - next page
+          console.log('Swipe left detected, navigating to:', pages[currentIndex + 1]);
           handleNavigation(pages[currentIndex + 1]);
         } else if (swipeDistance < 0 && currentIndex > 0) {
-          // Swipe right - previous page
+          // Swipe right (finger moves right) - previous page
+          console.log('Swipe right detected, navigating to:', pages[currentIndex - 1]);
           handleNavigation(pages[currentIndex - 1]);
         }
       }
     };
     
-    // Use capture phase and passive listeners for better performance
+    // Use passive listeners for better performance
+    // Note: touchend needs the event parameter, so we keep it as a function
     document.addEventListener('touchstart', handleTouchStart, { passive: true, capture: false });
     document.addEventListener('touchmove', handleTouchMove, { passive: true, capture: false });
-    document.addEventListener('touchend', handleTouchEnd, { passive: true, capture: false });
+    document.addEventListener('touchend', handleTouchEnd as any, { passive: true, capture: false });
     
     return () => {
       document.removeEventListener('touchstart', handleTouchStart);
@@ -228,7 +261,7 @@ function AppContent() {
       case 'course-details':
         return <CourseDetailsPage onNavigate={handleNavigation} courseId={selectedCourseId} />;
       case 'profile':
-        return <UserProfile onNavigate={handleNavigation} />;
+        return isMobile ? <MobileUserProfile onNavigate={handleNavigation} /> : <UserProfile onNavigate={handleNavigation} />;
       default:
         // Use mobile-optimized home screen on mobile devices
         if (isMobile) {
@@ -273,13 +306,11 @@ function AppContent() {
       <SessionWarning />
       
       {/* Top Navigation - Minimal on mobile, full on desktop */}
-      {currentPage !== 'login' && currentPage !== 'signup' && (
-        <Navigation 
-          currentPage={currentPage}
-          onNavigate={handleNavigation}
-          isShortsPage={currentPage === 'shorts'}
-        />
-      )}
+      <Navigation 
+        currentPage={currentPage}
+        onNavigate={handleNavigation}
+        isShortsPage={currentPage === 'shorts'}
+      />
 
       {/* Page Content - Optimized for smooth transitions */}
       <div 

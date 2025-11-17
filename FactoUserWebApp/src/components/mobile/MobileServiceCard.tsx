@@ -3,7 +3,7 @@ import { Service } from '../../api/services';
 
 interface MobileServiceCardProps {
   service: Service;
-  onClick: () => void;
+  onClick: (category?: string) => void;
 }
 
 // Helper function to get service icon
@@ -34,10 +34,21 @@ const getServiceColor = (title: string): string => {
 export const MobileServiceCard = memo(function MobileServiceCard({ service, onClick }: MobileServiceCardProps) {
   const icon = getServiceIcon(service.title);
   const colorGradient = getServiceColor(service.title);
+  
+  // Extract category from service for filtering
+  const getCategoryFilter = (): string | undefined => {
+    const category = service.category?.toLowerCase() || '';
+    if (category.includes('tax') || category.includes('itr')) return 'itr';
+    if (category.includes('gst')) return 'gst';
+    if (category.includes('registration')) return 'registration';
+    if (category.includes('consultancy')) return 'consultancy';
+    if (category.includes('outsourcing')) return 'outsourcing';
+    return undefined;
+  };
 
   return (
     <div
-      onClick={onClick}
+      onClick={() => onClick(getCategoryFilter())}
       className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 active:scale-98 transition-transform duration-150 touch-manipulation"
     >
       <div className="flex items-start gap-4">

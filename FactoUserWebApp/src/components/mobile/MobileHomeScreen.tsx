@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { ArrowRight } from 'lucide-react';
-import { fetchServices, Service } from '../../api/services';
+import { fetchServices, Service, fetchAllSubServices, SubService } from '../../api/services';
 import { MobileServiceCard } from './MobileServiceCard';
 import { useAuth } from '../../contexts/AuthContext';
 import { needsWakeUp, getWakeUpWaitTime, getRetryDelays } from '../../config/renderPlanConfig';
+import axios from 'axios';
+import { API_BASE_URL } from '../../config/apiConfig';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
@@ -13,9 +15,11 @@ interface MobileHomeScreenProps {
 }
 
 export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
+  const [userServices, setUserServices] = useState<SubService[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingUserServices, setLoadingUserServices] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [_refreshing, setRefreshing] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -23,6 +27,49 @@ export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
   useEffect(() => {
     loadServices();
   }, []);
+
+  // Fetch user purchases when authenticated
+  useEffect(() => {
+    const fetchUserPurchases = async () => {
+      if (!isAuthenticated || !token || !user) {
+        setUserServices([]);
+        return;
+      }
+
+      try {
+        setLoadingUserServices(true);
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
+
+        const purchasesRes = await axios.get(`${API_BASE_URL}/user-purchases`, { headers });
+        const purchases = purchasesRes.data.data || [];
+
+        // Filter service purchases
+        const servicePurchases = purchases.filter((p: any) => p.itemType === 'service');
+        
+        if (servicePurchases.length > 0) {
+          // Fetch all sub-services to map purchase IDs
+          const allSubServices = await fetchAllSubServices();
+          const purchasedServiceIds = servicePurchases.map((p: any) => p.itemId);
+          const purchasedServices = allSubServices.filter((s: SubService) => 
+            purchasedServiceIds.includes(s._id)
+          );
+          setUserServices(purchasedServices);
+        } else {
+          setUserServices([]);
+        }
+      } catch (error) {
+        console.error('Error fetching user purchases:', error);
+        setUserServices([]);
+      } finally {
+        setLoadingUserServices(false);
+      }
+    };
+
+    fetchUserPurchases();
+  }, [isAuthenticated, token, user]);
 
   // Wake up Render.com backend (only needed for free tier)
   const wakeUpBackend = async (): Promise<void> => {
@@ -416,17 +463,43 @@ export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
               View All
             </button>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-            <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-4">
-              No active services yet. Start by exploring our services!
-            </p>
-            <button
-              onClick={() => onNavigate('services')}
-              className="w-full bg-[#007AFF] text-white py-3 rounded-xl font-medium mt-2 active:scale-98 transition-transform"
-            >
-              Explore Services
-            </button>
-          </div>
+          {loadingUserServices ? (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+              <div className="animate-pulse space-y-3">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+              </div>
+            </div>
+          ) : userServices.length > 0 ? (
+            <div className="space-y-3">
+              {userServices.slice(0, 3).map((service) => (
+                <div
+                  key={service._id}
+                  onClick={() => onNavigate('service-details', service._id)}
+                  className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 active:scale-98 transition-transform cursor-pointer"
+                >
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">
+                    {service.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                    {service.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-4">
+                No active services yet. Start by exploring our services!
+              </p>
+              <button
+                onClick={() => onNavigate('services')}
+                className="w-full bg-[#007AFF] text-white py-3 rounded-xl font-medium mt-2 active:scale-98 transition-transform"
+              >
+                Explore Services
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -489,13 +562,19 @@ export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {services.map((service) => (
-              <MobileServiceCard
-                key={service._id}
-                service={service}
-                onClick={() => onNavigate('service-details', service._id)}
-              />
-            ))}
+            {services.map((service) => {
+              return (
+                <MobileServiceCard
+                  key={service._id}
+                  service={service}
+                  onClick={(categoryFilter) => {
+                    // Always navigate to services page with category filter if available
+                    // Otherwise navigate to services page without filter
+                    onNavigate('services', undefined, undefined, categoryFilter);
+                  }}
+                />
+              );
+            })}
           </div>
         )}
       </div>

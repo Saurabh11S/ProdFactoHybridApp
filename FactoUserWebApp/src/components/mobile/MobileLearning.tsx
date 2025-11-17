@@ -133,7 +133,7 @@ export function MobileLearning({ onNavigate }: MobileLearningProps) {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 pb-20 pt-16">
+    <div className="min-h-screen bg-white dark:bg-gray-900 pb-20 pt-20">
       {/* Header */}
       <div className="px-4 py-6 border-b border-gray-200 dark:border-gray-800">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Academy</h1>
@@ -186,7 +186,7 @@ export function MobileLearning({ onNavigate }: MobileLearningProps) {
                 className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700"
               >
                 {/* Top Section - Dark Background with Title and Image */}
-                <div className="bg-gradient-to-br from-gray-900 to-black p-6 flex items-center justify-between">
+                <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 flex items-center justify-between">
                   <div className="flex-1">
                     <h3 className="text-2xl font-bold text-white mb-2 leading-tight">
                       {course.title}

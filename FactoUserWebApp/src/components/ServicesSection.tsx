@@ -5,7 +5,7 @@ import { ConsultationModal } from './ConsultationModal';
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
 interface ServicesSectionProps {
-  onNavigate: (page: PageType, serviceId?: string) => void;
+  onNavigate: (page: PageType, serviceId?: string, courseId?: string, filter?: string) => void;
 }
 
 // Helper function to get service icon based on title
@@ -394,7 +394,22 @@ export function ServicesSection({ onNavigate }: ServicesSectionProps) {
 
                     {/* CTA Button */}
                     <button 
-                      onClick={() => onNavigate('services', service._id)}
+                      onClick={() => {
+                        // Extract category filter from service
+                        const category = service.category?.toLowerCase() || '';
+                        let categoryFilter: string | undefined = undefined;
+                        if (category.includes('tax') || category.includes('itr')) categoryFilter = 'itr';
+                        else if (category.includes('gst')) categoryFilter = 'gst';
+                        else if (category.includes('registration')) categoryFilter = 'registration';
+                        else if (category.includes('consultancy')) categoryFilter = 'consultancy';
+                        else if (category.includes('outsourcing')) categoryFilter = 'outsourcing';
+                        
+                        if (categoryFilter) {
+                          onNavigate('services', undefined, undefined, categoryFilter);
+                        } else {
+                          onNavigate('services', service._id);
+                        }
+                      }}
                       className={`relative w-full mt-6 bg-gradient-to-r ${colorScheme.color} text-white py-3 px-4 rounded-lg font-medium transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1 overflow-hidden group-hover:shadow-2xl hover:brightness-110`}
                     >
                       <span className="relative z-10">Explore Services</span>
