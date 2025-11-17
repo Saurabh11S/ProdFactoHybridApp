@@ -494,8 +494,8 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     if (priceCalculation.needsQuotation) {
       setShowQuotationForm(true);
     } else {
-      // Proceed with payment
-      handlePayment();
+      // Navigate to payment page
+      onNavigate('payment', serviceId);
     }
   };
 
@@ -632,7 +632,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     return missing;
   };
 
-  // Handle payment
+  // Handle payment - navigate to payment page
   const handlePayment = async () => {
     if (!isAuthenticated || !user || !subService) {
       onNavigate('login');
@@ -647,8 +647,8 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       return;
     }
 
-    // Proceed with payment if all info is present
-    proceedWithPayment();
+    // Navigate to payment page instead of processing inline
+    onNavigate('payment', serviceId);
   };
 
   // Proceed with payment after user info is complete

@@ -36,6 +36,14 @@ const getCorsOrigins = (): (string | RegExp)[] => {
       /^https:\/\/.*\.vercel\.app$/,
       // Custom domain facto.org.in (with and without www)
       /^https:\/\/(www\.)?facto\.org\.in$/,
+      // Capacitor mobile app origins (for Android/iOS apps)
+      'https://localhost',
+      'capacitor://localhost',
+      'ionic://localhost',
+      /^https:\/\/localhost/,
+      /^capacitor:\/\/localhost/,
+      /^ionic:\/\/localhost/,
+      /^file:\/\//,  // File protocol for some Capacitor configs
     ];
     
     // Add custom production domains from CORS_ORIGIN env var
@@ -46,7 +54,7 @@ const getCorsOrigins = (): (string | RegExp)[] => {
     
     return origins;
   } else {
-    // Development: Allow all localhost ports
+    // Development: Allow all localhost ports and Capacitor origins
     return [
       "http://localhost:3000",
       "http://localhost:5173",  // User Web App default port
@@ -54,6 +62,14 @@ const getCorsOrigins = (): (string | RegExp)[] => {
       "http://localhost:5175",  // Additional Vite port
       "http://localhost:8080",  // Backend port
       /^http:\/\/localhost:\d+$/,  // Allow all localhost ports
+      // Capacitor mobile app origins
+      'https://localhost',
+      'capacitor://localhost',
+      'ionic://localhost',
+      /^https:\/\/localhost/,
+      /^capacitor:\/\/localhost/,
+      /^ionic:\/\/localhost/,
+      /^file:\/\//,  // File protocol for some Capacitor configs
     ];
   }
 };
@@ -117,6 +133,15 @@ app.use((req, res, next) => {
     } else if (origin.match(/^https:\/\/(www\.)?facto\.org\.in$/)) {
       // Check if origin matches custom domain facto.org.in
       allowedOrigin = origin;
+    } else if (origin === 'https://localhost' || 
+               origin === 'capacitor://localhost' || 
+               origin === 'ionic://localhost' ||
+               origin.match(/^https:\/\/localhost/) ||
+               origin.match(/^capacitor:\/\/localhost/) ||
+               origin.match(/^ionic:\/\/localhost/) ||
+               origin.match(/^file:\/\//)) {
+      // Allow Capacitor mobile app origins
+      allowedOrigin = origin;
     } else if (process.env.CORS_ORIGIN) {
       // Check if origin is in CORS_ORIGIN list
       const allowedOrigins = process.env.CORS_ORIGIN.split(',').map(o => o.trim());
@@ -125,8 +150,17 @@ app.use((req, res, next) => {
       }
     }
   } else if (!isProduction) {
-    // Development: allow any localhost
-    allowedOrigin = origin || '*';
+    // Development: allow any localhost and Capacitor origins
+    if (origin && (
+      origin.includes('localhost') || 
+      origin.startsWith('capacitor://') || 
+      origin.startsWith('ionic://') ||
+      origin.startsWith('file://')
+    )) {
+      allowedOrigin = origin;
+    } else {
+      allowedOrigin = origin || '*';
+    }
   }
   
   res.header("Access-Control-Allow-Origin", allowedOrigin);

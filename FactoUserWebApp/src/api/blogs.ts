@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import { API_BASE_URL } from '../config/apiConfig';
 
 // Blog interfaces based on backend models
@@ -51,9 +51,9 @@ export const fetchBlogs = async (page = 1, limit = 10, search = '', tag = ''): P
       ...(tag && { tag })
     });
 
-    const url = `${API_BASE_URL}/blogs?${params}`;
-    console.log('🔄 Fetching blogs from:', url);
-    const response = await axios.get<BlogResponse>(url, {
+    const url = `/blogs?${params}`;
+    console.log('🔄 Fetching blogs from:', `${API_BASE_URL}${url}`);
+    const response = await axiosInstance.get<BlogResponse>(url, {
       timeout: 60000, // 60 seconds timeout for mobile (to handle Render.com wake-up time)
     });
     console.log('📦 Blogs API Response:', response.data);
@@ -84,9 +84,9 @@ export const fetchBlogs = async (page = 1, limit = 10, search = '', tag = ''): P
 // Fetch blog by ID
 export const fetchBlogById = async (id: string): Promise<Blog> => {
   try {
-    const url = `${API_BASE_URL}/blogs/${id}`;
-    console.log('🔄 Fetching blog by ID from:', url);
-    const response = await axios.get<SingleBlogResponse>(url);
+    const url = `/blogs/${id}`;
+    console.log('🔄 Fetching blog by ID from:', `${API_BASE_URL}${url}`);
+    const response = await axiosInstance.get<SingleBlogResponse>(url);
     console.log('📦 Single Blog API Response:', response.data);
     
     // Handle response structure: { success: true, data: { blog: {...} } }

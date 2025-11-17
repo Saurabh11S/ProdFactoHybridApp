@@ -229,8 +229,14 @@ export function MobileLearning({ onNavigate }: MobileLearningProps) {
                   {/* Action Button */}
                   <div className="flex justify-end">
                     <button
-                      onClick={() => handleCourseClick(course)}
-                      className="bg-black dark:bg-white text-white dark:text-black px-6 py-2.5 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-transform"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Course button clicked:', course._id);
+                        handleCourseClick(course);
+                      }}
+                      className="bg-black dark:bg-white text-white dark:text-black px-6 py-2.5 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-transform touch-manipulation"
+                      style={{ pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }}
                     >
                       {purchased ? (
                         <>

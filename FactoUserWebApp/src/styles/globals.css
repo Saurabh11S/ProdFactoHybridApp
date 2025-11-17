@@ -2,6 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Performance Optimizations for Mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+html {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+body {
+  overscroll-behavior-y: contain;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Smooth Scrolling for Mobile */
+@media (max-width: 768px) {
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Optimize animations */
+  [class*="animate-"] {
+    will-change: transform, opacity;
+  }
+  
+  /* Optimize scrolling containers */
+  [class*="overflow"] {
+    will-change: scroll-position;
+  }
+  
+  /* Reduce motion for better performance */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

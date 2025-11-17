@@ -129,81 +129,79 @@ export function MobileUpdates({ onNavigate: _onNavigate }: MobileUpdatesProps) {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 pb-20 pt-16">
-      <div className="px-4 py-6">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Financial <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#007AFF] to-[#00C897]">Updates</span>
-          </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Stay informed with the latest financial news and updates
-          </p>
-        </div>
-
-        {/* Category Filter - Horizontal Scroll */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+    <div className="fixed inset-0 bg-black z-40 overflow-hidden pb-16" style={{ pointerEvents: 'auto' }}>
+      {/* Category Filter - Top Navigation Bar (Shorts Style) */}
+      <div className="fixed top-16 left-0 right-0 bg-black/60 backdrop-blur-md border-b border-white/10 z-30">
+        <div className="flex gap-2 px-4 py-3 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {categories.map((category) => (
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
               className={`px-4 py-2 rounded-full font-medium text-sm whitespace-nowrap transition-all duration-300 ${
                 selectedCategory === category
-                  ? 'bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white shadow-lg'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                  ? 'bg-white text-black shadow-lg'
+                  : 'bg-white/10 text-white/80 hover:bg-white/20'
               }`}
             >
               {category}
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Content Area - Shorts Style Vertical Scroll */}
+      <div className="pt-32 pb-20 h-full overflow-y-auto snap-y snap-mandatory" style={{ WebkitOverflowScrolling: 'touch', willChange: 'scroll-position' }}>
 
         {/* Loading State */}
         {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#007AFF]"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400 text-sm">Loading updates...</p>
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+              <p className="mt-4 text-white text-sm">Loading updates...</p>
+            </div>
           </div>
         )}
 
         {/* Error State */}
         {error && !loading && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 text-center border border-red-200 dark:border-red-800">
-            <div className="mb-4">
-              <svg className="w-12 h-12 text-red-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-red-600 dark:text-red-400 font-medium mb-2">Unable to Load Updates</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{error}</p>
+          <div className="flex items-center justify-center h-full px-4">
+            <div className="bg-black/60 backdrop-blur-md rounded-2xl p-6 text-center border border-white/20 max-w-md">
+              <div className="mb-4">
+                <svg className="w-12 h-12 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-white font-medium mb-2">Unable to Load Updates</p>
+                <p className="text-sm text-white/70 mb-4">{error}</p>
+              </div>
+              <button 
+                onClick={() => {
+                  setError(null);
+                  setRetryCount(0);
+                  loadBlogs(0);
+                }}
+                className="bg-[#007AFF] text-white px-6 py-3 rounded-xl font-medium active:scale-98 transition-transform"
+              >
+                Retry
+              </button>
+              {retryCount > 0 && (
+                <p className="text-xs text-white/50 mt-2">
+                  Retried {retryCount} time{retryCount > 1 ? 's' : ''}
+                </p>
+              )}
             </div>
-            <button 
-              onClick={() => {
-                setError(null);
-                setRetryCount(0);
-                loadBlogs(0);
-              }}
-              className="bg-[#007AFF] text-white px-6 py-3 rounded-xl font-medium active:scale-98 transition-transform"
-            >
-              Retry
-            </button>
-            {retryCount > 0 && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                Retried {retryCount} time{retryCount > 1 ? 's' : ''}
-              </p>
-            )}
           </div>
         )}
 
         {/* Empty State */}
         {!loading && !error && filteredBlogs.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-600 dark:text-gray-400">No updates available in this category.</p>
+          <div className="flex items-center justify-center h-full">
+            <p className="text-white/70">No updates available in this category.</p>
           </div>
         )}
 
-        {/* Blogs List */}
+        {/* Blogs List - Shorts Style */}
         {!loading && !error && filteredBlogs.length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-0 snap-y snap-mandatory">
             {filteredBlogs.map((blog) => {
               const thumbnail = blog.contentType === 'image' ? blog.contentUrl : undefined;
               const readTime = calculateReadTime(blog.content);
@@ -212,67 +210,104 @@ export function MobileUpdates({ onNavigate: _onNavigate }: MobileUpdatesProps) {
               return (
                 <article
                   key={blog._id}
-                  className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden active:scale-98 transition-transform"
+                  className="relative w-full h-screen flex-shrink-0 snap-start"
                   onClick={() => setSelectedBlog(blog)}
                 >
-                  {/* Thumbnail */}
-                  {thumbnail && (
-                    <div className="relative aspect-video overflow-hidden">
+                  {/* Full Screen Image/Content */}
+                  <div className="absolute inset-0">
+                    {thumbnail ? (
                       <img
                         src={thumbnail}
                         alt={blog.title}
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute top-3 left-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(primaryTag)}`}>
-                          {primaryTag}
-                        </span>
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-[#007AFF] to-[#00C897] flex items-center justify-center">
+                        <div className="text-white text-6xl">📰</div>
+                      </div>
+                    )}
+                    
+                    {/* Dark Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+                  </div>
+
+                  {/* Content Overlay - Bottom Left (Shorts Style) */}
+                  <div className="absolute bottom-0 left-0 p-4 pb-24 z-10 max-w-[70%]">
+                    {/* Author Info */}
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#007AFF] to-[#00C897] rounded-full flex items-center justify-center text-white font-bold text-sm">
+                        {getAuthorInitials(blog.author)}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white font-semibold text-sm">
+                          {blog.author}
+                        </p>
+                        <p className="text-white/70 text-xs">
+                          {formatDate(blog.createdAt)} • {readTime}
+                        </p>
                       </div>
                     </div>
-                  )}
 
-                  {/* Content */}
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {formatDate(blog.createdAt)}
-                      </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {readTime}
-                      </span>
-                    </div>
-
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2">
+                    {/* Title */}
+                    <h3 className="text-white text-lg font-bold mb-2 line-clamp-3">
                       {blog.title}
                     </h3>
 
-                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2">
-                      {blog.content.substring(0, 100)}...
+                    {/* Description */}
+                    <p className="text-white/90 text-sm mb-3 line-clamp-2">
+                      {blog.content.substring(0, 150)}...
                     </p>
 
-                    {/* Author Info */}
-                    <div className="flex items-center space-x-2 mb-3">
-                      <div className="w-8 h-8 bg-gradient-to-br from-[#007AFF] to-[#00C897] rounded-full flex items-center justify-center text-white text-xs font-bold">
-                        {getAuthorInitials(blog.author)}
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-gray-900 dark:text-white">{blog.author}</p>
-                      </div>
+                    {/* Category Tag */}
+                    <div className="mb-3">
+                      <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs font-medium">
+                        {primaryTag}
+                      </span>
                     </div>
+                  </div>
 
-                    {/* Tags */}
-                    {blog.tags && blog.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {blog.tags.slice(0, 2).map((tag, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
+                  {/* Share Button - Right Side (Shorts Style) */}
+                  <div className="absolute right-3 bottom-28 flex flex-col items-center space-y-4 z-10">
+                    <button 
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          const shareUrl = window.location.href;
+                          const shareText = `${blog.title}\n\n${blog.content.substring(0, 100)}...`;
+                          
+                          if (navigator.share) {
+                            await navigator.share({
+                              title: blog.title,
+                              text: shareText,
+                              url: shareUrl
+                            });
+                          } else {
+                            await navigator.clipboard.writeText(shareUrl);
+                            alert('Link copied to clipboard!');
+                          }
+                        } catch (error) {
+                          console.log('Share cancelled or failed');
+                        }
+                      }}
+                      className="flex flex-col items-center space-y-1 active:scale-95 transition-transform"
+                    >
+                      <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors">
+                        <svg
+                          className="w-6 h-6"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
+                          />
+                        </svg>
                       </div>
-                    )}
+                      <span className="text-white text-xs font-medium">Share</span>
+                    </button>
                   </div>
                 </article>
               );
@@ -282,25 +317,25 @@ export function MobileUpdates({ onNavigate: _onNavigate }: MobileUpdatesProps) {
 
         {/* Blog Detail Modal */}
         {selectedBlog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedBlog(null)}>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedBlog(null)}>
+            <div className="bg-black/90 backdrop-blur-md rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-white/20" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-white/20">
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 bg-gradient-to-br from-[#007AFF] to-[#00C897] rounded-full flex items-center justify-center text-white text-xs font-bold">
                     {getAuthorInitials(selectedBlog.author)}
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white line-clamp-1">
+                    <h3 className="text-lg font-bold text-white line-clamp-1">
                       {selectedBlog.title}
                     </h3>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                    <p className="text-xs text-white/70">
                       {formatDate(selectedBlog.createdAt)}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedBlog(null)}
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  className="text-white/70 hover:text-white"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -338,20 +373,20 @@ export function MobileUpdates({ onNavigate: _onNavigate }: MobileUpdatesProps) {
                   </div>
                 )}
 
-                <div className="prose dark:prose-invert max-w-none">
-                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed whitespace-pre-wrap">
+                <div className="prose max-w-none">
+                  <p className="text-white/90 text-sm leading-relaxed whitespace-pre-wrap">
                     {selectedBlog.content}
                   </p>
                 </div>
 
                 {selectedBlog.reference && (
-                  <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Reference:</p>
+                  <div className="mt-4 p-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+                    <p className="text-xs text-white/70 mb-1">Reference:</p>
                     <a 
                       href={selectedBlog.reference.url} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-[#007AFF] hover:underline font-medium text-sm"
+                      className="text-[#60A5FA] hover:underline font-medium text-sm"
                     >
                       {selectedBlog.reference.title}
                     </a>

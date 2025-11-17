@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Service } from '../../api/services';
 
 interface MobileServiceCardProps {
@@ -30,7 +31,7 @@ const getServiceColor = (title: string): string => {
   return 'from-teal-500 to-teal-600';
 };
 
-export function MobileServiceCard({ service, onClick }: MobileServiceCardProps) {
+export const MobileServiceCard = memo(function MobileServiceCard({ service, onClick }: MobileServiceCardProps) {
   const icon = getServiceIcon(service.title);
   const colorGradient = getServiceColor(service.title);
 
@@ -88,5 +89,5 @@ export function MobileServiceCard({ service, onClick }: MobileServiceCardProps) 
       </div>
     </div>
   );
-}
+});
 

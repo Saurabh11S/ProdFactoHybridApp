@@ -1,5 +1,4 @@
 import { Capacitor } from '@capacitor/core';
-import { useDarkMode } from '../DarkModeContext';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details';
 
@@ -16,7 +15,6 @@ interface TabItem {
 }
 
 export function BottomTabBar({ currentPage, onNavigate }: BottomTabBarProps) {
-  const { isDarkMode } = useDarkMode();
 
   // Only show on mobile and for main pages
   if (!Capacitor.isNativePlatform() && window.innerWidth >= 768) {
@@ -105,14 +103,12 @@ export function BottomTabBar({ currentPage, onNavigate }: BottomTabBarProps) {
   ];
 
   return (
-    <nav className={`fixed bottom-0 left-0 right-0 z-50 ${
+    <nav className={`fixed bottom-0 left-0 right-0 z-[100] ${
       isShortsPage
         ? 'bg-black/60 backdrop-blur-md border-t border-white/10'
-        : isDarkMode 
-          ? 'bg-gray-900 border-t border-gray-800' 
-          : 'bg-white border-t border-gray-200'
-    } pb-safe`}>
-      <div className="flex items-center justify-around h-16 px-1">
+        : 'bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800'
+    } pb-safe`} style={{ pointerEvents: 'auto' }}>
+      <div className="flex items-center justify-around h-16 px-1" style={{ pointerEvents: 'auto' }}>
         {tabs.map((tab) => {
           const isActive = currentPage === tab.id;
           const IconComponent = isActive ? tab.activeIcon : tab.icon;
@@ -120,18 +116,22 @@ export function BottomTabBar({ currentPage, onNavigate }: BottomTabBarProps) {
           return (
             <button
               key={tab.id}
-              onClick={() => onNavigate(tab.id)}
-              className={`relative flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition-all duration-200 ${
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('BottomTabBar: Navigating to', tab.id);
+                onNavigate(tab.id);
+              }}
+              className={`relative flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition-all duration-200 touch-manipulation ${
                 isShortsPage
                   ? isActive
                     ? 'text-white'
                     : 'text-white/70'
                   : isActive 
                     ? 'text-[#007AFF]' 
-                    : isDarkMode
-                      ? 'text-gray-300'
-                      : 'text-gray-500'
+                    : 'text-gray-500 dark:text-gray-300'
               }`}
+              style={{ pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }}
               aria-label={tab.label}
             >
               {isActive && (
@@ -140,12 +140,7 @@ export function BottomTabBar({ currentPage, onNavigate }: BottomTabBarProps) {
                 }`} />
               )}
               <div className="mb-1 relative z-10">
-                <div 
-                  className={isShortsPage ? (isActive ? 'text-white' : 'text-white/70') : ''}
-                  style={isShortsPage ? { color: isActive ? 'white' : 'rgba(255, 255, 255, 0.7)' } : undefined}
-                >
-                  {IconComponent(isActive)}
-                </div>
+                {IconComponent(isActive)}
               </div>
               <span className={`text-xs font-medium transition-colors relative z-10 ${
                 isShortsPage
@@ -154,9 +149,7 @@ export function BottomTabBar({ currentPage, onNavigate }: BottomTabBarProps) {
                     : 'text-white/70'
                   : isActive 
                     ? 'text-[#007AFF]' 
-                    : isDarkMode
-                      ? 'text-gray-300'
-                      : 'text-gray-500'
+                    : 'text-gray-500 dark:text-gray-300'
               }`}>
                 {tab.label}
               </span>

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import { API_BASE_URL } from '../config/apiConfig';
 
 // Lecture interface based on backend model
@@ -51,11 +51,10 @@ export interface CourseResponse {
 // Fetch all published courses
 export const fetchCourses = async (): Promise<Course[]> => {
   try {
-    const url = `${API_BASE_URL}/course`;
-    console.log('🔄 Fetching courses from:', url);
-    const response = await axios.get(url, {
-      timeout: 60000, // 60 seconds timeout for mobile (to handle Render.com wake-up time)
-    });
+    const url = `/course`;
+    console.log('🔄 Fetching courses from:', `${API_BASE_URL}${url}`);
+    // Timeout is optimized based on Render.com plan (see renderPlanConfig.ts)
+    const response = await axiosInstance.get(url);
     console.log('📦 Full API Response:', JSON.stringify(response.data, null, 2));
     
     // Handle different response formats
@@ -112,7 +111,7 @@ export const fetchCourses = async (): Promise<Course[]> => {
 // Fetch user's purchased courses
 export const fetchUserCourses = async (token: string): Promise<Course[]> => {
   try {
-    const response = await axios.get<CourseResponse>(`${API_BASE_URL}/course/my-courses`, {
+    const response = await axiosInstance.get<CourseResponse>(`/course/my-courses`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -137,7 +136,7 @@ export const fetchCourseById = async (courseId: string, token?: string): Promise
       headers['Authorization'] = `Bearer ${token}`;
     }
     
-    const response = await axios.get<{success: boolean; data: Course}>(`${API_BASE_URL}/course/${courseId}/lectures`, {
+    const response = await axiosInstance.get<{success: boolean; data: Course}>(`/course/${courseId}/lectures`, {
       headers
     });
     return response.data.data;
@@ -150,7 +149,7 @@ export const fetchCourseById = async (courseId: string, token?: string): Promise
 // Fetch course by ID with all lectures (for purchased courses)
 export const fetchCourseByIdWithAllLectures = async (courseId: string, token: string): Promise<Course> => {
   try {
-    const response = await axios.get<{success: boolean; data: Course}>(`${API_BASE_URL}/admin/courses/${courseId}`, {
+    const response = await axiosInstance.get<{success: boolean; data: Course}>(`/admin/courses/${courseId}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'

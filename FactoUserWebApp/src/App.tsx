@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { DarkModeProvider } from './components/DarkModeContext';
 import { AuthProvider } from './contexts/AuthContext';
@@ -44,9 +44,145 @@ function AppContent() {
   const [servicesFilter, setServicesFilter] = useState<string | undefined>(undefined);
   const [isMobile, setIsMobile] = useState(false);
   const [showLanding, setShowLanding] = useState(false);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+  const isNavigating = useRef(false);
+  const navigationTimeout = useRef<NodeJS.Timeout | null>(null);
   
   // Handle app lifecycle (mobile only)
   useAppState();
+
+  const handleNavigation = useCallback((page: PageType, serviceId?: string, courseId?: string, filter?: string) => {
+    console.log('handleNavigation called:', { page, currentPage, serviceId, courseId, filter });
+    
+    // Always allow navigation for tab bar clicks (same page is fine for refreshing)
+    // Only prevent if it's the exact same page AND no serviceId/courseId change AND it's not a main tab
+    const mainTabs: PageType[] = ['home', 'services', 'learning', 'shorts', 'updates'];
+    const isMainTab = mainTabs.includes(page);
+    
+    if (currentPage === page && !serviceId && !courseId && !filter && !isMainTab) {
+      console.log('Already on this page, skipping navigation');
+      // Still reset navigation lock in case it's stuck
+      isNavigating.current = false;
+      return;
+    }
+    
+    // Prevent rapid navigation calls, but allow after a short delay
+    if (isNavigating.current) {
+      console.log('Navigation in progress, forcing after delay');
+      setTimeout(() => {
+        isNavigating.current = false;
+        handleNavigation(page, serviceId, courseId, filter);
+      }, 50); // Reduced delay for faster response
+      return;
+    }
+    
+    isNavigating.current = true;
+    
+    // Clear any pending navigation
+    if (navigationTimeout.current) {
+      clearTimeout(navigationTimeout.current);
+    }
+    
+    // Use requestAnimationFrame for smooth transitions
+    requestAnimationFrame(() => {
+      console.log('Setting current page to:', page);
+      setCurrentPage(page);
+      if (serviceId) {
+        setSelectedServiceId(serviceId);
+      }
+      if (courseId) {
+        setSelectedCourseId(courseId);
+      }
+      // Set filter for services page
+      if (page === 'services' && filter) {
+        setServicesFilter(filter);
+      } else if (page !== 'services') {
+        // Clear filter when navigating away from services page
+        setServicesFilter(undefined);
+      }
+      
+      // Reset navigation lock after transition
+      navigationTimeout.current = setTimeout(() => {
+        isNavigating.current = false;
+        console.log('Navigation lock released');
+      }, 200); // Reduced timeout for faster navigation
+    });
+  }, [currentPage]);
+  
+  // Swipe navigation handlers - optimized to not interfere with scrolling
+  useEffect(() => {
+    if (!isMobile) return;
+    
+    let touchStartTime = 0;
+    let isScrolling = false;
+    
+    let touchStartY = 0;
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+      isScrolling = false;
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      const deltaX = Math.abs(e.touches[0].clientX - touchStartX.current);
+      const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+      
+      // If vertical movement is greater, it's a scroll, not a swipe
+      if (deltaY > deltaX && deltaY > 10) {
+        isScrolling = true;
+      }
+      
+      touchEndX.current = e.touches[0].clientX;
+    };
+    
+    const handleTouchEnd = () => {
+      // Don't handle swipe if user was scrolling
+      if (isScrolling) return;
+      
+      const touchDuration = Date.now() - touchStartTime;
+      const swipeDistance = touchStartX.current - touchEndX.current;
+      const minSwipeDistance = 100;
+      const maxSwipeDuration = 300; // Max 300ms for a swipe
+      
+      // Only handle swipe on main pages (not login/signup/service-details)
+      if (['login', 'signup', 'service-details', 'documents', 'payment', 'profile', 'course-payment', 'course-details'].includes(currentPage)) {
+        return;
+      }
+      
+      // Only process if it's a quick swipe (not a slow drag)
+      if (touchDuration > maxSwipeDuration) return;
+      
+      if (Math.abs(swipeDistance) > minSwipeDistance && !isNavigating.current) {
+        const pages: PageType[] = ['home', 'services', 'learning', 'shorts', 'updates'];
+        const currentIndex = pages.indexOf(currentPage);
+        
+        if (swipeDistance > 0 && currentIndex < pages.length - 1) {
+          // Swipe left - next page
+          handleNavigation(pages[currentIndex + 1]);
+        } else if (swipeDistance < 0 && currentIndex > 0) {
+          // Swipe right - previous page
+          handleNavigation(pages[currentIndex - 1]);
+        }
+      }
+    };
+    
+    // Use capture phase and passive listeners for better performance
+    document.addEventListener('touchstart', handleTouchStart, { passive: true, capture: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: true, capture: false });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true, capture: false });
+    
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+      if (navigationTimeout.current) {
+        clearTimeout(navigationTimeout.current);
+      }
+    };
+  }, [isMobile, currentPage, handleNavigation]);
 
   // Detect mobile platform and check if landing page should be shown
   useEffect(() => {
@@ -63,23 +199,6 @@ function AppContent() {
     
     return () => window.removeEventListener('resize', checkMobile);
   }, [isMobile]);
-
-  const handleNavigation = (page: PageType, serviceId?: string, courseId?: string, filter?: string) => {
-    setCurrentPage(page);
-    if (serviceId) {
-      setSelectedServiceId(serviceId);
-    }
-    if (courseId) {
-      setSelectedCourseId(courseId);
-    }
-    // Set filter for services page
-    if (page === 'services' && filter) {
-      setServicesFilter(filter);
-    } else if (page !== 'services') {
-      // Clear filter when navigating away from services page
-      setServicesFilter(undefined);
-    }
-  };
 
   const renderPage = () => {
     switch (currentPage) {
@@ -162,8 +281,14 @@ function AppContent() {
         />
       )}
 
-      {/* Page Content */}
-      <div className={`w-full ${currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'shorts' ? (isMobile ? 'pt-16 pb-20' : 'pt-16 md:pt-16') : currentPage === 'shorts' ? '' : ''}`}>
+      {/* Page Content - Optimized for smooth transitions */}
+      <div 
+        className={`w-full ${currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'shorts' ? (isMobile ? 'pt-16 pb-20' : 'pt-16 md:pt-16') : currentPage === 'shorts' ? '' : ''}`}
+        style={{ 
+          willChange: currentPage !== 'shorts' ? 'contents' : 'auto',
+          WebkitOverflowScrolling: 'touch'
+        }}
+      >
         {renderPage()}
       </div>
 
@@ -175,13 +300,12 @@ function AppContent() {
         />
       )}
 
-      {/* WhatsApp Chat Button - Show on all pages except login/signup */}
-      {/* Always visible on mobile apps - position adjusts based on bottom tab bar presence */}
-      {currentPage !== 'login' && currentPage !== 'signup' && (
+      {/* WhatsApp Chat Button - Desktop only (mobile shows in nav) */}
+      {!isMobile && currentPage !== 'login' && currentPage !== 'signup' && (
         <WhatsAppChatButton 
           phoneNumber="+918001234567" // Update this with your actual WhatsApp number
           message="Hello! I need help with your services."
-          isMobile={isMobile && ['home', 'services', 'updates', 'profile', 'learning', 'shorts'].includes(currentPage)}
+          isMobile={false}
         />
       )}
     </div>

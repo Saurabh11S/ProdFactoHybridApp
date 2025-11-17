@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import { API_BASE_URL } from '../config/apiConfig';
 
 // Service interfaces based on backend models
@@ -61,11 +61,12 @@ export interface ServiceResponse {
 // Fetch all services
 export const fetchServices = async (): Promise<Service[]> => {
   try {
-    const url = `${API_BASE_URL}/services`;
-    console.log('🔄 Fetching services from:', url);
-    const response = await axios.get<ServiceResponse>(url, {
-      timeout: 60000, // 60 seconds timeout for mobile (to handle Render.com wake-up time)
-    });
+    const url = `/services`;
+    const fullUrl = `${API_BASE_URL}${url}`;
+    console.log('🔄 Fetching services from:', fullUrl);
+    console.log('🌐 Full API URL:', fullUrl);
+    // Timeout is optimized based on Render.com plan (see renderPlanConfig.ts)
+    const response = await axiosInstance.get<ServiceResponse>(url);
     console.log('📦 Full API Response:', JSON.stringify(response.data, null, 2));
     
     // Handle different response structures
@@ -116,9 +117,9 @@ export const fetchServices = async (): Promise<Service[]> => {
 // Fetch sub-services by service ID
 export const fetchSubServices = async (serviceId: string): Promise<SubService[]> => {
   try {
-    const url = `${API_BASE_URL}/sub-services/service/${serviceId}`;
-    console.log('🔄 [fetchSubServices] Fetching from:', url);
-    const response = await axios.get<ServiceResponse>(url);
+    const url = `/sub-services/service/${serviceId}`;
+    console.log('🔄 [fetchSubServices] Fetching from:', `${API_BASE_URL}${url}`);
+    const response = await axiosInstance.get<ServiceResponse>(url);
     
     // Handle different response structures
     let subServices: SubService[] = [];
@@ -148,9 +149,9 @@ export const fetchSubServices = async (serviceId: string): Promise<SubService[]>
 // Fetch all sub-services directly
 export const fetchAllSubServices = async (): Promise<SubService[]> => {
   try {
-    const url = `${API_BASE_URL}/sub-services/all`;
-    console.log('🔄 [fetchAllSubServices] Fetching from:', url);
-    const response = await axios.get<ServiceResponse>(url);
+    const url = `/sub-services/all`;
+    console.log('🔄 [fetchAllSubServices] Fetching from:', `${API_BASE_URL}${url}`);
+    const response = await axiosInstance.get<ServiceResponse>(url);
     
     console.log('📦 [fetchAllSubServices] Full response:', JSON.stringify(response.data, null, 2));
     console.log('📦 [fetchAllSubServices] Response structure:', {
@@ -262,7 +263,7 @@ export const fetchAllSubServices = async (): Promise<SubService[]> => {
 // Fetch user's purchased services
 export const fetchUserServices = async (token: string): Promise<SubService[]> => {
   try {
-    const response = await axios.get<ServiceResponse>(`${API_BASE_URL}/sub-services/my-services`, {
+      const response = await axiosInstance.get<ServiceResponse>(`/sub-services/my-services`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -282,9 +283,9 @@ export const fetchSubServiceById = async (subServiceId: string, _forceRefresh: b
     // Using query parameters only to avoid CORS header issues
     const timestamp = Date.now();
     const random = Math.random();
-    const url = `${API_BASE_URL}/sub-services/${subServiceId}?t=${timestamp}&_=${random}`;
+    const url = `/sub-services/${subServiceId}?t=${timestamp}&_=${random}`;
     
-    const response = await axios.get<{ success: boolean; data: { subService: SubService } }>(
+    const response = await axiosInstance.get<{ success: boolean; data: { subService: SubService } }>(
       url
     );
     

@@ -76,59 +76,22 @@ const shorts: Short[] = YOUTUBE_VIDEOS.map((video, index) => ({
 
 export function MobileShorts({ onNavigate }: MobileShortsProps = {}) {
   const [currentShort, setCurrentShort] = useState(0);
-  const [shortsData, setShortsData] = useState(shorts);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const touchStartY = useRef(0);
   const touchEndY = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const formatNumber = (num: number) => {
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1) + "K";
-    }
-    return num.toString();
-  };
-
-  const handleLike = (id: number) => {
-    setShortsData((prev) =>
-      prev.map((short) =>
-        short.id === id
-          ? {
-              ...short,
-              isLiked: !short.isLiked,
-              isDisliked: short.isLiked ? false : short.isDisliked,
-              likes: short.isLiked ? short.likes - 1 : short.likes + 1,
-            }
-          : short
-      )
-    );
-  };
-
-  const handleDislike = (id: number) => {
-    setShortsData((prev) =>
-      prev.map((short) =>
-        short.id === id
-          ? {
-              ...short,
-              isDisliked: !short.isDisliked,
-              isLiked: short.isDisliked ? false : short.isLiked,
-              likes: short.isLiked && short.isDisliked ? short.likes - 1 : short.likes,
-            }
-          : short
-      )
-    );
-  };
 
   const handleNext = useCallback(() => {
-    setCurrentShort((prev) => (prev + 1) % shortsData.length);
+    setCurrentShort((prev) => (prev + 1) % shorts.length);
     setIsPlaying(false);
-  }, [shortsData.length]);
+  }, []);
 
   const handlePrevious = useCallback(() => {
-    setCurrentShort((prev) => (prev - 1 + shortsData.length) % shortsData.length);
+    setCurrentShort((prev) => (prev - 1 + shorts.length) % shorts.length);
     setIsPlaying(false);
-  }, [shortsData.length]);
+  }, []);
 
   // Touch handlers for swipe
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -165,7 +128,7 @@ export function MobileShorts({ onNavigate }: MobileShortsProps = {}) {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [handleNext, handlePrevious]);
 
-  const currentShortData = shortsData[currentShort];
+  const currentShortData = shorts[currentShort];
 
   return (
     <div 
@@ -174,6 +137,7 @@ export function MobileShorts({ onNavigate }: MobileShortsProps = {}) {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      style={{ pointerEvents: 'auto' }}
     >
       {/* Video Container - Full Screen */}
       <div className="relative w-full h-full">
@@ -266,93 +230,57 @@ export function MobileShorts({ onNavigate }: MobileShortsProps = {}) {
             </h3>
           </div>
 
-          {/* Action Buttons - Right Side (YouTube Shorts Style) */}
+          {/* Share Button Only - Right Side (YouTube Shorts Style) */}
           <div className="absolute right-3 bottom-28 flex flex-col items-center space-y-4 z-10">
-            {/* Like Button */}
-            <button
-              onClick={() => handleLike(currentShortData.id)}
-              className="flex flex-col items-center space-y-1 active:scale-95 transition-transform"
-            >
-              <div
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  currentShortData.isLiked
-                    ? "bg-white text-red-500"
-                    : "bg-white/10 backdrop-blur-sm text-white"
-                }`}
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill={currentShortData.isLiked ? "currentColor" : "none"}
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
-                  />
-                </svg>
-              </div>
-              <span className="text-white text-xs font-medium">
-                {formatNumber(currentShortData.likes)}
-              </span>
-            </button>
-
-            {/* Dislike Button */}
-            <button
-              onClick={() => handleDislike(currentShortData.id)}
-              className="flex flex-col items-center space-y-1 active:scale-95 transition-transform"
-            >
-              <div
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  currentShortData.isDisliked
-                    ? "bg-white text-gray-800"
-                    : "bg-white/10 backdrop-blur-sm text-white"
-                }`}
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill={currentShortData.isDisliked ? "currentColor" : "none"}
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"
-                  />
-                </svg>
-              </div>
-              <span className="text-white text-xs font-medium">Dislike</span>
-            </button>
-
-            {/* Comments Button */}
-            <button className="flex flex-col items-center space-y-1 active:scale-95 transition-transform">
-              <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white">
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
-              </div>
-              <span className="text-white text-xs font-medium">
-                {formatNumber(currentShortData.comments)}
-              </span>
-            </button>
-
             {/* Share Button */}
-            <button className="flex flex-col items-center space-y-1 active:scale-95 transition-transform">
-              <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white">
+            <button 
+              onClick={async (e) => {
+                e.stopPropagation();
+                try {
+                  const videoId = YOUTUBE_VIDEOS[currentShort]?.videoId || '';
+                  const shareUrl = `https://www.youtube.com/shorts/${videoId}`;
+                  const shareTitle = currentShortData.title || 'Check out this video!';
+                  const shareText = currentShortData.description || `Watch: ${shareTitle}`;
+                  
+                  // Use Web Share API if available
+                  if (navigator.share && navigator.canShare && navigator.canShare({ title: shareTitle, text: shareText, url: shareUrl })) {
+                    await navigator.share({
+                      title: shareTitle,
+                      text: shareText,
+                      url: shareUrl
+                    });
+                  } else if (navigator.share) {
+                    // Fallback for browsers that support share but not canShare
+                    await navigator.share({
+                      title: shareTitle,
+                      text: shareText,
+                      url: shareUrl
+                    });
+                  } else {
+                    // Fallback: Copy to clipboard
+                    try {
+                      await navigator.clipboard.writeText(shareUrl);
+                      // Show toast notification instead of alert
+                      const toast = document.createElement('div');
+                      toast.textContent = 'Link copied to clipboard!';
+                      toast.style.cssText = 'position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 8px; z-index: 10000; font-size: 14px;';
+                      document.body.appendChild(toast);
+                      setTimeout(() => toast.remove(), 2000);
+                    } catch (clipboardError) {
+                      console.error('Failed to copy to clipboard:', clipboardError);
+                    }
+                  }
+                } catch (error: any) {
+                  // User cancelled or share failed - this is expected behavior
+                  if (error.name !== 'AbortError') {
+                    console.log('Share failed:', error);
+                  }
+                }
+              }}
+              className="flex flex-col items-center space-y-1 active:scale-95 transition-transform touch-manipulation"
+              aria-label="Share video"
+            >
+              <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors">
                 <svg
                   className="w-6 h-6"
                   fill="none"
@@ -369,44 +297,7 @@ export function MobileShorts({ onNavigate }: MobileShortsProps = {}) {
               </div>
               <span className="text-white text-xs font-medium">Share</span>
             </button>
-
-            {/* Remix Button */}
-            <button className="flex flex-col items-center space-y-1 active:scale-95 transition-transform">
-              <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white">
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-              </div>
-              <span className="text-white text-xs font-medium">Remix</span>
-            </button>
           </div>
-
-          {/* Download Button - Bottom Right */}
-          <button className="absolute bottom-24 right-3 w-12 h-12 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center text-white active:scale-95 transition-all z-10">
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              />
-            </svg>
-          </button>
         </div>
 
       </div>
@@ -436,7 +327,7 @@ export function MobileShorts({ onNavigate }: MobileShortsProps = {}) {
 
       {/* Progress Indicator - Top */}
       <div className="absolute top-16 left-0 right-0 flex justify-center space-x-1 px-4">
-        {shortsData.map((_, index) => (
+        {shorts.map((_, index) => (
           <div
             key={index}
             className={`h-1 flex-1 rounded-full transition-all duration-300 ${

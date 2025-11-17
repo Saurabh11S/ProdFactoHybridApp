@@ -14,13 +14,13 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
-      backgroundColor: "#000000",
+      backgroundColor: "#0a1628",
       showSpinner: true,
-      spinnerColor: "#ffffff"
+      spinnerColor: "#007AFF"
     },
     StatusBar: {
-      style: 'dark',
-      backgroundColor: '#ffffff'
+      style: 'light',
+      backgroundColor: '#0a1628'
     },
     Keyboard: {
       resize: 'body',

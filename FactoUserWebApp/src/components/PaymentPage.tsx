@@ -571,15 +571,23 @@ export function PaymentPage({ onNavigate, serviceId }: PaymentPageProps) {
             {/* Payment Button */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 p-6">
               <button
-                onClick={total === 0 ? () => {
-                  // Handle contact us action for free consultation
-                  window.open('tel:+91-9876543210', '_self');
-                } : handlePayment}
-                className={`w-full py-4 px-6 rounded-lg font-bold text-lg hover:shadow-lg transition-all duration-200 mb-4 flex items-center justify-center ${
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('Payment button clicked, total:', total);
+                  if (total === 0) {
+                    // Handle contact us action for free consultation
+                    window.open('tel:+91-9876543210', '_self');
+                  } else {
+                    handlePayment();
+                  }
+                }}
+                className={`w-full py-4 px-6 rounded-lg font-bold text-lg hover:shadow-lg transition-all duration-200 mb-4 flex items-center justify-center touch-manipulation ${
                   total === 0 
                     ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
                     : 'bg-gradient-to-r from-[#007AFF] to-[#0056CC] text-white hover:from-[#0056CC] hover:to-[#007AFF]'
                 }`}
+                style={{ pointerEvents: 'auto', WebkitTapHighlightColor: 'transparent' }}
               >
                 {total === 0 ? (
                   <>

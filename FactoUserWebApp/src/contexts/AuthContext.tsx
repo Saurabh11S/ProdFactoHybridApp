@@ -353,8 +353,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(true);
       setError(null);
 
-      console.log('Login attempt with email:', email);
-      console.log('API URL:', `${API_BASE_URL}/auth/login`);
+      // Trim and validate inputs
+      const trimmedEmail = email.trim();
+      const trimmedPassword = password.trim();
+      
+      if (!trimmedEmail || !trimmedPassword) {
+        const errorMsg = 'Email and password are required';
+        setError(errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      console.log('🔐 Login attempt:', { 
+        email: trimmedEmail, 
+        passwordLength: trimmedPassword.length,
+        apiUrl: `${API_BASE_URL}/auth/login`
+      });
       
       // Test backend connectivity first
       try {
@@ -365,14 +378,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       const response = await axios.post(`${API_BASE_URL}/auth/login`, {
-        email,
-        password
+        email: trimmedEmail,
+        password: trimmedPassword
+      }, {
+        timeout: 30000, // 30 second timeout
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
-      console.log('Login response:', response.data);
+      console.log('📦 Login response:', {
+        success: response.data.success,
+        hasData: !!response.data.data,
+        hasUser: !!response.data.data?.user,
+        hasToken: !!response.data.data?.token
+      });
 
       if (response.data.success && response.data.data) {
         const { user: userData, token: authToken } = response.data.data;
+        
+        if (!userData || !authToken) {
+          const errorMsg = 'Invalid response from server. Missing user or token.';
+          console.error('❌', errorMsg, response.data);
+          setError(errorMsg);
+          throw new Error(errorMsg);
+        }
         
         setUser(userData);
         setToken(authToken);
@@ -384,33 +414,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Set axios default header
         axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
         
-        console.log('Login successful, user:', userData);
-        console.log('Auth token received:', authToken);
-        console.log('Setting user and token state...');
+        console.log('✅ Login successful:', {
+          userId: userData._id,
+          email: userData.email,
+          hasToken: !!authToken
+        });
         setIsLoading(false);
-        console.log('Login process completed successfully');
       } else {
-        throw new Error(response.data.status?.message || 'Login failed');
+        const errorMsg = response.data.status?.message || response.data.message || 'Login failed. Invalid credentials.';
+        console.error('❌ Login failed:', errorMsg, response.data);
+        setError(errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (error: any) {
-      console.error('Login error details:', {
+      console.error('❌ Login error details:', {
         message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
+        code: error.code,
+        response: {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data
+        },
         config: {
           url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers
+          method: error.config?.method
         }
       });
       
-      let errorMessage = 'Login failed';
+      let errorMessage = 'Login failed. Please check your credentials.';
       
       if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
-        errorMessage = 'Unable to connect to server. Please check if the backend is running.';
+        errorMessage = 'Unable to connect to server. Please check your internet connection.';
+      } else if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        errorMessage = 'Request timed out. Please try again.';
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
       } else if (error.response?.status === 404) {
-        errorMessage = 'Login endpoint not found. Please check the API configuration.';
+        errorMessage = 'Login endpoint not found. Please contact support.';
       } else if (error.response?.status === 500) {
         errorMessage = 'Server error. Please try again later.';
       } else if (error.response?.data?.message) {
@@ -419,7 +459,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         errorMessage = error.response.data.status.message;
       } else if (error.response?.data?.error?.message) {
         errorMessage = error.response.data.error.message;
-      } else if (error.message) {
+      } else if (error.message && error.message !== 'Login failed') {
         errorMessage = error.message;
       }
       

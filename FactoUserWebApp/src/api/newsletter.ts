@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { API_BASE_URL } from '../config/apiConfig';
+import axiosInstance from '../utils/axiosConfig';
 
 export interface NewsletterSubscriptionResponse {
   success: boolean;
@@ -19,7 +18,7 @@ export interface NewsletterSubscriptionResponse {
  */
 export const subscribeToNewsletter = async (email: string): Promise<NewsletterSubscriptionResponse> => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/newsletter/subscribe`, {
+    const response = await axiosInstance.post(`/newsletter/subscribe`, {
       email,
     });
     return response.data;
@@ -38,7 +37,7 @@ export const subscribeToNewsletter = async (email: string): Promise<NewsletterSu
  */
 export const unsubscribeFromNewsletter = async (email: string): Promise<NewsletterSubscriptionResponse> => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/newsletter/unsubscribe`, {
+    const response = await axiosInstance.post(`/newsletter/unsubscribe`, {
       email,
     });
     return response.data;
