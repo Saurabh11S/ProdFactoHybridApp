@@ -2,6 +2,9 @@
 /dist
 yarn.lock
 sendgrid.env
+<<<<<<< HEAD
 .env
 .env.local
 .env.*.local
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9

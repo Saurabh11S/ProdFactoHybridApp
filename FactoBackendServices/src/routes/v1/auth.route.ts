@@ -10,8 +10,11 @@ router.route("/verifyOtp").post(controllers.authController.verifyOtp);
 router.route("/signup").post(controllers.authController.signup);
 router.route("/login").post(controllers.authController.loginWithPassword);
 router.route("/refresh").post(controllers.authController.refreshToken);
+<<<<<<< HEAD
 router.route("/google").post(controllers.authController.loginWithGoogle);
 router.route("/facebook").post(controllers.authController.loginWithFacebook);
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
 
 // Test endpoints - only available in development
 const isDevelopment = process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'prod';

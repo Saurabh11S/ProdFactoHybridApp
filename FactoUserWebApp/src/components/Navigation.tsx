@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Browser } from '@capacitor/browser';
+<<<<<<< HEAD
 import { getWhatsAppNumber, getDefaultWhatsAppMessage } from '../config/whatsappConfig';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details' | 'terms' | 'privacy';
@@ -11,6 +12,14 @@ type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login
 interface NavigationProps {
   currentPage: PageType;
   onNavigate: (page: PageType, serviceId?: string, courseId?: string, filter?: string) => void;
+=======
+
+type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details';
+
+interface NavigationProps {
+  currentPage: PageType;
+  onNavigate: (page: PageType) => void;
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
   isShortsPage?: boolean;
 }
 
@@ -105,8 +114,13 @@ export function Navigation({ currentPage, onNavigate, isShortsPage = false }: Na
             {isMobile && (
               <button
                 onClick={() => {
+<<<<<<< HEAD
                   const phoneNumber = getWhatsAppNumber();
                   const message = getDefaultWhatsAppMessage();
+=======
+                  const phoneNumber = '+918001234567';
+                  const message = 'Hello! I need help with your services.';
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
                   const formattedPhone = phoneNumber.replace(/[^\d+]/g, '');
                   const encodedMessage = encodeURIComponent(message);
                   const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;

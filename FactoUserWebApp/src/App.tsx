@@ -35,10 +35,15 @@ import { MobileLoginPage } from './components/mobile/MobileLoginPage';
 import { MobileSignupPage } from './components/mobile/MobileSignupPage';
 import { MobileUpdates } from './components/mobile/MobileUpdates';
 import { MobileUserProfile } from './components/mobile/MobileUserProfile';
+<<<<<<< HEAD
 import { TermsAndConditions } from './components/TermsAndConditions';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details' | 'terms' | 'privacy';
+=======
+
+type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details';
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<PageType>('home');
@@ -60,7 +65,11 @@ function AppContent() {
     
     // Always allow navigation for tab bar clicks (same page is fine for refreshing)
     // Only prevent if it's the exact same page AND no serviceId/courseId change AND it's not a main tab
+<<<<<<< HEAD
     const mainTabs: PageType[] = ['home', 'services', 'shorts', 'updates', 'learning'];
+=======
+    const mainTabs: PageType[] = ['home', 'services', 'learning', 'shorts', 'updates'];
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
     const isMainTab = mainTabs.includes(page);
     
     if (currentPage === page && !serviceId && !courseId && !filter && !isMainTab) {
@@ -117,6 +126,7 @@ function AppContent() {
   useEffect(() => {
     if (!isMobile) return;
     
+<<<<<<< HEAD
     const mainPages: PageType[] = ['home', 'services', 'shorts', 'updates', 'learning'];
     
     // Don't enable swipe on non-main pages
@@ -205,10 +215,66 @@ function AppContent() {
       const finalX = e.changedTouches[0]?.clientX || touchEndX.current;
       
       if (!touchStartXValue) {
+=======
+    let touchStartTime = 0;
+    let isScrolling = false;
+    
+    let touchStartY = 0;
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      // Only handle swipe on main pages
+      if (['login', 'signup', 'service-details', 'documents', 'payment', 'profile', 'course-payment', 'course-details'].includes(currentPage)) {
+        return;
+      }
+      
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+      isScrolling = false;
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      // Only handle swipe on main pages
+      if (['login', 'signup', 'service-details', 'documents', 'payment', 'profile', 'course-payment', 'course-details'].includes(currentPage)) {
+        return;
+      }
+      
+      if (!touchStartX.current) return; // Guard against missing start position
+      
+      const deltaX = Math.abs(e.touches[0].clientX - touchStartX.current);
+      const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+      
+      // If vertical movement is significantly greater than horizontal, it's a scroll
+      // Use a ratio to be more lenient with diagonal swipes
+      if (deltaY > deltaX * 1.5 && deltaY > 15) {
+        isScrolling = true;
+      }
+      
+      touchEndX.current = e.touches[0].clientX;
+    };
+    
+    const handleTouchEnd = (e: TouchEvent) => {
+      // Only handle swipe on main pages
+      if (['login', 'signup', 'service-details', 'documents', 'payment', 'profile', 'course-payment', 'course-details'].includes(currentPage)) {
+        return;
+      }
+      
+      // Don't handle swipe if user was scrolling
+      if (isScrolling) {
+        return;
+      }
+      
+      // Get the final touch position from changedTouches (the finger that was lifted)
+      const finalX = e.changedTouches[0]?.clientX || touchEndX.current;
+      
+      // Guard against missing start position
+      if (!touchStartX.current) {
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
         return;
       }
       
       const touchDuration = Date.now() - touchStartTime;
+<<<<<<< HEAD
       const swipeDistance = touchStartXValue - finalX;
       const minSwipeDistance = 60; // Minimum distance for swipe
       const maxSwipeDuration = 500; // Maximum duration for swipe
@@ -224,10 +290,18 @@ function AppContent() {
       const effectiveMinVelocity = wasEdgeSwipe ? minSwipeVelocity * 0.7 : minSwipeVelocity;
       
       // Only process if it's a quick, significant swipe
+=======
+      const swipeDistance = touchStartX.current - finalX;
+      const minSwipeDistance = 50; // Reduced for easier swiping
+      const maxSwipeDuration = 600; // Increased for more tolerance
+      
+      // Only process if it's a quick swipe (not a slow drag)
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
       if (touchDuration > maxSwipeDuration) {
         return;
       }
       
+<<<<<<< HEAD
       const swipeVelocity = Math.abs(swipeDistance) / touchDuration;
       if (Math.abs(swipeDistance) < effectiveMinDistance || swipeVelocity < effectiveMinVelocity) {
         return;
@@ -271,6 +345,41 @@ function AppContent() {
       document.removeEventListener('touchmove', handleTouchMove, { capture: true } as any);
       document.removeEventListener('touchend', handleTouchEnd, { capture: true } as any);
       document.removeEventListener('touchcancel', () => {}, { capture: true } as any);
+=======
+      if (Math.abs(swipeDistance) > minSwipeDistance && !isNavigating.current) {
+        const pages: PageType[] = ['home', 'services', 'learning', 'shorts', 'updates'];
+        const currentIndex = pages.indexOf(currentPage);
+        
+        if (currentIndex === -1) {
+          return;
+        }
+        
+        if (swipeDistance > 0 && currentIndex < pages.length - 1) {
+          // Swipe left (finger moves left) - next page
+          console.log('Swipe left detected, navigating to:', pages[currentIndex + 1]);
+          handleNavigation(pages[currentIndex + 1]);
+        } else if (swipeDistance < 0 && currentIndex > 0) {
+          // Swipe right (finger moves right) - previous page
+          console.log('Swipe right detected, navigating to:', pages[currentIndex - 1]);
+          handleNavigation(pages[currentIndex - 1]);
+        }
+      }
+    };
+    
+    // Use passive listeners for better performance
+    // Note: touchend needs the event parameter, so we keep it as a function
+    document.addEventListener('touchstart', handleTouchStart, { passive: true, capture: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: true, capture: false });
+    document.addEventListener('touchend', handleTouchEnd as any, { passive: true, capture: false });
+    
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+      if (navigationTimeout.current) {
+        clearTimeout(navigationTimeout.current);
+      }
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
     };
   }, [isMobile, currentPage, handleNavigation]);
 
@@ -319,10 +428,13 @@ function AppContent() {
         return <CourseDetailsPage onNavigate={handleNavigation} courseId={selectedCourseId} />;
       case 'profile':
         return isMobile ? <MobileUserProfile onNavigate={handleNavigation} /> : <UserProfile onNavigate={handleNavigation} />;
+<<<<<<< HEAD
       case 'terms':
         return <TermsAndConditions onNavigate={handleNavigation} />;
       case 'privacy':
         return <PrivacyPolicy onNavigate={handleNavigation} />;
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
       default:
         // Use mobile-optimized home screen on mobile devices
         if (isMobile) {
@@ -330,7 +442,11 @@ function AppContent() {
         }
         // Use full web home screen on desktop
         return (
+<<<<<<< HEAD
           <div className="min-h-screen bg-gradient-to-br from-[#0A0F1F] to-[#1A263A] dark:from-[#0A0F1F] dark:to-[#1A263A]">
+=======
+          <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800">
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
             <main className="relative">
               <HeroSection onNavigate={handleNavigation} />
               <ServicesSection onNavigate={handleNavigation} />
@@ -339,7 +455,11 @@ function AppContent() {
               <FinanceShortsSection onNavigate={handleNavigation} />
               <NewsSection onNavigate={handleNavigation} />
             </main>
+<<<<<<< HEAD
             <Footer onNavigate={handleNavigation} />
+=======
+            <Footer />
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
           </div>
         );
     }
@@ -378,15 +498,23 @@ function AppContent() {
         className={`w-full ${currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'shorts' ? (isMobile ? 'pt-16 pb-20' : 'pt-16 md:pt-16') : currentPage === 'shorts' ? '' : ''}`}
         style={{ 
           willChange: currentPage !== 'shorts' ? 'contents' : 'auto',
+<<<<<<< HEAD
           WebkitOverflowScrolling: 'touch',
           touchAction: 'pan-y pinch-zoom' // Allow vertical scrolling and pinch zoom, but let horizontal swipes be handled
+=======
+          WebkitOverflowScrolling: 'touch'
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
         }}
       >
         {renderPage()}
       </div>
 
       {/* Bottom Tab Bar - Mobile only */}
+<<<<<<< HEAD
       {isMobile && currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'terms' && currentPage !== 'privacy' && (
+=======
+      {isMobile && currentPage !== 'login' && currentPage !== 'signup' && (
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
         <BottomTabBar 
           currentPage={currentPage}
           onNavigate={handleNavigation}
@@ -394,8 +522,15 @@ function AppContent() {
       )}
 
       {/* WhatsApp Chat Button - Desktop only (mobile shows in nav) */}
+<<<<<<< HEAD
       {!isMobile && currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'terms' && currentPage !== 'privacy' && (
         <WhatsAppChatButton 
+=======
+      {!isMobile && currentPage !== 'login' && currentPage !== 'signup' && (
+        <WhatsAppChatButton 
+          phoneNumber="+918001234567" // Update this with your actual WhatsApp number
+          message="Hello! I need help with your services."
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
           isMobile={false}
         />
       )}

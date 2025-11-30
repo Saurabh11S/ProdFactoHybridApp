@@ -2,13 +2,20 @@ import axios from 'axios';
 import { getAPIBaseURL } from '../config/apiConfig';
 import { getRecommendedTimeout } from '../config/renderPlanConfig';
 import { Capacitor } from '@capacitor/core';
+<<<<<<< HEAD
 import { logger } from './logger';
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
 
 // Get API URL dynamically to ensure it's correct for the current platform
 const getBaseURL = (): string => {
   // Always get fresh URL to handle mobile detection correctly
   const url = getAPIBaseURL();
+<<<<<<< HEAD
   logger.log('🔧 [Axios Config] Using API Base URL:', url);
+=======
+  console.log('🔧 [Axios Config] Using API Base URL:', url);
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
   return url;
 };
 
@@ -30,7 +37,11 @@ axiosInstance.interceptors.request.use(
     // Ensure we're using the correct API URL (important for mobile)
     const currentApiUrl = getAPIBaseURL();
     if (config.baseURL !== currentApiUrl) {
+<<<<<<< HEAD
       logger.log('🔄 [Axios] Updating baseURL from', config.baseURL, 'to', currentApiUrl);
+=======
+      console.log('🔄 [Axios] Updating baseURL from', config.baseURL, 'to', currentApiUrl);
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
       config.baseURL = currentApiUrl;
     }
     
@@ -39,6 +50,7 @@ axiosInstance.interceptors.request.use(
                      (window.location.protocol === 'capacitor:' || 
                       window.location.protocol === 'file:'));
     
+<<<<<<< HEAD
     logger.log('📤 ========== API REQUEST ==========');
     logger.log('📤 Method:', config.method?.toUpperCase());
     logger.log('📤 URL:', config.url);
@@ -49,11 +61,27 @@ axiosInstance.interceptors.request.use(
     logger.log('📤 Headers:', config.headers);
     logger.log('📤 Timeout:', config.timeout, 'ms');
     logger.log('📤 =================================');
+=======
+    console.log('📤 ========== API REQUEST ==========');
+    console.log('📤 Method:', config.method?.toUpperCase());
+    console.log('📤 URL:', config.url);
+    console.log('📤 Base URL:', config.baseURL);
+    console.log('📤 Full URL:', `${config.baseURL}${config.url}`);
+    console.log('📱 Platform:', isMobile ? 'Mobile (Native)' : 'Web');
+    console.log('📱 Native Check:', Capacitor.isNativePlatform());
+    console.log('📤 Headers:', config.headers);
+    console.log('📤 Timeout:', config.timeout, 'ms');
+    console.log('📤 =================================');
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
     
     return config;
   },
   (error) => {
+<<<<<<< HEAD
     logger.error('❌ Request Error:', error);
+=======
+    console.error('❌ Request Error:', error);
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
     return Promise.reject(error);
   }
 );
@@ -61,7 +89,11 @@ axiosInstance.interceptors.request.use(
 // Add response interceptor for logging and error handling
 axiosInstance.interceptors.response.use(
   (response) => {
+<<<<<<< HEAD
     logger.log('✅ API Response:', {
+=======
+    console.log('✅ API Response:', {
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
       status: response.status,
       url: response.config.url,
       data: response.data,
@@ -72,6 +104,7 @@ axiosInstance.interceptors.response.use(
     const isNetworkError = error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED';
     const fullURL = error.config ? `${error.config.baseURL}${error.config.url}` : 'N/A';
     
+<<<<<<< HEAD
     logger.error('❌ ========== API ERROR ==========');
     logger.error('❌ Message:', error.message);
     logger.error('❌ Code:', error.code);
@@ -94,6 +127,30 @@ axiosInstance.interceptors.response.use(
       }
     }
     logger.error('❌ =================================');
+=======
+    console.error('❌ ========== API ERROR ==========');
+    console.error('❌ Message:', error.message);
+    console.error('❌ Code:', error.code);
+    console.error('❌ Status:', error.response?.status);
+    console.error('❌ Status Text:', error.response?.statusText);
+    console.error('❌ URL:', error.config?.url);
+    console.error('❌ Base URL:', error.config?.baseURL);
+    console.error('❌ Full URL:', fullURL);
+    console.error('❌ Response Data:', error.response?.data);
+    console.error('❌ Network Error:', isNetworkError);
+    
+    if (isNetworkError) {
+      console.error('❌ Network Issue Details:');
+      console.error('   - Check internet connection');
+      console.error('   - Backend may be starting (Render.com takes 30-60s)');
+      console.error('   - Verify backend URL is accessible');
+      if (fullURL.includes('onrender.com')) {
+        console.error('   - Render.com service may be sleeping');
+        console.error('   - First request may take longer to wake up the service');
+      }
+    }
+    console.error('❌ =================================');
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
 
     // Provide user-friendly error messages
     if (error.code === 'ERR_NETWORK') {

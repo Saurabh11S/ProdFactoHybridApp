@@ -370,6 +370,7 @@ export const sendConsultationNotificationToAdmin = async (
 };
 
 /**
+<<<<<<< HEAD
  * Sends admin response email to user when admin responds to their query
  */
 export const sendQueryResponseToUser = async (
@@ -434,6 +435,8 @@ export const sendQueryResponseToUser = async (
 };
 
 /**
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
  * Sends newsletter update email to all active subscribers
  */
 export const sendNewsletterUpdate = async (

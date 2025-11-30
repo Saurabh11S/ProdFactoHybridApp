@@ -49,6 +49,7 @@ const QuerySchema = new mongoose.Schema<IQuery, QueryModel>(
         type: String,
         enum: ['service', 'course', 'updated', 'general', 'consultation'],
         default: 'general',
+<<<<<<< HEAD
     },
     isResponded: {
         type: Boolean,
@@ -56,6 +57,8 @@ const QuerySchema = new mongoose.Schema<IQuery, QueryModel>(
     },
     respondedAt: {
         type: Date,
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
     }
   },
   {

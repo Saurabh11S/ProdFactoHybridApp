@@ -11,6 +11,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+<<<<<<< HEAD
     minify: 'terser',
     terserOptions: {
       compress: {
@@ -19,6 +20,8 @@ export default defineConfig({
         pure_funcs: ['console.log', 'console.info', 'console.debug']
       }
     },
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
     rollupOptions: {
       output: {
         manualChunks: {

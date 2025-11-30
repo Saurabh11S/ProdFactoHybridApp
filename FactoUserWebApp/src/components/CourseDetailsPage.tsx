@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { Play, ArrowLeft } from 'lucide-react';
 import { fetchCourseById, Course, Lecture } from '../api/courses';
 import { useAuth } from '../contexts/AuthContext';
+<<<<<<< HEAD
 import { ConsultationModal } from './ConsultationModal';
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details';
 
@@ -17,7 +20,10 @@ export function CourseDetailsPage({ onNavigate, courseId }: CourseDetailsPagePro
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+<<<<<<< HEAD
   const [showConsultationModal, setShowConsultationModal] = useState(false);
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
 
   useEffect(() => {
     const loadCourseDetails = async () => {
@@ -215,17 +221,24 @@ export function CourseDetailsPage({ onNavigate, courseId }: CourseDetailsPagePro
                 {!course.isPurchased && (
                   <button
                     onClick={() => onNavigate('course-payment', undefined, course._id)}
+<<<<<<< HEAD
                     className="w-full bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all duration-300 hover:scale-105 mb-3"
+=======
+                    className="w-full bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all duration-300 hover:scale-105"
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
                   >
                     Buy Now
                   </button>
                 )}
+<<<<<<< HEAD
                 <button
                   onClick={() => setShowConsultationModal(true)}
                   className="w-full border border-[#007AFF] text-[#007AFF] dark:text-blue-400 px-6 py-3 rounded-lg font-medium hover:bg-[#007AFF] hover:text-white dark:hover:bg-blue-500 transition-all duration-300"
                 >
                   Book Free Consultation
                 </button>
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
               </div>
             </div>
           </div>
@@ -292,6 +305,7 @@ export function CourseDetailsPage({ onNavigate, courseId }: CourseDetailsPagePro
           </div>
         </div>
       </div>
+<<<<<<< HEAD
 
       {/* Consultation Modal */}
       <ConsultationModal
@@ -300,6 +314,8 @@ export function CourseDetailsPage({ onNavigate, courseId }: CourseDetailsPagePro
         category="course"
         itemName={course?.title}
       />
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
     </div>
   );
 }

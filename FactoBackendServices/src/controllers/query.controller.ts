@@ -80,7 +80,11 @@ export const scheduleConsultation = bigPromise(
       });
 
       // Send notifications (non-blocking)
+<<<<<<< HEAD
       const adminEmail = process.env.ADMIN_EMAIL || 'facto.m.consultancy@gmail.com';
+=======
+      const adminEmail = 'facto.m.consultancy@gmail.com';
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
       
       // Send email to user if email is provided
       if (email) {

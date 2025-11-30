@@ -1,6 +1,9 @@
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
+<<<<<<< HEAD
 import { getWhatsAppNumber, getDefaultWhatsAppMessage } from '../config/whatsappConfig';
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
 
 interface WhatsAppChatButtonProps {
   phoneNumber?: string;
@@ -21,6 +24,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 );
 
 export function WhatsAppChatButton({ 
+<<<<<<< HEAD
   phoneNumber, // Optional: if not provided, uses environment variable or default
   message, // Optional: if not provided, uses default message
   isMobile = false
@@ -35,6 +39,18 @@ export function WhatsAppChatButton({
     
     // Encode the message for URL
     const encodedMessage = encodeURIComponent(whatsappMessage);
+=======
+  phoneNumber = '+918001234567', // Default phone number - update this with your actual WhatsApp number
+  message = 'Hello! I need help with your services.', // Default message
+  isMobile = false
+}: WhatsAppChatButtonProps) {
+  const handleWhatsAppClick = () => {
+    // Format phone number (remove any spaces, dashes, or special characters except +)
+    const formattedPhone = phoneNumber.replace(/[^\d+]/g, '');
+    
+    // Encode the message for URL
+    const encodedMessage = encodeURIComponent(message);
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
     
     // Create WhatsApp URL
     const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;

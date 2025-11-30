@@ -36,6 +36,7 @@ dist-ssr
 keystore.properties
 android/keystore.properties
 android/app/keystore.properties
+<<<<<<< HEAD
 
 # Android build artifacts
 android/app/build/
@@ -52,3 +53,5 @@ RENDER_PLAN_RECOMMENDATIONS.md
 *.tmp
 *.temp
 .cache/
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9

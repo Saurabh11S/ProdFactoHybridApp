@@ -94,7 +94,10 @@
     "eslint-plugin-react-refresh": "^0.4.4",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.5",
+<<<<<<< HEAD
     "terser": "^5.44.1",
+=======
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
     "typescript": "^5.2.2",
     "vite": "^4.5.0"
   }

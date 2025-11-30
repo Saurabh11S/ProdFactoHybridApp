@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details' | 'terms' | 'privacy';
 
 interface FooterProps {
@@ -5,6 +6,10 @@ interface FooterProps {
 }
 
 export function Footer({ onNavigate }: FooterProps = {}) {
+=======
+
+export function Footer() {
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
   const currentYear = new Date().getFullYear();
 
   const footerSections = {
@@ -219,6 +224,7 @@ export function Footer({ onNavigate }: FooterProps = {}) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="md:flex md:items-center md:justify-between">
             <div className="flex flex-wrap items-center justify-center md:justify-start space-x-6 text-sm text-gray-300">
+<<<<<<< HEAD
               <a 
                 href="#" 
                 onClick={(e) => {
@@ -239,6 +245,10 @@ export function Footer({ onNavigate }: FooterProps = {}) {
               >
                 Terms of Service
               </a>
+=======
+              <a href="#" className="hover:text-[#007AFF] transition-colors duration-200 hover:underline">Privacy Policy</a>
+              <a href="#" className="hover:text-[#007AFF] transition-colors duration-200 hover:underline">Terms of Service</a>
+>>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
               <a href="#" className="hover:text-[#007AFF] transition-colors duration-200 hover:underline">Cookie Policy</a>
               <a href="#" className="hover:text-[#007AFF] transition-colors duration-200 hover:underline">GDPR Compliance</a>
               <a href="#" className="hover:text-[#007AFF] transition-colors duration-200 hover:underline">Disclaimer</a>
