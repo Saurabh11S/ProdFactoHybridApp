@@ -1,0 +1,7 @@
+/node_modules
+/dist
+yarn.lock
+sendgrid.env
+.env
+.env.local
+.env.*.local
