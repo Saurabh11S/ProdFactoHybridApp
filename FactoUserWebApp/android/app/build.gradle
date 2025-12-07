@@ -38,25 +38,17 @@ android {
     
     buildTypes {
         release {
-<<<<<<< HEAD
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-=======
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
             if (keystorePropertiesFile.exists()) {
                 signingConfig signingConfigs.release
             }
         }
-<<<<<<< HEAD
         debug {
             minifyEnabled false
             debuggable true
         }
-=======
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
     }
 }
 

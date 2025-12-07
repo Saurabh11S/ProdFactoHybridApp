@@ -11,7 +11,6 @@ import jwt from "jsonwebtoken";
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "24h"; // Extended to 24 hours for better user experience
 
-<<<<<<< HEAD
 // Google OAuth Login
 export const loginWithGoogle: RequestHandler = bigPromise(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -129,9 +128,6 @@ export const loginWithFacebook: RequestHandler = bigPromise(
     }
   }
 );
-
-=======
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
   
   export const sendOtp: RequestHandler = bigPromise(
     async (req: Request, res: Response, next: NextFunction) => {
@@ -446,6 +442,8 @@ export const refreshToken: RequestHandler = bigPromise(
     verifyOtp,
     signup,
     loginWithPassword,
+    loginWithGoogle,
+    loginWithFacebook,
     createTestUser,
     refreshToken
   };

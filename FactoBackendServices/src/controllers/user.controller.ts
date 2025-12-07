@@ -7,6 +7,10 @@ import { AuthRequest } from '@/middlewares/auth';
 import { IUser } from '@/interfaces';
 import mongoose from 'mongoose';
 import { db } from '@/models';
+import { 
+  sendFreeConsultationRequestConfirmationToUser, 
+  sendFreeConsultationRequestNotificationToAdmin 
+} from '@/utils/emailService';
 
 export const getUserDetails = bigPromise(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -39,7 +43,7 @@ export const getUserPurchases = bigPromise(
 
       // Get user purchases with populated payment order details
       const purchases = await db.UserPurchase.find({ userId })
-        .populate('paymentOrderId', 'amount currency status transactionId createdAt paymentMethod')
+        .populate('paymentOrderId', 'amount currency status transactionId createdAt paymentMethod paymentActivatedByAdmin isConsultationPayment consultationPrice activatedAt')
         .sort({ createdAt: -1 })
         .lean();
 
@@ -83,6 +87,19 @@ export const saveUserService = bigPromise(
 
       if (existingPurchase) {
         return next(createCustomError('Service already requested or purchased', StatusCode.BAD_REQUEST));
+      }
+
+      // Fetch service details for email notifications (if free consultation)
+      let serviceDetails = null;
+      if (isFreeConsultation) {
+        try {
+          serviceDetails = await db.SubService.findById(itemId)
+            .populate('serviceId', 'title category')
+            .select('title serviceId');
+        } catch (serviceError) {
+          console.error('Error fetching service details for email:', serviceError);
+          // Continue without service details - we'll use itemId as fallback
+        }
       }
 
       // For free consultation, use a special paymentOrderId value
@@ -156,6 +173,60 @@ export const saveUserService = bigPromise(
       });
 
       await userPurchase.save();
+
+      // Send email notifications for free consultation
+      if (isFreeConsultation) {
+        try {
+          // Get user details (fetch once)
+          const user = await db.User.findById(userId).select('email fullName phoneNumber');
+          
+          // Get service name
+          const serviceName = serviceDetails?.title || 
+                             (serviceDetails?.serviceId && typeof serviceDetails.serviceId === 'object' && 'title' in serviceDetails.serviceId 
+                               ? (serviceDetails.serviceId as any).title 
+                               : 'Service') || 
+                             'Service';
+          
+          // Send confirmation email to user
+          if (user && user.email) {
+            console.log('📧 Sending free consultation confirmation email to user:', user.email);
+            await sendFreeConsultationRequestConfirmationToUser(
+              user.email,
+              user.fullName || 'Valued Customer',
+              serviceName,
+              itemId
+            );
+            console.log('✅ Free consultation confirmation email sent to user');
+          } else {
+            console.warn('⚠️ User email not available, skipping user notification email');
+          }
+
+          // Send notification email to admin
+          const adminEmail = process.env.ADMIN_EMAIL || 'facto.m.consultancy@gmail.com';
+          console.log('📧 Sending free consultation notification email to admin:', adminEmail);
+          
+          await sendFreeConsultationRequestNotificationToAdmin(
+            adminEmail,
+            {
+              userName: user?.fullName || 'Unknown User',
+              userEmail: user?.email || 'Not provided',
+              userPhone: user?.phoneNumber ? `+91${user.phoneNumber}` : 'Not provided',
+              serviceName: serviceName,
+              serviceId: itemId,
+              selectedFeatures: selectedFeatures.length > 0 ? selectedFeatures : undefined,
+              billingPeriod: billingPeriod !== 'one-time' ? billingPeriod : undefined,
+              specialRequirement: specialRequirement || undefined,
+              additionalRequirements: additionalRequirements || undefined,
+              purchaseId: userPurchase._id.toString()
+            }
+          );
+          console.log('✅ Free consultation notification email sent to admin');
+        } catch (emailError: any) {
+          // Log error but don't fail the request
+          console.error('❌ Failed to send free consultation emails:', emailError.message || emailError);
+          console.error('❌ Email error details:', emailError);
+        }
+      }
 
       const message = isFreeConsultation 
         ? 'Your free consultation request has been submitted successfully. Our team will contact you soon.'

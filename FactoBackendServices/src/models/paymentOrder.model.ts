@@ -55,6 +55,26 @@ const PaymentOrderSchema = new mongoose.Schema<IPaymentOrder, PaymentOrderModel>
         selectedFeatures:[String]
       },
     ],
+    // Fields for admin-activated payment (for free consultation services)
+    isConsultationPayment: {
+      type: Boolean,
+      default: false
+    },
+    consultationPrice: {
+      type: Number,
+      default: 0
+    },
+    paymentActivatedByAdmin: {
+      type: Boolean,
+      default: false
+    },
+    activatedAt: {
+      type: Date
+    },
+    activatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User" // Admin who activated it
+    }
   },
   {
     timestamps: true,

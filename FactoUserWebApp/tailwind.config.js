@@ -2,14 +2,7 @@
 export default {
   content: [
     "./index.html",
-<<<<<<< HEAD
     "./src/**/*.{js,ts,jsx,tsx}"
-=======
-    "./src/**/*.{js,ts,jsx,tsx}",
-    "./**/*.{js,ts,jsx,tsx}",
-    "./components/**/*.{js,ts,jsx,tsx}",
-    "./App.tsx"
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
   ],
   darkMode: 'class',
   theme: {

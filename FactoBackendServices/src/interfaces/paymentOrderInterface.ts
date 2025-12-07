@@ -16,6 +16,12 @@ export interface IPaymentOrder extends Document {
   paymentMethod: string;
   transactionId?: string;
   items: IPaymentOrderItem[];
+  // Fields for admin-activated payment (for free consultation services)
+  isConsultationPayment?: boolean;
+  consultationPrice?: number;
+  paymentActivatedByAdmin?: boolean;
+  activatedAt?: Date;
+  activatedBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
   totalAmount: number;

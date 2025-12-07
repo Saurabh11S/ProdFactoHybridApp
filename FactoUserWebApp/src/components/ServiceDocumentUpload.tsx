@@ -4,6 +4,8 @@ import { API_BASE_URL } from '../config/apiConfig';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 import { Storage } from '../utils/storage';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchDocumentRequirements } from '../api/documents';
 
 interface ServiceDocumentUploadProps {
   serviceId: string;
@@ -38,6 +40,7 @@ interface UploadedFile {
 }
 
 export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: ServiceDocumentUploadProps) {
+  const { token } = useAuth();
   const [documents, setDocuments] = useState<UserDocument[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -45,64 +48,6 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
   const [uploading, setUploading] = useState(false);
   const [requiredDocuments, setRequiredDocuments] = useState<RequiredDocument[]>([]);
 
-  // Get available documents based on service type (all optional)
-  const getRequiredDocumentsForService = (serviceName: string): RequiredDocument[] => {
-    const serviceType = serviceName.toLowerCase();
-    
-    if (serviceType.includes('itr')) {
-      return [
-        { name: 'Form 16', description: 'TDS certificate from your employer', required: false, uploaded: false },
-        { name: 'PAN Card', description: 'Copy of your PAN card', required: false, uploaded: false },
-        { name: 'Aadhaar Card', description: 'Copy of your Aadhaar card', required: false, uploaded: false },
-        { name: 'Bank Statement', description: 'Last 3 months bank statements', required: false, uploaded: false },
-        { name: 'Investment Proofs', description: '80C, 80D investment certificates', required: false, uploaded: false },
-        { name: 'Interest Certificates', description: 'FD, Savings account interest certificates', required: false, uploaded: false },
-        { name: 'Rent Receipts', description: 'House rent receipts (if applicable)', required: false, uploaded: false }
-      ];
-    } else if (serviceType.includes('gst')) {
-      return [
-        { name: 'PAN Card', description: 'Copy of PAN card', required: false, uploaded: false },
-        { name: 'Aadhaar Card', description: 'Copy of Aadhaar card', required: false, uploaded: false },
-        { name: 'Bank Account Details', description: 'Bank account statement or cancelled cheque', required: false, uploaded: false },
-        { name: 'Business Address Proof', description: 'Electricity bill, rent agreement, or property documents', required: false, uploaded: false },
-        { name: 'Business Registration', description: 'Partnership deed, MOA, AOA, or LLP agreement', required: false, uploaded: false },
-        { name: 'Digital Signature', description: 'DSC certificate (if available)', required: false, uploaded: false }
-      ];
-    } else if (serviceType.includes('company') || serviceType.includes('llp') || serviceType.includes('partnership')) {
-      return [
-        { name: 'PAN Card', description: 'PAN card of all directors/partners', required: false, uploaded: false },
-        { name: 'Aadhaar Card', description: 'Aadhaar card of all directors/partners', required: false, uploaded: false },
-        { name: 'Address Proof', description: 'Address proof of all directors/partners', required: false, uploaded: false },
-        { name: 'Business Address', description: 'Registered office address proof', required: false, uploaded: false },
-        { name: 'Digital Signature', description: 'DSC of authorized signatory', required: false, uploaded: false },
-        { name: 'MOA/AOA', description: 'Memorandum and Articles of Association', required: false, uploaded: false }
-      ];
-    } else if (serviceType.includes('trademark')) {
-      return [
-        { name: 'Trademark Logo', description: 'High-resolution logo/design file', required: false, uploaded: false },
-        { name: 'PAN Card', description: 'PAN card of applicant', required: false, uploaded: false },
-        { name: 'Address Proof', description: 'Address proof of applicant', required: false, uploaded: false },
-        { name: 'Business Registration', description: 'Company/LLP registration certificate', required: false, uploaded: false },
-        { name: 'Power of Attorney', description: 'POA if filed through attorney', required: false, uploaded: false }
-      ];
-    } else if (serviceType.includes('lut')) {
-      return [
-        { name: 'GST Registration Certificate', description: 'GST registration certificate', required: false, uploaded: false },
-        { name: 'PAN Card', description: 'PAN card copy', required: false, uploaded: false },
-        { name: 'Bank Account Details', description: 'Bank account statement', required: false, uploaded: false },
-        { name: 'Export Documents', description: 'Previous export invoices (if any)', required: false, uploaded: false },
-        { name: 'Business Address Proof', description: 'Address proof of business', required: false, uploaded: false }
-      ];
-    } else {
-      // Default documents for other services
-      return [
-        { name: 'PAN Card', description: 'Copy of PAN card', required: false, uploaded: false },
-        { name: 'Aadhaar Card', description: 'Copy of Aadhaar card', required: false, uploaded: false },
-        { name: 'Address Proof', description: 'Address proof document', required: false, uploaded: false },
-        { name: 'Business Documents', description: 'Relevant business documents', required: false, uploaded: false }
-      ];
-    }
-  };
 
   // Helper function to match documents to required documents
   const matchDocumentToRequired = (docTitle: string, requiredName: string): boolean => {
@@ -140,56 +85,106 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
 
   // Update required documents based on current documents
   const updateRequiredDocumentsStatus = useCallback((currentDocs: UserDocument[]) => {
-    setRequiredDocuments(prev => prev.map(reqDoc => {
-      const isUploaded = currentDocs.some((doc: UserDocument) => 
-        matchDocumentToRequired(doc.title, reqDoc.name)
-      );
-      return { ...reqDoc, uploaded: isUploaded };
-    }));
+    console.log('🔄 Updating required documents status. Current docs:', currentDocs.length);
+    setRequiredDocuments(prev => {
+      const updated = prev.map(reqDoc => {
+        const isUploaded = currentDocs.some((doc: UserDocument) => {
+          const matched = matchDocumentToRequired(doc.title, reqDoc.name);
+          if (matched) {
+            console.log(`✅ Matched document "${doc.title}" to required "${reqDoc.name}"`);
+          }
+          return matched;
+        });
+        return { ...reqDoc, uploaded: isUploaded };
+      });
+      const uploadedCount = updated.filter(doc => doc.uploaded).length;
+      console.log(`📊 Updated progress: ${uploadedCount} / ${updated.length}`);
+      return updated;
+    });
   }, []);
 
   // Initialize required documents and fetch existing documents
   useEffect(() => {
     const initializeDocuments = async () => {
       try {
-        // Initialize required documents based on service type
-        const requiredDocs = getRequiredDocumentsForService(serviceName);
-        setRequiredDocuments(requiredDocs);
+        setLoading(true);
+        const fetchToken = token || await Storage.get('authToken');
+        
+        if (!fetchToken) {
+          console.warn('No token available for fetching documents');
+          setRequiredDocuments([]);
+          setLoading(false);
+          return;
+        }
 
-        // Fetch existing documents for this service
-        const token = await Storage.get('authToken');
-        const response = await axios.get(
-          `${API_BASE_URL}/document/service/${serviceId}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
+        // 1. Fetch document requirements from master table (API only - no hardcoded fallback)
+        let apiRequirements: RequiredDocument[] = [];
+        try {
+          console.log('🔍 Fetching document requirements for serviceId:', serviceId);
+          const requirements = await fetchDocumentRequirements(serviceId, fetchToken);
+          console.log('📋 API returned requirements:', requirements);
+          
+          if (requirements && requirements.length > 0) {
+            // Map API response to RequiredDocument format
+            apiRequirements = requirements.map((req) => ({
+              name: req.title,
+              description: req.description || '',
+              required: req.isMandatory || false,
+              uploaded: false // Will be updated after fetching user documents
+            }));
+            console.log('✅ Fetched document requirements from master table:', apiRequirements.length, 'documents');
+          } else {
+            console.log('ℹ️ No requirements found in master table for this service');
           }
-        );
-        const existingDocs = response.data.data.userDocuments || [];
-        setDocuments(existingDocs);
+        } catch (apiError: any) {
+          console.error('❌ Error fetching document requirements from master table:', apiError?.message || apiError);
+          console.error('❌ Error details:', apiError?.response?.data || apiError);
+          // Don't set any fallback - show empty state instead
+          apiRequirements = [];
+        }
 
-        // Update required documents to show which ones are uploaded
-        const updatedRequiredDocs = requiredDocs.map(reqDoc => {
-          const isUploaded = existingDocs.some((doc: UserDocument) => 
-            matchDocumentToRequired(doc.title, reqDoc.name)
+        // 2. Set requirements from API only (no hardcoded fallback)
+        setRequiredDocuments(apiRequirements);
+
+        // 3. Fetch existing user documents
+        try {
+          const response = await axios.get(
+            `${API_BASE_URL}/document/service/${serviceId}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${fetchToken}`,
+                'Content-Type': 'application/json'
+              }
+            }
           );
-          return { ...reqDoc, uploaded: isUploaded };
-        });
-        setRequiredDocuments(updatedRequiredDocs);
+          
+          const existingDocs = response.data.data.userDocuments || [];
+          setDocuments(existingDocs);
+
+          // 4. Update required documents to show which ones are uploaded
+          const updatedRequiredDocs = apiRequirements.map(reqDoc => {
+            const isUploaded = existingDocs.some((doc: UserDocument) => 
+              matchDocumentToRequired(doc.title, reqDoc.name)
+            );
+            return { ...reqDoc, uploaded: isUploaded };
+          });
+          setRequiredDocuments(updatedRequiredDocs);
+        } catch (docError) {
+          console.error('Error fetching user documents:', docError);
+          // Keep the requirements list even if user documents fetch fails
+        }
 
       } catch (error: any) {
-        // Still initialize required documents even if fetch fails
-        const requiredDocs = getRequiredDocumentsForService(serviceName);
-        setRequiredDocuments(requiredDocs);
+        console.error('Error initializing documents:', error);
+        // Don't set any fallback - show empty state if API fails
+        setRequiredDocuments([]);
       } finally {
         setLoading(false);
       }
     };
 
     initializeDocuments();
-  }, [serviceId, serviceName]);
+  }, [serviceId, serviceName, token]);
 
   // Update required documents status whenever documents change
   useEffect(() => {
@@ -321,16 +316,22 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
       formData.append('title', fileData.name);
       formData.append('description', `Uploaded for ${serviceName}`);
 
-      const token = await Storage.get('authToken');
+      // Use token from auth context first, fallback to storage
+      const authToken = token || await Storage.get('authToken');
+      
+      if (!authToken) {
+        throw new Error('Authentication token not found. Please login again.');
+      }
+      
       console.log('📤 Uploading to:', `${API_BASE_URL}/document/upload/${serviceId}`);
-      console.log('🔑 Token exists:', !!token);
+      console.log('🔑 Token exists:', !!authToken);
       
       const response = await axios.post(
         `${API_BASE_URL}/document/upload/${serviceId}`,
         formData,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'multipart/form-data'
           },
           onUploadProgress: (progressEvent) => {
@@ -352,10 +353,16 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
         const newDocument = response.data.data.userDocument;
         setDocuments(prev => {
           const updated = [...prev, newDocument];
-          // Update required documents status after adding new document
-          updateRequiredDocumentsStatus(updated);
           return updated;
         });
+        // Update required documents status after state update
+        // Use the new document directly in the callback
+        setTimeout(() => {
+          setDocuments(currentDocs => {
+            updateRequiredDocumentsStatus(currentDocs);
+            return currentDocs;
+          });
+        }, 0);
       }
 
       // Remove from uploaded files after successful upload
@@ -381,11 +388,16 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
       
       // Handle specific error cases
       if (error.response?.status === 401) {
-        errorMessage = 'Your session has expired. Please log in again to continue uploading.';
-        // Optionally redirect to login or refresh token
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 3000);
+        const isTokenError = error.response?.data?.message?.toLowerCase().includes('token') || 
+                            error.response?.data?.message?.toLowerCase().includes('expired') ||
+                            error.response?.data?.message?.toLowerCase().includes('unauthorized');
+        
+        if (isTokenError) {
+          errorMessage = 'Your session has expired. Please refresh the page and try again. If the problem persists, please login again.';
+          // Don't force redirect - let user decide
+        } else {
+          errorMessage = error.response?.data?.message || 'Authentication failed. Please try again.';
+        }
       } else if (error.response?.status === 413) {
         errorMessage = 'File is too large. Please upload files smaller than 10MB.';
       } else if (error.response?.status === 415) {
@@ -404,12 +416,19 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
 
   const removeDocument = async (documentId: string) => {
     try {
-      const token = await Storage.get('authToken');
+      // Use token from auth context first, fallback to storage
+      const authToken = token || await Storage.get('authToken');
+      
+      if (!authToken) {
+        alert('Authentication token not found. Please login again.');
+        return;
+      }
+      
       await axios.delete(
         `${API_BASE_URL}/document/remove/${documentId}`,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json'
           }
         }
@@ -417,10 +436,15 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
 
       setDocuments(prev => {
         const updated = prev.filter(doc => doc._id !== documentId);
-        // Update required documents status after removing document
-        updateRequiredDocumentsStatus(updated);
         return updated;
       });
+      // Update required documents status after state update
+      setTimeout(() => {
+        setDocuments(currentDocs => {
+          updateRequiredDocumentsStatus(currentDocs);
+          return currentDocs;
+        });
+      }, 0);
     } catch (error) {
       console.error('Error removing document:', error);
       alert('Failed to remove document. Please try again.');
@@ -500,32 +524,42 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
                   Available Documents
                 </h3>
                 <div className="space-y-3">
-                  {requiredDocuments.map((doc, index) => (
-                    <div key={index} className="flex items-start p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                      <div className={`w-5 h-5 rounded border-2 mr-3 mt-1 flex items-center justify-center ${
-                        doc.uploaded 
-                          ? 'bg-[#00C897] border-[#00C897]' 
-                          : 'border-gray-300 dark:border-gray-500'
-                      }`}>
-                        {doc.uploaded && (
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center">
-                          <p className="font-medium text-[#1F2937] dark:text-white">{doc.name}</p>
+                  {requiredDocuments.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <svg className="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <p className="text-sm">No document requirements configured for this service.</p>
+                      <p className="text-xs mt-2 text-gray-400">Please contact support if you need assistance.</p>
+                    </div>
+                  ) : (
+                    requiredDocuments.map((doc, index) => (
+                      <div key={index} className="flex items-start p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className={`w-5 h-5 rounded border-2 mr-3 mt-1 flex items-center justify-center ${
+                          doc.uploaded 
+                            ? 'bg-[#00C897] border-[#00C897]' 
+                            : 'border-gray-300 dark:border-gray-500'
+                        }`}>
                           {doc.uploaded && (
-                            <span className="ml-2 text-[#00C897] text-xs bg-[#00C897]/10 px-2 py-1 rounded-full">
-                              ✓ Uploaded
-                            </span>
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{doc.description}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center">
+                            <p className="font-medium text-[#1F2937] dark:text-white">{doc.name}</p>
+                            {doc.uploaded && (
+                              <span className="ml-2 text-[#00C897] text-xs bg-[#00C897]/10 px-2 py-1 rounded-full">
+                                ✓ Uploaded
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{doc.description}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
                 
                 {/* Progress Summary */}

@@ -69,7 +69,7 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
   const [, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedServiceForUpload, setSelectedServiceForUpload] = useState<{id: string, name: string} | null>(null);
+  const [selectedServiceForUpload, setSelectedServiceForUpload] = useState<{id: string, purchaseId?: string, name: string} | null>(null);
   const [serviceDocumentCounts, setServiceDocumentCounts] = useState<{[key: string]: number}>({});
   const [allServices, setAllServices] = useState<SubService[]>([]);
   const [_servicesLoading, setServicesLoading] = useState(true);
@@ -78,6 +78,7 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFormData, setEditFormData] = useState({
     fullName: '',
+    email: '',
     gstNumber: ''
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -90,6 +91,7 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
       const gstNumber = (user as any).gstProfile?.gstNumber || '';
       setEditFormData({
         fullName: user.fullName || '',
+        email: user.email || '',
         gstNumber: gstNumber
       });
     }
@@ -127,6 +129,7 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
       const gstNumber = (user as any).gstProfile?.gstNumber || '';
       setEditFormData({
         fullName: user.fullName || '',
+        email: user.email || '',
         gstNumber: gstNumber
       });
     }
@@ -143,11 +146,21 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
     setSaveError(null);
 
     try {
+      // Validate email format if provided
+      if (editFormData.email && !/^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(editFormData.email.trim())) {
+        setSaveError('Please enter a valid email address');
+        setIsSaving(false);
+        return;
+      }
+
       const updateData: any = {};
       if (editFormData.fullName.trim()) {
         updateData.fullName = editFormData.fullName.trim();
       }
-      // Email and Phone Number are not editable - excluded from update
+      if (editFormData.email.trim()) {
+        updateData.email = editFormData.email.trim().toLowerCase();
+      }
+      // Phone Number is not editable - excluded from update
       // Update GST Profile - preserve existing gstProfile data and update gstNumber
       const existingGstProfile = (user as any).gstProfile || {};
       const trimmedGstNumber = editFormData.gstNumber.trim().toUpperCase();
@@ -914,14 +927,14 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Email <span className="text-gray-500 text-xs">(Not editable)</span>
+                        Email
                       </label>
                       <input
                         type="email"
-                        value={user.email}
-                        disabled
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                        placeholder="Email cannot be changed"
+                        value={editFormData.email}
+                        onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-[#1F2937] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]"
+                        placeholder="Enter your email address"
                       />
                     </div>
                     {user.phoneNumber && (
@@ -1202,20 +1215,39 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
                             </div>
                           )}
 
-                          {/* Payment Button for Free Consultations */}
-                          {paymentStatus.status === 'Free Consultation' && (
-                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                              <button
-                                onClick={() => onNavigate('service-details', purchase.itemId)}
-                                className="w-full bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center mb-3"
-                              >
-                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                                </svg>
-                                Pay Now
-                              </button>
-                            </div>
-                          )}
+                          {/* Payment Button for Free Consultations - only show if payment is activated */}
+                          {paymentStatus.status === 'Free Consultation' && (() => {
+                            const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
+                              ? purchase.paymentOrderId
+                              : paymentOrders.find(p => p._id === purchase.paymentOrderId);
+                            
+                            const isPaymentActivated = payment && typeof payment === 'object' && 'paymentActivatedByAdmin' in payment
+                              ? (payment as any).paymentActivatedByAdmin === true
+                              : false;
+                            
+                            return isPaymentActivated ? (
+                              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                                <button
+                                  onClick={() => onNavigate('service-details', purchase.itemId)}
+                                  className="w-full bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center mb-3"
+                                >
+                                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                  </svg>
+                                  Pay Now
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                                <div className="w-full bg-gray-400 text-white py-2 px-4 rounded-lg font-medium text-center flex items-center justify-center mb-3 cursor-not-allowed">
+                                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Quote Pending
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           {/* Document Upload Button */}
                           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
@@ -1231,7 +1263,8 @@ export function UserProfile({ onNavigate }: UserProfileProps) {
                             </div>
                             <button
                               onClick={() => setSelectedServiceForUpload({
-                                id: purchase._id,
+                                id: purchase.itemId, // Use itemId (sub-service ID) for fetching requirements
+                                purchaseId: purchase._id, // Keep purchase ID for document uploads
                                 name: serviceData.title
                               })}
                               className="w-full bg-gradient-to-r from-[#00C897] to-[#007AFF] text-white py-2 px-4 rounded-lg font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center"

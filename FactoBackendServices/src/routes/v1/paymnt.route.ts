@@ -6,6 +6,7 @@ import { controllers } from "../../controllers";
 import { verifyToken } from "@/middlewares/auth";
 
 router.route("/initiate-payment").post(verifyToken,controllers.paymentOrderController.initiatePayment);
+router.route("/initiate-consultation-payment").post(verifyToken,controllers.paymentOrderController.initiateConsultationPayment);
 router.route("/verify-payment").post(verifyToken,controllers.paymentOrderController.verifyPayment);
 router.route("/razorpay-webhook").post(controllers.paymentOrderController.handleWebhook);
 router.route("/getAllPayments").get(controllers.paymentOrderController.getAllPayments);

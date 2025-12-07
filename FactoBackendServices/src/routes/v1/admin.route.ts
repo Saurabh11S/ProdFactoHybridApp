@@ -87,6 +87,12 @@ router.get(
   controllers.adminController.getUserServiceDocuments
 );
 router.get(
+  "/users/:userId/documents",
+  verifyToken,
+  isAdmin,
+  controllers.adminController.getAllUserDocuments
+);
+router.get(
   "/services/:serviceId/consultations",
   verifyToken,
   isAdmin,
@@ -364,6 +370,22 @@ router.get(
   verifyToken,
   isAdmin,
   controllers.adminController.getAllApplicationsBySubService
+);
+
+// Get all pending free consultation requests
+router.get(
+  "/consultations/pending",
+  verifyToken,
+  isAdmin,
+  controllers.adminController.getAllPendingConsultations
+);
+
+// Activate payment for free consultation service
+router.put(
+  "/consultation/:purchaseId/activate-payment",
+  verifyToken,
+  isAdmin,
+  controllers.adminController.activateConsultationPayment
 );
 
 export default router;

@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Footer } from './Footer';
 import { fetchBlogs, fetchBlogById, Blog } from '../api/blogs';
-<<<<<<< HEAD
 import { ConsultationModal } from './ConsultationModal';
-=======
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
 
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment';
 
@@ -19,10 +16,7 @@ export function Updates({ onNavigate: _onNavigate }: UpdatesProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>(['All']);
-<<<<<<< HEAD
   const [showConsultationModal, setShowConsultationModal] = useState(false);
-=======
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
 
   // Fetch blogs from API
   useEffect(() => {
@@ -116,7 +110,6 @@ export function Updates({ onNavigate: _onNavigate }: UpdatesProps) {
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
             Financial <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#007AFF] to-[#00C897]">Updates</span>
           </h1>
-<<<<<<< HEAD
           <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-6">
             Stay informed with the latest financial news, regulatory updates, and industry insights
           </p>
@@ -129,11 +122,6 @@ export function Updates({ onNavigate: _onNavigate }: UpdatesProps) {
             </svg>
             Book Free Consultation
           </button>
-=======
-          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-            Stay informed with the latest financial news, regulatory updates, and industry insights
-          </p>
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
         </div>
 
         {/* Category Filter */}
@@ -349,7 +337,6 @@ export function Updates({ onNavigate: _onNavigate }: UpdatesProps) {
         )}
       </div>
       <Footer />
-<<<<<<< HEAD
 
       {/* Consultation Modal */}
       <ConsultationModal
@@ -357,8 +344,6 @@ export function Updates({ onNavigate: _onNavigate }: UpdatesProps) {
         onClose={() => setShowConsultationModal(false)}
         category="updated"
       />
-=======
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
     </div>
   );
 }

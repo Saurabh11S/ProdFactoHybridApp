@@ -15,6 +15,7 @@ import Query from '@/pages/Query/Query';
 import Employee from '@/pages/Employee/Employee';
 import ReqCall from '@/pages/ReqCall/ReqCall';
 import QuotationManagement  from '@/pages/Quotations/QuotationManagement';
+import ConsultationManagement from '@/pages/Consultations/ConsultationManagement';
 import Newsletter from '@/pages/Newsletter/Newsletter';
 // ProtectedRoute Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -96,6 +97,14 @@ const Router = () => {
             element={
               <ProtectedRoute>
                 <QuotationManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/consultations"
+            element={
+              <ProtectedRoute>
+                <ConsultationManagement />
               </ProtectedRoute>
             }
           />

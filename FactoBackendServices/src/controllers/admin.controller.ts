@@ -47,7 +47,7 @@ export const getUserServices = bigPromise(
       })
       .populate({
         path: 'paymentOrderId',
-        select: 'amount currency status transactionId createdAt'
+        select: 'amount currency status transactionId createdAt paymentActivatedByAdmin consultationPrice activatedAt'
       })
       .sort({ createdAt: -1 });
 
@@ -84,6 +84,15 @@ export const getUserServices = bigPromise(
               transactionId: purchase.paymentOrderId && typeof purchase.paymentOrderId === 'object' && 'transactionId' in purchase.paymentOrderId
                 ? (purchase.paymentOrderId as any).transactionId
                 : null,
+              paymentStatus: purchase.paymentOrderId && typeof purchase.paymentOrderId === 'object' && 'status' in purchase.paymentOrderId
+                ? (purchase.paymentOrderId as any).status
+                : null,
+              paymentActivatedByAdmin: purchase.paymentOrderId && typeof purchase.paymentOrderId === 'object' && 'paymentActivatedByAdmin' in purchase.paymentOrderId
+                ? (purchase.paymentOrderId as any).paymentActivatedByAdmin
+                : false,
+              consultationPrice: purchase.paymentOrderId && typeof purchase.paymentOrderId === 'object' && 'consultationPrice' in purchase.paymentOrderId
+                ? (purchase.paymentOrderId as any).consultationPrice
+                : 0,
             };
           } catch (error) {
             console.error('Error fetching service details:', error);
@@ -127,7 +136,7 @@ export const getServiceUsers = bigPromise(
       })
       .populate({
         path: 'paymentOrderId',
-        select: 'amount currency status transactionId createdAt'
+        select: 'amount currency status transactionId createdAt paymentActivatedByAdmin consultationPrice activatedAt'
       })
       .sort({ createdAt: -1 });
 
@@ -147,6 +156,9 @@ export const getServiceUsers = bigPromise(
           amount: payment?.amount || null,
           currency: payment?.currency || 'INR',
           transactionId: payment?.transactionId || null,
+          paymentStatus: payment?.status || null,
+          paymentActivatedByAdmin: payment?.paymentActivatedByAdmin || false,
+          consultationPrice: payment?.consultationPrice || 0,
         };
       });
 
@@ -171,15 +183,54 @@ export const getUserServiceDocuments = bigPromise(
         return next(createCustomError("Invalid user ID or service ID", StatusCode.BAD_REQ));
       }
 
+      // Convert string IDs to ObjectIds for proper querying
+      const userIdObjectId = new mongoose.Types.ObjectId(userId);
+      const serviceIdObjectId = new mongoose.Types.ObjectId(serviceId);
+      
       // Get all documents uploaded by user for this service
       const userDocuments = await db.UserDocument.find({ 
-        userId: userId,
-        subServiceId: serviceId
+        userId: userIdObjectId,
+        subServiceId: serviceIdObjectId
       })
       .populate('subServiceId', 'title')
       .sort({ createdAt: -1 });
+      
+      console.log(`Found ${userDocuments.length} documents for userId: ${userId}, serviceId: ${serviceId}`);
 
       const response = sendSuccessApiResponse("User service documents retrieved successfully", {
+        documents: userDocuments,
+        totalDocuments: userDocuments.length,
+      });
+      res.status(StatusCode.OK).send(response);
+    } catch (error: any) {
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+    }
+  }
+);
+
+// Get all user documents (for admin - across all services)
+export const getAllUserDocuments = bigPromise(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { userId } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return next(createCustomError("Invalid user ID", StatusCode.BAD_REQ));
+      }
+
+      // Convert string ID to ObjectId for proper querying
+      const userIdObjectId = new mongoose.Types.ObjectId(userId);
+      
+      // Get all documents uploaded by user across all services
+      const userDocuments = await db.UserDocument.find({ 
+        userId: userIdObjectId
+      })
+      .populate('subServiceId', 'title')
+      .sort({ createdAt: -1 });
+      
+      console.log(`Found ${userDocuments.length} total documents for userId: ${userId}`);
+
+      const response = sendSuccessApiResponse("All user documents retrieved successfully", {
         documents: userDocuments,
         totalDocuments: userDocuments.length,
       });
@@ -2409,42 +2460,74 @@ export const addCommentToQuery = bigPromise(
         return next(createCustomError("Query not found", StatusCode.NOT_FOUND));
       }
 
-      // Check if query was already responded to
+      // Check if query was already responded to and if comment changed
       const isFirstResponse = !query.isResponded;
+      const oldComment = query.comment || '';
+      const commentChanged = oldComment.trim() !== comment.trim();
 
       // Update query with comment and mark as responded
       query.comment = comment;
       query.isResponded = true;
-      query.respondedAt = new Date();
+      if (isFirstResponse) {
+        query.respondedAt = new Date();
+      }
       await query.save();
 
-      // Send email notification to user (non-blocking) - only if this is the first response
-      if (isFirstResponse && query.email && query.email !== 'not-provided@example.com') {
-        try {
-          console.log('📧 Attempting to send response email to user:', query.email);
-          const { sendQueryResponseToUser } = await import("@/utils/emailService");
-          await sendQueryResponseToUser(
-            query.email,
-            query.name,
-            query.query,
-            comment,
-            query.category
-          );
-          console.log('✅ Response email sent successfully to user');
-        } catch (emailError: any) {
-          console.error('❌ Failed to send response email to user:', emailError.message || emailError);
-          // Don't fail the request if email fails
+      // Send email notification to user (non-blocking) - send if first response OR if comment was updated
+      if (query.email && query.email !== 'not-provided@example.com' && query.email.trim() !== '') {
+        // Send email if it's the first response OR if the comment was changed
+        if (isFirstResponse || commentChanged) {
+          try {
+            console.log('📧 Attempting to send response email to user:', query.email);
+            console.log('📧 Query details:', {
+              name: query.name,
+              query: query.query,
+              comment: comment,
+              category: query.category,
+              isFirstResponse,
+              commentChanged,
+              oldComment: oldComment,
+              newComment: comment
+            });
+            
+            const { sendQueryResponseToUser } = await import("@/utils/emailService");
+            await sendQueryResponseToUser(
+              query.email,
+              query.name || 'Valued Customer',
+              query.query,
+              comment,
+              query.category
+            );
+            console.log('✅ Response email sent successfully to user:', query.email);
+          } catch (emailError: any) {
+            console.error('❌ Failed to send response email to user:', query.email);
+            console.error('❌ Error details:', emailError.message || emailError);
+            console.error('❌ Full error:', JSON.stringify(emailError, null, 2));
+            // Don't fail the request if email fails, but log the error
+          }
+        } else {
+          console.log('ℹ️ Comment unchanged, skipping email notification');
         }
-      } else if (!isFirstResponse) {
-        console.log('ℹ️ Query already responded to, skipping email notification');
       } else {
         console.warn('⚠️ User email not available or invalid, skipping email notification');
+        console.warn('⚠️ Email value:', query.email);
+        console.warn('⚠️ Is first response:', isFirstResponse);
+        console.warn('⚠️ Comment changed:', commentChanged);
       }
 
-      const response = sendSuccessApiResponse(
-        "Comment added to the query successfully and user has been notified",
-        { query }
-      );
+      // Determine response message based on whether email was sent
+      let message = "Comment added to the query successfully";
+      if (query.email && query.email !== 'not-provided@example.com' && query.email.trim() !== '') {
+        if (isFirstResponse || commentChanged) {
+          message = "Comment added to the query successfully. Email notification has been sent to the user.";
+        } else {
+          message = "Comment updated successfully. (No email sent - comment unchanged)";
+        }
+      } else {
+        message = "Comment added to the query successfully. (No email sent - user email not available)";
+      }
+
+      const response = sendSuccessApiResponse(message, { query });
       res.status(StatusCode.OK).send(response);
     } catch (error: any) {
       return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
@@ -2776,6 +2859,206 @@ export const getAllApplicationsBySubService = bigPromise(
       res.status(StatusCode.OK).send(response);
     } catch (error) {
       return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+    }
+  }
+);
+
+/**
+ * Get all pending free consultation requests
+ * Admin can see all consultation requests that need price activation
+ */
+export const getAllPendingConsultations = bigPromise(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const {
+        page = 1,
+        limit = 10,
+        sortBy = "createdAt",
+        sortOrder = "desc",
+      } = req.query;
+
+      // First, find all PaymentOrders with free_consultation status
+      const freeConsultationOrders = await db.PaymentOrder.find({
+        status: 'free_consultation'
+      })
+      .select('_id status paymentActivatedByAdmin consultationPrice activatedAt')
+      .lean();
+
+      const paymentOrderIds = freeConsultationOrders.map(order => order._id);
+
+      // Find all UserPurchases that reference these payment orders
+      const userPurchases = await db.UserPurchase.find({
+        itemType: 'service',
+        status: 'active',
+        paymentOrderId: { $in: paymentOrderIds }
+      })
+      .populate({
+        path: 'userId',
+        select: 'fullName email phoneNumber'
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+      // Create a map of payment order details for quick lookup
+      const paymentOrderMap = new Map(
+        freeConsultationOrders.map((order: any) => [order._id.toString(), order])
+      );
+
+      // Get unique service IDs to fetch service details
+      const serviceIds = [...new Set(userPurchases.map((p: any) => p.itemId))];
+      
+      // Convert string IDs to ObjectIds for querying
+      const objectIdServiceIds = serviceIds
+        .filter((id: any) => mongoose.Types.ObjectId.isValid(id))
+        .map((id: any) => new mongoose.Types.ObjectId(id));
+      
+      // Fetch all SubServices
+      const subServices = await db.SubService.find({
+        _id: { $in: objectIdServiceIds }
+      })
+      .select('_id title description')
+      .lean();
+
+      // Create a map of service details for quick lookup
+      const serviceMap = new Map(
+        subServices.map((service: any) => [service._id.toString(), service])
+      );
+
+      // Filter and map to consultation format
+      const consultations = userPurchases
+        .filter((purchase: any) => {
+          const paymentOrderId = purchase.paymentOrderId?.toString();
+          return paymentOrderMap.has(paymentOrderId);
+        })
+        .map((purchase: any) => {
+          const user = purchase.userId as any;
+          const paymentOrderId = purchase.paymentOrderId?.toString();
+          const payment = paymentOrderMap.get(paymentOrderId);
+          const serviceId = purchase.itemId?.toString();
+          const service = serviceMap.get(serviceId);
+
+          return {
+            _id: purchase._id,
+            purchaseId: purchase._id,
+            userId: {
+              _id: user?._id,
+              fullName: user?.fullName || 'Unknown',
+              email: user?.email || 'N/A',
+              phoneNumber: user?.phoneNumber || 'N/A'
+            },
+            service: {
+              _id: service?._id,
+              title: service?.title || 'Unknown Service',
+              description: service?.description || ''
+            },
+            selectedFeatures: purchase.selectedFeatures || [],
+            billingPeriod: purchase.billingPeriod || 'monthly',
+            status: payment?.paymentActivatedByAdmin ? 'activated' : 'pending',
+            consultationPrice: payment?.consultationPrice || 0,
+            paymentActivatedByAdmin: payment?.paymentActivatedByAdmin || false,
+            activatedAt: payment?.activatedAt || null,
+            createdAt: purchase.createdAt,
+            updatedAt: purchase.updatedAt
+          };
+        });
+
+      // Pagination
+      const skipIndex = (Number(page) - 1) * Number(limit);
+      const paginatedConsultations = consultations.slice(skipIndex, skipIndex + Number(limit));
+      const total = consultations.length;
+
+      const response = sendSuccessApiResponse(
+        "Pending consultations retrieved successfully",
+        {
+          consultations: paginatedConsultations,
+          pagination: {
+            total,
+            page: Number(page),
+            limit: Number(limit),
+            totalPages: Math.ceil(total / Number(limit)),
+          },
+        }
+      );
+
+      res.status(StatusCode.OK).send(response);
+    } catch (error: any) {
+      return next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+    }
+  }
+);
+
+/**
+ * Activate payment for a free consultation service
+ * Admin sets the price and activates payment option for user
+ */
+export const activateConsultationPayment = bigPromise(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { purchaseId } = req.params;
+      const { price } = req.body; // Price set by admin
+
+      if (!price || price <= 0) {
+        return next(createCustomError("Valid price is required", StatusCode.BAD_REQ));
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(purchaseId)) {
+        return next(createCustomError("Invalid purchase ID", StatusCode.BAD_REQ));
+      }
+
+      // Find the UserPurchase with free consultation
+      const purchase = await db.UserPurchase.findById(purchaseId)
+        .populate('paymentOrderId');
+
+      if (!purchase) {
+        return next(createCustomError("Purchase not found", StatusCode.NOT_FOUND));
+      }
+
+      const paymentOrder = await db.PaymentOrder.findById(purchase.paymentOrderId);
+      
+      if (!paymentOrder) {
+        return next(createCustomError("Payment order not found", StatusCode.NOT_FOUND));
+      }
+
+      if (paymentOrder.status !== 'free_consultation') {
+        return next(createCustomError("This is not a consultation service", StatusCode.BAD_REQ));
+      }
+
+      // Update payment order with admin-set price
+      paymentOrder.amount = price;
+      paymentOrder.status = 'pending'; // Change to pending so user can pay
+      paymentOrder.paymentActivatedByAdmin = true;
+      paymentOrder.activatedAt = new Date();
+      paymentOrder.activatedBy = req.user._id;
+      paymentOrder.isConsultationPayment = true;
+      paymentOrder.consultationPrice = price;
+      
+      // Update item price in the items array
+      if (paymentOrder.items && paymentOrder.items.length > 0) {
+        paymentOrder.items[0].price = price;
+      }
+      
+      await paymentOrder.save();
+
+      const response = sendSuccessApiResponse(
+        "Payment activated successfully. User can now proceed with payment.",
+        { 
+          paymentOrder: {
+            _id: paymentOrder._id,
+            amount: paymentOrder.amount,
+            status: paymentOrder.status,
+            paymentActivatedByAdmin: paymentOrder.paymentActivatedByAdmin,
+            activatedAt: paymentOrder.activatedAt
+          },
+          purchase: {
+            _id: purchase._id,
+            itemId: purchase.itemId,
+            status: purchase.status
+          }
+        }
+      );
+      res.status(StatusCode.OK).send(response);
+    } catch (error: any) {
+      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
     }
   }
 );

@@ -9,16 +9,10 @@ interface ConsultationModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   category?: string; // service, course, updated, general
-<<<<<<< HEAD
   itemName?: string; // Optional: name of the specific service/course/item for better tracking
 }
 
 export function ConsultationModal({ isOpen, onClose, onSuccess, category = 'service', itemName }: ConsultationModalProps) {
-=======
-}
-
-export function ConsultationModal({ isOpen, onClose, onSuccess, category = 'service' }: ConsultationModalProps) {
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
   const { user, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     name: user?.fullName || '',
@@ -84,24 +78,17 @@ export function ConsultationModal({ isOpen, onClose, onSuccess, category = 'serv
     setErrors({});
 
     try {
-<<<<<<< HEAD
       // Build query with item name if provided
       let queryText = formData.query.trim();
       if (itemName) {
         queryText = `Regarding: ${itemName}\n\n${queryText}`;
       }
 
-=======
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
       const payload = {
         name: formData.name.trim(),
         email: formData.email.trim() || undefined,
         phoneNo: formData.phoneNo.trim() || undefined,
-<<<<<<< HEAD
         query: queryText,
-=======
-        query: formData.query.trim(),
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
         category: formData.category,
       };
 

@@ -236,10 +236,24 @@ docker run -p 80:80 facto-web-app
 
 ## Available Scripts
 
+### Web Development
 - `npm run dev` - Start development server with hot reload
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
+
+### Android Mobile App
+- `npm run build:mobile` - Build web app and sync to Android (recommended)
+- `npm run cap:sync` - Sync web app to Android (after build)
+- `npm run cap:open:android` - Open Android project in Android Studio
+- `npm run cap:run:android` - Run Android app on connected device/emulator
+- `npm run android:build:debug` - Build debug APK
+- `npm run android:build:release` - Build release APK
+- `npm run android:build:aab` - Build Android App Bundle (for Play Store)
+
+**Quick Sync:** Use `npm run build:mobile` to build and sync in one command.
+
+For detailed Android sync instructions, see [SYNC_TO_ANDROID.md](./SYNC_TO_ANDROID.md).
 
 ## Project Structure
 

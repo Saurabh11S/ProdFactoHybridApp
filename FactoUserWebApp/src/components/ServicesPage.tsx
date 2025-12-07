@@ -283,7 +283,7 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
     fetchUserPurchases();
   }, [isAuthenticated, user, token]);
 
-  // Helper function to check if a service has free consultation
+  // Helper function to check if a service has free consultation (including activated consultations)
   const hasFreeConsultation = (serviceId: string): boolean => {
     const purchase = userPurchases.find(
       p => p.itemId === serviceId && p.itemType === 'service' && p.status === 'active'
@@ -299,13 +299,55 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
       : null;
     
     if (payment && typeof payment === 'object' && 'status' in payment) {
-      return (payment as any).status === 'free_consultation';
+      const paymentStatus = (payment as any).status;
+      const isConsultationPayment = (payment as any).isConsultationPayment;
+      
+      // It's a consultation if status is 'free_consultation' OR if it's 'pending' with consultation flag
+      return paymentStatus === 'free_consultation' || 
+             (paymentStatus === 'pending' && isConsultationPayment);
     }
     
     return false;
   };
 
-  // Helper function to check if a service is already purchased (excluding free consultations)
+  // Helper function to check if payment is activated for consultation service
+  const isPaymentActivated = (serviceId: string): boolean => {
+    const purchase = userPurchases.find(
+      p => p.itemId === serviceId && p.itemType === 'service' && p.status === 'active'
+    );
+    
+    if (!purchase) {
+      return false;
+    }
+    
+    const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
+      ? purchase.paymentOrderId
+      : null;
+    
+    if (payment && typeof payment === 'object' && 'status' in payment) {
+      const paymentStatus = (payment as any).status;
+      const isConsultationPayment = (payment as any).isConsultationPayment;
+      
+      // If it's free consultation, check if admin activated payment
+      if (paymentStatus === 'free_consultation') {
+        return (payment as any).paymentActivatedByAdmin === true;
+      }
+      
+      // If status is pending with consultation flag, payment is activated and ready
+      if (paymentStatus === 'pending' && isConsultationPayment) {
+        return true;
+      }
+      
+      // If status is completed, payment was made
+      if (paymentStatus === 'completed') {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  // Helper function to check if a service is already purchased (excluding free consultations and pending payments)
   const isServicePurchased = (serviceId: string): boolean => {
     const purchase = userPurchases.find(
       p => p.itemId === serviceId && p.itemType === 'service' && p.status === 'active'
@@ -315,24 +357,37 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
       return false;
     }
     
-    // Check if it's a free consultation - if so, don't mark as "purchased"
+    // Check payment status
     const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
       ? purchase.paymentOrderId
       : null;
     
     if (payment && typeof payment === 'object' && 'status' in payment) {
       const paymentStatus = (payment as any).status;
+      const isConsultationPayment = (payment as any).isConsultationPayment;
+      
       // If it's a free consultation, it's not fully purchased yet
       if (paymentStatus === 'free_consultation') {
         return false;
       }
+      
+      // If payment is pending (admin activated but user hasn't paid), it's not purchased yet
+      if (paymentStatus === 'pending' && isConsultationPayment) {
+        return false;
+      }
+      
+      // For other pending statuses (non-consultation), also don't mark as purchased
+      if (paymentStatus === 'pending') {
+        return false;
+      }
+      
       // If it's paid (completed), then it's purchased
       if (paymentStatus === 'completed') {
         return true;
       }
     }
     
-    // Default: if there's a purchase, consider it purchased (for backward compatibility)
+    // Default: if there's a purchase without payment info, consider it purchased (for backward compatibility)
     return true;
   };
 
@@ -605,19 +660,26 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
                 <div className="p-6 space-y-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <h3 className="font-bold text-[#1F2937] dark:text-white text-lg group-hover:text-[#007AFF] transition-colors">
                           {service.title}
                         </h3>
-                        {hasFreeConsultation(service._id) ? (
-                          <span className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded-full text-xs font-bold">
-                            Free Consultation
-                          </span>
-                        ) : isServicePurchased(service._id) && (
+                        {isServicePurchased(service._id) ? (
                           <span className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded-full text-xs font-bold">
                             Already Purchased
                           </span>
-                        )}
+                        ) : isPaymentActivated(service._id) ? (
+                          <span className="bg-gradient-to-r from-orange-100 to-amber-100 text-orange-800 dark:from-orange-900 dark:to-amber-900 dark:text-orange-200 px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            Price Ready
+                          </span>
+                        ) : hasFreeConsultation(service._id) ? (
+                          <span className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded-full text-xs font-bold">
+                            Free Consultation
+                          </span>
+                        ) : null}
                       </div>
                       <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
                         {service.description}

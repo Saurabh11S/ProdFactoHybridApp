@@ -9,6 +9,8 @@ import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { Storage } from '../utils/storage';
 import { initializeRazorpayPayment } from '../utils/razorpay';
+import { BILLING_MULTIPLIERS, getBillingPeriodMultiplier, getPeriodLabel } from '../utils/billingPeriod';
+import { ServiceDocumentUpload } from './ServiceDocumentUpload';
 
 type PageType = 'home' | 'services' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
@@ -16,15 +18,6 @@ interface ServiceDetailsPageProps {
   onNavigate: (page: PageType, serviceId?: string) => void;
   serviceId?: string;
 }
-
-// Billing period multipliers (kept for potential future use)
-// const BILLING_MULTIPLIERS: Record<string, number> = {
-//   monthly: 1,
-//   quarterly: 3,
-//   half_yearly: 6,
-//   yearly: 12,
-//   one_time: 1
-// };
 
 interface UserPurchase {
   _id: string;
@@ -49,7 +42,6 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isRequestingConsultation, setIsRequestingConsultation] = useState(false);
-  const [isNotifyingTeam, setIsNotifyingTeam] = useState(false);
   const [userPurchases, setUserPurchases] = useState<UserPurchase[]>([]);
   const [successPopup, setSuccessPopup] = useState({
     isOpen: false,
@@ -68,6 +60,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     email?: boolean;
     fullName?: boolean;
   }>({});
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
 
   // Fetch user purchases (paymentOrderId is already populated by the API)
   useEffect(() => {
@@ -93,41 +86,58 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     fetchUserPurchases();
   }, [isAuthenticated, user, token, refreshKey]);
 
-  // Check if service is already purchased (excluding free consultations)
-  const isServicePurchased = useMemo(() => {
+  // Get the purchase for this service
+  const currentPurchase = useMemo(() => {
     if (!subService || !isAuthenticated || userPurchases.length === 0) {
+      return null;
+    }
+    return userPurchases.find(
+      p => p.itemId === subService._id && p.itemType === 'service'
+    ) || null;
+  }, [subService, isAuthenticated, userPurchases]);
+
+  // Check if service is already purchased (excluding free consultations and pending payments)
+  const isServicePurchased = useMemo(() => {
+    if (!currentPurchase) {
       return false;
     }
+    
+    const purchase = currentPurchase;
 
-    const purchase = userPurchases.find(
-      p => p.itemId === subService._id && p.itemType === 'service' && p.status === 'active'
-    );
-
-    if (!purchase) {
-      return false;
-    }
-
-    // Check if it's a free consultation - if so, don't mark as "purchased"
+    // Check payment status
     const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
       ? purchase.paymentOrderId
       : null;
     
     if (payment && typeof payment === 'object' && 'status' in payment) {
+      const paymentStatus = (payment as any).status;
+      
       // If it's a free consultation, it's not fully purchased yet - user needs to pay
-      if (payment.status === 'free_consultation') {
+      if (paymentStatus === 'free_consultation') {
         return false;
       }
+      
+      // If payment is pending (admin activated but user hasn't paid), it's not purchased yet
+      if (paymentStatus === 'pending' && (payment as any).isConsultationPayment) {
+        return false;
+      }
+      
       // If it's paid (completed), then it's purchased
-      if (payment.status === 'completed') {
+      if (paymentStatus === 'completed') {
         return true;
+      }
+      
+      // For other pending statuses (non-consultation), also don't mark as purchased
+      if (paymentStatus === 'pending') {
+        return false;
       }
     }
 
-    // Default: if there's a purchase, consider it purchased (for backward compatibility)
+    // Default: if there's a purchase without payment info, consider it purchased (for backward compatibility)
     return true;
   }, [subService, userPurchases, isAuthenticated]);
 
-  // Check if service has free consultation request
+  // Check if service has free consultation request (including activated consultations)
   const hasFreeConsultation = useMemo(() => {
     if (!subService || !isAuthenticated || userPurchases.length === 0) {
       return false;
@@ -146,9 +156,55 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       : null;
     
     if (payment && typeof payment === 'object' && 'status' in payment) {
-      return payment.status === 'free_consultation';
+      const paymentStatus = (payment as any).status;
+      const isConsultationPayment = (payment as any).isConsultationPayment;
+      
+      // It's a consultation if status is 'free_consultation' OR if it's 'pending' with consultation flag
+      return paymentStatus === 'free_consultation' || 
+             (paymentStatus === 'pending' && isConsultationPayment);
     }
 
+    return false;
+  }, [subService, userPurchases, isAuthenticated]);
+
+  // Check if payment is activated for consultation service
+  const isPaymentActivated = useMemo(() => {
+    if (!subService || !isAuthenticated || userPurchases.length === 0) {
+      return false;
+    }
+
+    const purchase = userPurchases.find(
+      p => p.itemId === subService._id && p.itemType === 'service' && p.status === 'active'
+    );
+
+    if (!purchase) {
+      return false;
+    }
+
+    const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
+      ? purchase.paymentOrderId
+      : null;
+    
+    if (payment && typeof payment === 'object' && 'status' in payment) {
+      const paymentStatus = (payment as any).status;
+      const isConsultationPayment = (payment as any).isConsultationPayment;
+      
+      // If it's free consultation, check if admin activated payment
+      if (paymentStatus === 'free_consultation') {
+        return (payment as any).paymentActivatedByAdmin === true;
+      }
+      
+      // If status is pending with consultation flag, payment is activated and ready
+      if (paymentStatus === 'pending' && isConsultationPayment) {
+        return true;
+      }
+      
+      // If status is completed, payment was made
+      if (paymentStatus === 'completed') {
+        return true;
+      }
+    }
+    
     return false;
   }, [subService, userPurchases, isAuthenticated]);
 
@@ -334,22 +390,39 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       };
     }
 
+    // Check if there's an activated consultation payment - use that price instead
+    let consultationPrice = 0;
+    if (hasFreeConsultation && isPaymentActivated) {
+      const purchase = userPurchases.find(
+        p => p.itemId === subService._id && p.itemType === 'service' && p.status === 'active'
+      );
+      if (purchase) {
+        const payment = typeof purchase.paymentOrderId === 'object' && purchase.paymentOrderId
+          ? purchase.paymentOrderId
+          : null;
+        if (payment && typeof payment === 'object' && 'consultationPrice' in payment) {
+          consultationPrice = (payment as any).consultationPrice || 0;
+        }
+      }
+    }
+
     // Get base price for selected period from pricingStructure (configured by Admin)
     // Only use pricingStructure prices, not the legacy price field
+    // But if consultation price is set, use that instead
     const selectedPricing = subService.pricingStructure?.find(p => p.period === selectedPeriod);
-    const basePrice = selectedPricing?.price || 0;
+    const basePrice = consultationPrice > 0 ? consultationPrice : (selectedPricing?.price || 0);
     
     // Validate that selected period exists in pricingStructure
     // If not, we'll handle it in useEffect
     
     // Calculate modifiers from selected options
+    // Additional options should be multiplied by billing period multiplier
+    const periodMultiplier = getBillingPeriodMultiplier(selectedPeriod);
     let totalModifier = 0;
     let needsQuotation = false;
     
     // Get period label for breakdown
-    const periodLabel = selectedPeriod === 'one_time' 
-      ? 'One-Time' 
-      : selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1).replace('_', ' ');
+    const periodLabel = getPeriodLabel(selectedPeriod);
     
     const breakdown: Array<{ label: string; amount: number; type: 'base' | 'modifier' }> = [
       { label: `Base Price (${periodLabel})`, amount: basePrice, type: 'base' }
@@ -363,10 +436,12 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       if (inputType === 'dropdown' && selectedValue && typeof selectedValue === 'string') {
         const option = request.options?.find(opt => opt.name === selectedValue);
         if (option) {
-          totalModifier += option.priceModifier;
+          // Multiply additional option price by billing period multiplier
+          const adjustedPrice = option.priceModifier * periodMultiplier;
+          totalModifier += adjustedPrice;
           breakdown.push({
-            label: `${request.name}: ${option.name}`,
-            amount: option.priceModifier,
+            label: `${request.name}: ${option.name} (${periodLabel})`,
+            amount: adjustedPrice,
             type: 'modifier'
           });
           if (option.needsQuotation) {
@@ -380,10 +455,12 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
             selectedValue.forEach(optionName => {
               const option = request.options?.find(opt => opt.name === optionName);
               if (option) {
-                totalModifier += option.priceModifier;
+                // Multiply additional option price by billing period multiplier
+                const adjustedPrice = option.priceModifier * periodMultiplier;
+                totalModifier += adjustedPrice;
                 breakdown.push({
-                  label: `${request.name}: ${optionName}`,
-                  amount: option.priceModifier,
+                  label: `${request.name}: ${optionName} (${periodLabel})`,
+                  amount: adjustedPrice,
                   type: 'modifier'
                 });
                 if (option.needsQuotation) {
@@ -394,10 +471,12 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
           } else if (selectedValue && typeof selectedValue === 'string') {
             const option = request.options?.find(opt => opt.name === selectedValue);
             if (option) {
-              totalModifier += option.priceModifier;
+              // Multiply additional option price by billing period multiplier
+              const adjustedPrice = option.priceModifier * periodMultiplier;
+              totalModifier += adjustedPrice;
               breakdown.push({
-                label: `${request.name}: ${option.name}`,
-                amount: option.priceModifier,
+                label: `${request.name}: ${option.name} (${periodLabel})`,
+                amount: adjustedPrice,
                 type: 'modifier'
               });
               if (option.needsQuotation) {
@@ -408,10 +487,12 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
         } else {
           // Handle simple checkbox without options - use request's priceModifier
           if (selectedValue) {
-            totalModifier += request.priceModifier || 0;
+            // Multiply additional option price by billing period multiplier
+            const adjustedPrice = (request.priceModifier || 0) * periodMultiplier;
+            totalModifier += adjustedPrice;
             breakdown.push({
-              label: request.name,
-              amount: request.priceModifier || 0,
+              label: `${request.name} (${periodLabel})`,
+              amount: adjustedPrice,
               type: 'modifier'
             });
           }
@@ -429,7 +510,8 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     
     // Add tax placeholder (18% GST)
     const tax = subtotal * 0.18;
-    const total = subtotal + tax;
+    // If quotation is required, set total to 0, otherwise round to nearest integer
+    const total = needsQuotation ? 0 : Math.round(subtotal + tax);
 
     breakdown.push(
       { label: 'Subtotal', amount: subtotal, type: 'base' },
@@ -443,7 +525,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       needsQuotation,
       breakdown
     };
-  }, [subService, selectedPeriod, selectedRequestOptions]);
+  }, [subService, selectedPeriod, selectedRequestOptions, hasFreeConsultation, isPaymentActivated, userPurchases]);
 
   // Handle option selection
   const handleOptionChange = (requestName: string, optionName: string, isMultiple: boolean = false) => {
@@ -494,55 +576,8 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     if (priceCalculation.needsQuotation) {
       setShowQuotationForm(true);
     } else {
-      // Navigate to payment page
-      onNavigate('payment', serviceId);
-    }
-  };
-
-  // Handle Notify Team (for unauthenticated users)
-  const handleNotifyTeam = async () => {
-    if (!subService) return;
-
-    setIsNotifyingTeam(true);
-    setPaymentError(null);
-
-    try {
-      const serviceName = typeof subService.serviceId === 'object' && subService.serviceId !== null
-        ? subService.serviceId.title
-        : 'Service';
-
-      const response = await axios.post(
-        `${API_BASE_URL}/query/consultation`,
-        {
-          name: 'Guest User',
-          email: undefined,
-          phoneNo: undefined,
-          query: `Interested in ${subService.title} service. Total: ₹${priceCalculation.total.toLocaleString('en-IN')}`,
-          category: serviceName.toLowerCase(),
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (response.data.success) {
-        setSuccessPopup({
-          isOpen: true,
-          title: 'Team Notified!',
-          message: 'Our team has been notified of your interest. We will contact you soon!',
-          serviceName: displayService.title,
-          purchaseId: 'N/A',
-          amount: priceCalculation.total,
-          currency: 'INR'
-        });
-      }
-    } catch (error: any) {
-      console.error('Notify team failed:', error);
-      setPaymentError(error.response?.data?.message || 'Failed to notify team. Please try again.');
-    } finally {
-      setIsNotifyingTeam(false);
+      // Direct payment flow - open Razorpay directly
+      handlePayment();
     }
   };
 
@@ -632,7 +667,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     return missing;
   };
 
-  // Handle payment - navigate to payment page
+  // Handle payment - opens Razorpay payment gateway directly
   const handlePayment = async () => {
     if (!isAuthenticated || !user || !subService) {
       onNavigate('login');
@@ -647,13 +682,14 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       return;
     }
 
-    // Navigate to payment page instead of processing inline
-    onNavigate('payment', serviceId);
+    // DIRECT PAYMENT FLOW - Skip PaymentPage, go directly to Razorpay
+    await proceedWithPayment();
   };
 
   // Proceed with payment after user info is complete
   const proceedWithPayment = async () => {
     if (!isAuthenticated || !user || !subService) {
+      setPaymentError('Please login to proceed with payment.');
       return;
     }
 
@@ -661,24 +697,85 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
     setPaymentError(null);
 
     try {
-      const paymentOrderData = {
-        userId: user._id,
-        items: [{
-          itemType: 'service',
-          itemId: subService._id,
-          price: priceCalculation.total,
-          billingPeriod: selectedPeriod,
-          selectedOptions: selectedRequestOptions
-        }]
-      };
+      // Use token from context first, fallback to storage
+      const authToken = token || await Storage.get('authToken');
+      
+      if (!authToken) {
+        setPaymentError('Authentication token not found. Please login again.');
+        setIsProcessingPayment(false);
+        return;
+      }
+      
+      let paymentOrderResponse;
 
-      const authToken = await Storage.get('authToken');
-      const paymentOrderResponse = await axios.post(`${API_BASE_URL}/payment/initiate-payment`, paymentOrderData, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
+      // Check if this is an activated consultation payment - use existing PaymentOrder
+      // Note: After activation, hasFreeConsultation might be false (status changed to 'pending')
+      // So we check isPaymentActivated which handles both 'free_consultation' and 'pending' statuses
+      if (isPaymentActivated) {
+        // Find the purchase to get the paymentOrderId
+        const purchase = userPurchases.find(
+          p => p.itemId === subService._id && p.itemType === 'service' && p.status === 'active'
+        );
+        
+        if (purchase && purchase.paymentOrderId) {
+          const paymentOrderId = typeof purchase.paymentOrderId === 'object' 
+            ? (purchase.paymentOrderId as any)._id 
+            : purchase.paymentOrderId;
+          
+          // Use existing payment order for consultation
+          paymentOrderResponse = await axios.post(
+            `${API_BASE_URL}/payment/initiate-consultation-payment`,
+            { paymentOrderId },
+            {
+              headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+        } else {
+          throw new Error('Payment order not found for consultation');
         }
-      });
+      } else {
+        // Regular payment flow - create new payment order
+        // Check if there's an existing purchase that might be a consultation
+        const existingPurchase = userPurchases.find(
+          p => p.itemId === subService._id && p.itemType === 'service' && p.status === 'active'
+        );
+        
+        if (existingPurchase && existingPurchase.paymentOrderId) {
+          const payment = typeof existingPurchase.paymentOrderId === 'object' && existingPurchase.paymentOrderId
+            ? existingPurchase.paymentOrderId
+            : null;
+          
+          // Check if it's a consultation payment that hasn't been activated yet
+          if (payment && typeof payment === 'object' && 'status' in payment) {
+            const paymentStatus = (payment as any).status;
+            if (paymentStatus === 'free_consultation') {
+              throw new Error('Payment not yet activated by admin. Please wait for price confirmation.');
+            }
+          }
+        }
+
+        // Regular payment flow - create new payment order
+        const paymentOrderData = {
+          userId: user._id,
+          items: [{
+            itemType: 'service',
+            itemId: subService._id,
+            price: priceCalculation.total,
+            billingPeriod: selectedPeriod,
+            selectedOptions: selectedRequestOptions
+          }]
+        };
+
+        paymentOrderResponse = await axios.post(`${API_BASE_URL}/payment/initiate-payment`, paymentOrderData, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
 
       const { orderId, amount, currency, razorpayKeyId } = paymentOrderResponse.data.data;
       
@@ -720,14 +817,22 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
             },
             handler: async function (response: any) {
               try {
-                const token = await Storage.get('authToken');
+                // Use token from context first, fallback to storage
+                const verifyToken = token || await Storage.get('authToken');
+                
+                if (!verifyToken) {
+                  setPaymentError('Authentication token not found. Please login again to verify payment.');
+                  setIsProcessingPayment(false);
+                  return;
+                }
+                
                 const verifyResponse = await axios.post(`${API_BASE_URL}/payment/verify-payment`, {
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_signature: response.razorpay_signature
                 }, {
                   headers: {
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${verifyToken}`,
                     'Content-Type': 'application/json'
                   }
                 });
@@ -747,9 +852,29 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                 // Refresh user purchases to update the UI
                 setRefreshKey(prev => prev + 1);
                 setIsProcessingPayment(false);
-              } catch (error) {
+              } catch (error: any) {
                 console.error('Payment verification failed:', error);
-                setPaymentError('Payment successful, but verification failed. Please contact support.');
+                console.error('Error details:', {
+                  status: error.response?.status,
+                  data: error.response?.data,
+                  message: error.message
+                });
+                
+                // Extract error message
+                const errorMessage = error.response?.data?.message || 
+                                  error.response?.data?.error?.message ||
+                                  error.message ||
+                                  'Payment verification failed';
+                
+                // Check if payment was actually successful but verification failed
+                if (error.response?.status === 401) {
+                  setPaymentError('Your session expired during verification. Payment may have been successful. Please refresh the page and check your profile, or contact support with payment ID: ' + response.razorpay_payment_id);
+                } else if (error.response?.status === 400) {
+                  setPaymentError('Payment verification failed: ' + errorMessage + '. Please contact support with payment ID: ' + response.razorpay_payment_id);
+                } else {
+                  setPaymentError('Payment may have been successful, but verification failed. Please contact support with payment ID: ' + response.razorpay_payment_id + '. Error: ' + errorMessage);
+                }
+                
                 setIsProcessingPayment(false);
               }
             },
@@ -765,7 +890,33 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       }
     } catch (error: any) {
       console.error('Payment initiation failed:', error);
-      setPaymentError(error.response?.data?.message || 'Payment initiation failed. Please try again.');
+      
+      // Extract error message
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error?.message ||
+                          error.message ||
+                          'Payment initiation failed. Please try again.';
+      
+      // Handle authentication errors gracefully without logging out
+      if (error.response?.status === 401) {
+        // Check if it's a token-related error
+        const isTokenError = errorMessage.toLowerCase().includes('token') || 
+                            errorMessage.toLowerCase().includes('invalid') ||
+                            errorMessage.toLowerCase().includes('unauthorized') ||
+                            errorMessage.toLowerCase().includes('expired');
+        
+        if (isTokenError) {
+          setPaymentError('Your session has expired. Please refresh the page and try again. If the problem persists, please login again.');
+          // Don't log out automatically - let user decide
+          // The axios interceptor should handle this, but we're being explicit here
+        } else {
+          setPaymentError(errorMessage);
+        }
+      } else {
+        // For non-401 errors, show the actual error message
+        setPaymentError(errorMessage);
+      }
+      
       setIsProcessingPayment(false);
     }
   };
@@ -790,12 +941,12 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
   // Loading state
   if (loadingService) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0b1220] via-[#0f1729] to-[#121826] pt-20">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-[#0b1220] dark:via-[#0f1729] dark:to-[#121826] pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1287ff] mx-auto mb-4"></div>
-              <p className="text-[#98a0ad]">Loading service details...</p>
+              <p className="text-gray-600 dark:text-gray-600 dark:text-[#98a0ad]">Loading service details...</p>
             </div>
           </div>
         </div>
@@ -868,7 +1019,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
   const category = parentService?.category || 'Services';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b1220] via-[#0f1729] to-[#121826] pt-20">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-[#0b1220] dark:via-[#0f1729] dark:to-[#121826] pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Mobile-Friendly Navigation */}
         {Capacitor.isNativePlatform() || (typeof window !== 'undefined' && window.innerWidth < 768) ? (
@@ -886,12 +1037,12 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
               <span className="px-3 py-1 bg-[#1287ff]/20 text-[#1287ff] rounded-full text-xs font-medium">
                 {category}
               </span>
-              <span className="text-[#98a0ad]">•</span>
-              <span className="text-white font-medium">{displayService.title}</span>
+              <span className="text-gray-600 dark:text-[#98a0ad]">•</span>
+              <span className="text-gray-900 dark:text-white font-medium">{displayService.title}</span>
             </div>
           </div>
         ) : (
-          <nav className="flex items-center space-x-2 text-sm mb-8 text-[#98a0ad]">
+          <nav className="flex items-center space-x-2 text-sm mb-8 text-gray-600 dark:text-[#98a0ad]">
             <button 
               onClick={() => onNavigate('home')} 
               className="hover:text-[#1287ff] transition-colors"
@@ -908,7 +1059,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
             <span>/</span>
             <span className="text-[#1287ff]">{category}</span>
             <span>/</span>
-            <span className="text-white">{displayService.title}</span>
+            <span className="text-gray-900 dark:text-white">{displayService.title}</span>
           </nav>
         )}
 
@@ -917,7 +1068,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
           {/* Left Column - Main Content (2/3 on desktop) */}
           <div className="lg:col-span-2 space-y-6">
             {/* Hero Section */}
-            <div className="bg-[rgba(255,255,255,0.03)] rounded-[18px] border border-[rgba(255,255,255,0.1)] p-6 md:p-8 shadow-lg">
+            <div className="bg-white dark:bg-[rgba(255,255,255,0.03)] rounded-[18px] border border-gray-300 dark:border-[rgba(255,255,255,0.1)] p-6 md:p-8 shadow-lg">
               <div className="flex items-start gap-6 mb-6">
                 <div className="flex-shrink-0">
                   <div className="w-20 h-20 bg-gradient-to-br from-[#1287ff] to-[#12d6b8] rounded-2xl flex items-center justify-center text-4xl shadow-lg shadow-[#1287ff]/20">
@@ -930,15 +1081,15 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                       {category}
                     </span>
                     {displayService.serviceCode && displayService.serviceCode !== 'placeholder' && (
-                      <span className="px-3 py-1 bg-[rgba(255,255,255,0.05)] text-[#98a0ad] rounded-full text-xs font-medium border border-[rgba(255,255,255,0.1)]">
+                      <span className="px-3 py-1 bg-gray-100 dark:bg-[rgba(255,255,255,0.05)] text-gray-600 dark:text-[#98a0ad] rounded-full text-xs font-medium border border-gray-300 dark:border-[rgba(255,255,255,0.1)]">
                         Code: {displayService.serviceCode}
                       </span>
                     )}
                   </div>
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 bg-gradient-to-r from-white via-[#12d6b8] to-white bg-clip-text text-transparent">
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3 bg-gradient-to-r from-gray-900 via-[#12d6b8] to-gray-900 dark:from-white dark:via-[#12d6b8] dark:to-white bg-clip-text text-transparent">
                     {displayService.title}
                   </h1>
-                  <p className="text-[#98a0ad] text-lg leading-relaxed">
+                  <p className="text-gray-600 dark:text-[#98a0ad] text-lg leading-relaxed">
                     {displayService.description}
                   </p>
                   {serviceError && (
@@ -952,46 +1103,90 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
               </div>
 
               {/* Price Preview */}
-              <div className="pt-6 border-t border-[rgba(255,255,255,0.1)]">
+              <div className="pt-6 border-t border-gray-300 dark:border-[rgba(255,255,255,0.1)]">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                   <div>
-                    <p className="text-[#98a0ad] text-sm mb-1">
+                    <p className="text-gray-600 dark:text-[#98a0ad] text-sm mb-1">
                       {subService && subService.pricingStructure && subService.pricingStructure.length > 0
                         ? `Starting from (${selectedPeriod === 'one_time' ? 'One-Time' : selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1).replace('_', ' ')})`
                         : 'Starting from'}
                     </p>
-                    <p className="text-2xl font-bold text-white">
-                      {priceCalculation.total === 0 ? (
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {priceCalculation.needsQuotation ? (
+                        <span className="px-3 py-1 bg-[#12d6b8]/20 text-[#12d6b8] rounded-full text-sm">Quote Required</span>
+                      ) : priceCalculation.basePrice === 0 && priceCalculation.modifiers === 0 ? (
                         <span className="px-3 py-1 bg-[#12d6b8]/20 text-[#12d6b8] rounded-full text-sm">Free</span>
                       ) : (
-                        `₹${priceCalculation.total.toLocaleString('en-IN')}`
+                        `₹${(priceCalculation.basePrice + priceCalculation.modifiers).toLocaleString('en-IN')}`
                       )}
                     </p>
                   </div>
-                  {!isServicePurchased && (
+                  {/* Hide payment button when quotation is required - user should only see consultation button */}
+                  {!isServicePurchased && !hasFreeConsultation && !priceCalculation.needsQuotation && (
                     <button
                       onClick={handleGetQuotation}
                       disabled={isProcessingPayment || !isAuthenticated}
-                      className="px-6 py-3 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      className="px-6 py-3 bg-[#1287ff] text-gray-900 dark:text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                     >
                       {isProcessingPayment 
                         ? 'Processing...' 
                         : !isAuthenticated 
                           ? 'Login to Pay and Activate' 
-                          : priceCalculation.needsQuotation 
-                            ? 'Pay and Activate — Request Quotation' 
-                            : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`}
+                          : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`}
                     </button>
                   )}
                   {isServicePurchased && (
-                    <div className="px-6 py-3 bg-green-500/20 border-2 border-green-500/50 text-green-400 rounded-full font-semibold text-center whitespace-nowrap">
-                      ✓ Service Already Purchased
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="px-6 py-3 bg-green-500/20 border-2 border-green-500/50 text-green-400 rounded-full font-semibold text-center whitespace-nowrap">
+                        ✓ Service Already Purchased
+                      </div>
+                      <button
+                        onClick={() => setShowDocumentUpload(true)}
+                        className="px-6 py-3 bg-gradient-to-r from-[#00C897] to-[#007AFF] text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105 whitespace-nowrap flex items-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        Upload Documents
+                      </button>
                     </div>
                   )}
                   {/* Show status for free consultations in hero section */}
-                  {hasFreeConsultation && !isServicePurchased && (
-                    <div className="px-6 py-3 bg-blue-500/20 border-2 border-blue-500/50 text-blue-400 rounded-full font-semibold text-center whitespace-nowrap">
-                      ✓ Free Consultation Requested
+                  {hasFreeConsultation && !isServicePurchased && isPaymentActivated && (
+                    <button
+                      onClick={handlePayment}
+                      disabled={isProcessingPayment}
+                      className="px-6 py-3 bg-gradient-to-r from-[#007AFF] to-[#00C897] text-gray-900 dark:text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    >
+                      {isProcessingPayment ? 'Processing...' : 'Pay Now'}
+                    </button>
+                  )}
+                  {hasFreeConsultation && !isServicePurchased && !isPaymentActivated && (
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="px-6 py-3 bg-gray-400 text-gray-900 dark:text-white rounded-full font-semibold text-center whitespace-nowrap cursor-not-allowed flex items-center justify-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Quote Pending</span>
+                        <button
+                          onClick={() => setRefreshKey(prev => prev + 1)}
+                          className="ml-2 hover:opacity-80 transition-opacity"
+                          title="Refresh to check for price update"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => setShowDocumentUpload(true)}
+                        className="px-6 py-3 bg-gradient-to-r from-[#00C897] to-[#007AFF] text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105 whitespace-nowrap flex items-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        Upload Documents
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1034,8 +1229,8 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
 
             {/* Features Section */}
             {displayService.features && displayService.features.length > 0 && (
-              <div className="bg-[rgba(255,255,255,0.03)] rounded-[18px] border border-[rgba(255,255,255,0.1)] p-6 md:p-8 shadow-lg">
-                <h2 className="text-2xl font-bold text-white mb-6">What's Included</h2>
+              <div className="bg-white dark:bg-[rgba(255,255,255,0.03)] rounded-[18px] border border-gray-300 dark:border-[rgba(255,255,255,0.1)] p-6 md:p-8 shadow-lg">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">What's Included</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {displayService.features.map((feature, index) => (
                     <div key={index} className="flex items-start gap-3">
@@ -1044,7 +1239,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       </div>
-                      <span className="text-[#98a0ad]">{feature}</span>
+                      <span className="text-gray-600 dark:text-[#98a0ad]">{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -1052,8 +1247,8 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
             )}
 
             {/* Additional Info Sections */}
-            <div className="bg-[rgba(255,255,255,0.03)] rounded-[18px] border border-[rgba(255,255,255,0.1)] p-6 md:p-8 shadow-lg">
-              <h2 className="text-2xl font-bold text-white mb-6">How It Works</h2>
+            <div className="bg-white dark:bg-[rgba(255,255,255,0.03)] rounded-[18px] border border-gray-300 dark:border-[rgba(255,255,255,0.1)] p-6 md:p-8 shadow-lg">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">How It Works</h2>
               <div className="space-y-4">
                 {[
                   'Submit your requirements',
@@ -1064,10 +1259,10 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                   'Ongoing support'
                 ].map((step, index) => (
                   <div key={index} className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-[#1287ff] to-[#12d6b8] rounded-xl flex items-center justify-center font-bold text-white shadow-lg">
+                    <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-[#1287ff] to-[#12d6b8] rounded-xl flex items-center justify-center font-bold text-gray-900 dark:text-white shadow-lg">
                       {index + 1}
                     </div>
-                    <p className="text-[#98a0ad] pt-2">{step}</p>
+                    <p className="text-gray-600 dark:text-[#98a0ad] pt-2">{step}</p>
                   </div>
                 ))}
               </div>
@@ -1078,13 +1273,13 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
           <div className="lg:col-span-1">
             <div className="lg:sticky lg:top-24 space-y-6">
               {/* Configurator Card */}
-              <div className="bg-[rgba(255,255,255,0.03)] rounded-[18px] border border-[rgba(255,255,255,0.1)] p-6 shadow-lg">
-                <h3 className="text-xl font-bold text-white mb-6">Configure Your Service</h3>
+              <div className="bg-white dark:bg-[rgba(255,255,255,0.03)] rounded-[18px] border border-gray-300 dark:border-[rgba(255,255,255,0.1)] p-6 shadow-lg">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Configure Your Service</h3>
 
                 {/* Billing Period Toggle - Only show periods configured by Admin */}
                 {subService && subService.pricingStructure && subService.pricingStructure.length > 0 && (
                   <div className="mb-6">
-                    <label className="block text-sm font-medium text-white mb-3">
+                    <label className="block text-sm font-medium text-gray-900 dark:text-white mb-3">
                       Billing Period
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -1099,8 +1294,8 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                             onClick={() => setSelectedPeriod(pricing.period)}
                             className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
                               selectedPeriod === pricing.period
-                                ? 'bg-[#1287ff] text-white shadow-lg shadow-[#1287ff]/20'
-                                : 'bg-[rgba(255,255,255,0.05)] text-[#98a0ad] hover:bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.1)]'
+                                ? 'bg-[#1287ff] text-gray-900 dark:text-white shadow-lg shadow-[#1287ff]/20'
+                                : 'bg-gray-100 dark:bg-[rgba(255,255,255,0.05)] text-gray-600 dark:text-[#98a0ad] hover:bg-gray-200 dark:hover:bg-[rgba(255,255,255,0.08)] border border-gray-300 dark:border-[rgba(255,255,255,0.1)]'
                             }`}
                           >
                             {periodLabel}
@@ -1108,7 +1303,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                         );
                       })}
                     </div>
-                    <p className="text-xs text-[#98a0ad] mt-3">
+                    <p className="text-xs text-gray-600 dark:text-[#98a0ad] mt-3">
                       Choose how often you'll be billed. Prices shown are per selected billing period.
                     </p>
                   </div>
@@ -1118,11 +1313,11 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                 {subService && subService.requests && subService.requests.length > 0 && (
                   <div className="space-y-4 mb-6">
                     <div className="flex items-center justify-between mb-3">
-                      <label className="block text-sm font-medium text-[#98a0ad]">
+                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98a0ad]">
                         Additional Options
                       </label>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-[#98a0ad]">
+                        <span className="text-xs text-gray-600 dark:text-[#98a0ad]">
                           {subService.requests.length} {subService.requests.length === 1 ? 'option' : 'options'} available
                         </span>
                         <button
@@ -1154,10 +1349,10 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                       }
                       
                       return (
-                      <div key={index} className="border-2 border-[rgba(255,255,255,0.1)] rounded-xl p-4 bg-[rgba(255,255,255,0.02)] hover:border-[rgba(255,255,255,0.2)] transition-all">
+                      <div key={index} className="border-2 border-gray-300 dark:border-[rgba(255,255,255,0.1)] rounded-xl p-4 bg-gray-50 dark:bg-[rgba(255,255,255,0.02)] hover:border-gray-400 dark:hover:border-[rgba(255,255,255,0.2)] transition-all">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
-                            <label className="text-sm font-semibold text-white">{request.name}</label>
+                            <label className="text-sm font-semibold text-gray-900 dark:text-white">{request.name}</label>
                             {/* Input Type Badge */}
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                               inputType === 'dropdown' 
@@ -1181,20 +1376,24 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                               value={selectedRequestOptions[request.name] as string || ''}
                               onChange={(e) => handleOptionChange(request.name, e.target.value, false)}
                               disabled={!request.options || request.options.length === 0}
-                              className="w-full px-4 py-3 bg-[rgba(255,255,255,0.05)] border-2 border-[rgba(255,255,255,0.1)] rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#1287ff] focus:border-[#1287ff] cursor-pointer transition-all hover:border-[rgba(255,255,255,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="w-full px-4 py-3 bg-gray-100 dark:bg-[rgba(255,255,255,0.05)] border-2 border-gray-300 dark:border-[rgba(255,255,255,0.1)] rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#1287ff] focus:border-[#1287ff] cursor-pointer transition-all hover:border-gray-400 dark:hover:border-[rgba(255,255,255,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <option value="" className="bg-[#0b1220] text-[#98a0ad]">
+                              <option value="" className="bg-white dark:bg-[#0b1220] text-gray-600 dark:text-[#98a0ad]">
                                 {request.options && request.options.length > 0 ? 'Select an option' : 'No options available'}
                               </option>
-                              {request.options && request.options.length > 0 && request.options.map((option, optIndex) => (
-                                <option key={optIndex} value={option.name} className="bg-[#0b1220] text-white">
-                                  {option.name} {option.priceModifier !== 0 && `(${option.priceModifier > 0 ? '+' : ''}₹${option.priceModifier.toLocaleString('en-IN')})`}
-                                  {option.needsQuotation && ' - Quote Required'}
-                                </option>
-                              ))}
+                              {request.options && request.options.length > 0 && request.options.map((option, optIndex) => {
+                                const periodMultiplier = getBillingPeriodMultiplier(selectedPeriod);
+                                const adjustedPrice = option.priceModifier * periodMultiplier;
+                                return (
+                                  <option key={optIndex} value={option.name} className="bg-white dark:bg-[#0b1220] text-gray-900 dark:text-white">
+                                    {option.name} {option.priceModifier !== 0 && `(${adjustedPrice > 0 ? '+' : ''}₹${adjustedPrice.toLocaleString('en-IN')})`}
+                                    {option.needsQuotation && ' - Quote Required'}
+                                  </option>
+                                );
+                              })}
                             </select>
                             {selectedRequestOptions[request.name] && (
-                              <p className="text-xs text-[#98a0ad] mt-2">
+                              <p className="text-xs text-gray-600 dark:text-[#98a0ad] mt-2">
                                 Selected: {selectedRequestOptions[request.name]}
                               </p>
                             )}
@@ -1220,7 +1419,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                                   className={`flex items-center gap-3 cursor-pointer group p-3 rounded-lg border transition-all ${
                                     isSelected 
                                       ? 'bg-[#1287ff]/10 border-[#1287ff]/50' 
-                                      : 'bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.05)] hover:border-[rgba(255,255,255,0.2)]'
+                                      : 'bg-white dark:bg-[rgba(255,255,255,0.03)] border-gray-300 dark:border-[rgba(255,255,255,0.1)] hover:bg-gray-100 dark:bg-[rgba(255,255,255,0.05)] hover:border-gray-400 dark:hover:border-[rgba(255,255,255,0.2)]'
                                   }`}
                                 >
                                   <input
@@ -1228,18 +1427,22 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                                     name={request.name}
                                     checked={isSelected}
                                     onChange={() => handleOptionChange(request.name, option.name, request.isMultipleSelect || false)}
-                                    className="w-5 h-5 min-w-[20px] rounded border-2 border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff] flex-shrink-0"
+                                    className="w-5 h-5 min-w-[20px] rounded border-2 border-[rgba(255,255,255,0.3)] bg-gray-100 dark:bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff] flex-shrink-0"
                                   />
                                   <div className="flex-1 flex items-center justify-between min-w-0 ml-2">
                                     <div>
-                                      <span className={`text-sm font-medium block ${isSelected ? 'text-white' : 'text-[#98a0ad]'}`}>
+                                      <span className={`text-sm font-medium block ${isSelected ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-[#98a0ad]'}`}>
                                         {option.name}
                                       </span>
-                                      {option.priceModifier !== 0 && (
-                                        <span className={`text-xs mt-0.5 block ${isSelected ? 'text-[#12d6b8]' : 'text-[#98a0ad]'}`}>
-                                          {option.priceModifier > 0 ? '+' : ''}₹{option.priceModifier.toLocaleString('en-IN')}
-                                        </span>
-                                      )}
+                                      {option.priceModifier !== 0 && (() => {
+                                        const periodMultiplier = getBillingPeriodMultiplier(selectedPeriod);
+                                        const adjustedPrice = option.priceModifier * periodMultiplier;
+                                        return (
+                                          <span className={`text-xs mt-0.5 block ${isSelected ? 'text-[#12d6b8]' : 'text-gray-600 dark:text-[#98a0ad]'}`}>
+                                            {adjustedPrice > 0 ? '+' : ''}₹{adjustedPrice.toLocaleString('en-IN')}
+                                          </span>
+                                        );
+                                      })()}
                                     </div>
                                     {option.needsQuotation && (
                                       <span className="px-2 py-1 bg-[#12d6b8]/20 text-[#12d6b8] rounded-full text-xs font-medium ml-2">
@@ -1259,7 +1462,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                             className={`flex items-center gap-3 cursor-pointer group p-3 rounded-lg border transition-all ${
                               selectedRequestOptions[request.name]
                                 ? 'bg-[#1287ff]/10 border-[#1287ff]/50' 
-                                : 'bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.05)] hover:border-[rgba(255,255,255,0.2)]'
+                                : 'bg-white dark:bg-[rgba(255,255,255,0.03)] border-gray-300 dark:border-[rgba(255,255,255,0.1)] hover:bg-gray-100 dark:bg-[rgba(255,255,255,0.05)] hover:border-gray-400 dark:hover:border-[rgba(255,255,255,0.2)]'
                             }`}
                           >
                             <input
@@ -1267,18 +1470,22 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                               name={request.name}
                               checked={!!selectedRequestOptions[request.name]}
                               onChange={(e) => handleCheckboxToggle(request.name, e.target.checked)}
-                              className="w-5 h-5 min-w-[20px] rounded border-2 border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff] flex-shrink-0"
+                              className="w-5 h-5 min-w-[20px] rounded border-2 border-[rgba(255,255,255,0.3)] bg-gray-100 dark:bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff] flex-shrink-0"
                             />
                             <div className="flex-1 flex items-center justify-between min-w-0 ml-2">
                               <div>
-                                <span className={`text-sm font-medium block ${selectedRequestOptions[request.name] ? 'text-white' : 'text-[#98a0ad]'}`}>
+                                <span className={`text-sm font-medium block ${selectedRequestOptions[request.name] ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-[#98a0ad]'}`}>
                                   {request.name}
                                 </span>
-                                {request.priceModifier !== 0 && (
-                                  <span className={`text-xs mt-0.5 block ${selectedRequestOptions[request.name] ? 'text-[#12d6b8]' : 'text-[#98a0ad]'}`}>
-                                    {request.priceModifier > 0 ? '+' : ''}₹{request.priceModifier.toLocaleString('en-IN')}
-                                  </span>
-                                )}
+                                {request.priceModifier !== 0 && (() => {
+                                  const periodMultiplier = getBillingPeriodMultiplier(selectedPeriod);
+                                  const adjustedPrice = (request.priceModifier || 0) * periodMultiplier;
+                                  return (
+                                    <span className={`text-xs mt-0.5 block ${selectedRequestOptions[request.name] ? 'text-[#12d6b8]' : 'text-gray-600 dark:text-[#98a0ad]'}`}>
+                                      {adjustedPrice > 0 ? '+' : ''}₹{adjustedPrice.toLocaleString('en-IN')}
+                                    </span>
+                                  );
+                                })()}
                               </div>
                               {request.needsQuotation && (
                                 <span className="px-2 py-1 bg-[#12d6b8]/20 text-[#12d6b8] rounded-full text-xs font-medium ml-2">
@@ -1297,32 +1504,32 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                 
                 {/* Show message if no requests configured */}
                 {subService && (!subService.requests || subService.requests.length === 0) && (
-                  <div className="p-4 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.1)] rounded-xl">
-                    <p className="text-sm text-[#98a0ad] text-center">
+                  <div className="p-4 bg-gray-50 dark:bg-[rgba(255,255,255,0.02)] border border-gray-300 dark:border-[rgba(255,255,255,0.1)] rounded-xl">
+                    <p className="text-sm text-gray-600 dark:text-[#98a0ad] text-center">
                       No additional options available for this service
                     </p>
                   </div>
                 )}
 
                 {/* Price Breakdown */}
-                <div className="border-t border-[rgba(255,255,255,0.1)] pt-6">
-                  <h4 className="text-sm font-semibold text-white mb-4">Price Breakdown</h4>
+                <div className="border-t border-gray-300 dark:border-[rgba(255,255,255,0.1)] pt-6">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Price Breakdown</h4>
                   <div className="space-y-2.5 mb-4">
                     {priceCalculation.breakdown.map((item, index) => (
                       <div key={index} className="flex items-center justify-between text-sm py-1">
-                        <span className={item.type === 'base' ? 'text-white font-medium' : 'text-[#98a0ad]'}>
+                        <span className={item.type === 'base' ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-600 dark:text-[#98a0ad]'}>
                           {item.label}
                         </span>
-                        <span className={item.type === 'base' ? 'text-white font-semibold' : 'text-[#98a0ad]'}>
+                        <span className={item.type === 'base' ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-600 dark:text-[#98a0ad]'}>
                           ₹{item.amount.toLocaleString('en-IN')}
                         </span>
                       </div>
                     ))}
                   </div>
                   <div className="flex items-center justify-between pt-4 border-t-2 border-[rgba(255,255,255,0.2)]">
-                    <span className="text-lg font-bold text-white">Total</span>
+                    <span className="text-lg font-bold text-gray-900 dark:text-white">Total</span>
                     <span 
-                      className="text-2xl font-bold text-white transition-all duration-300" 
+                      className="text-2xl font-bold text-gray-900 dark:text-white transition-all duration-300" 
                       aria-live="polite" 
                       aria-atomic="true"
                       key={priceCalculation.total}
@@ -1339,12 +1546,12 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
 
                 {/* Action Buttons Section */}
                 <div className="mt-6 space-y-3">
-                  {/* Payment button for free consultations */}
-                  {hasFreeConsultation && !isServicePurchased && (
+                  {/* Payment button for free consultations - only show if payment is activated */}
+                  {hasFreeConsultation && !isServicePurchased && isPaymentActivated && (
                     <button
                       onClick={handlePayment}
                       disabled={isProcessingPayment}
-                      className="w-full px-6 py-4 bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full px-6 py-4 bg-gradient-to-r from-[#007AFF] to-[#00C897] text-gray-900 dark:text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isProcessingPayment ? (
                         <>
@@ -1364,12 +1571,31 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                       )}
                     </button>
                   )}
-                  {/* Primary CTA Button */}
-                  {!isServicePurchased && !hasFreeConsultation && (
+                  {/* Show disabled message if consultation is requested but payment not activated */}
+                  {hasFreeConsultation && !isServicePurchased && !isPaymentActivated && (
+                    <div className="w-full px-6 py-4 bg-gray-400 text-gray-900 dark:text-white rounded-full font-semibold text-center flex items-center justify-center gap-2 cursor-not-allowed">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Quote Pending</span>
+                      <button
+                        onClick={() => setRefreshKey(prev => prev + 1)}
+                        className="ml-2 hover:opacity-80 transition-opacity"
+                        title="Refresh to check for price update"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                  {/* Primary CTA Button - Only show if no free consultation is pending and quotation is not required */}
+                  {/* Hide payment button when quotation is required - user should only see consultation button */}
+                  {!isServicePurchased && !hasFreeConsultation && !priceCalculation.needsQuotation && (
                     <button
                       onClick={handleGetQuotation}
                       disabled={isProcessingPayment || priceCalculation.total === 0 || !isAuthenticated}
-                      className="w-full px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full px-6 py-4 bg-[#1287ff] text-gray-900 dark:text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isProcessingPayment ? (
                         <>
@@ -1380,49 +1606,21 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                           <span>Processing...</span>
                         </>
                       ) : !isAuthenticated ? (
-                        <div className="space-y-3">
-                          <button
-                            onClick={() => {
-                              handleNotifyTeam();
-                            }}
-                            disabled={isNotifyingTeam || isProcessingPayment}
-                            className="w-full px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                          >
-                            {isNotifyingTeam ? (
-                              <>
-                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <span>Notifying...</span>
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                </svg>
-                                <span>Notify Team</span>
-                              </>
-                            )}
-                          </button>
-                          <button
-                            onClick={() => {
-                              onNavigate('login');
-                            }}
-                            disabled={isNotifyingTeam || isProcessingPayment}
-                            className="w-full px-6 py-3 bg-transparent border-2 border-[#1287ff] text-[#1287ff] rounded-full font-semibold hover:bg-[#1287ff]/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>
-                            <span>Pay Later (Login)</span>
-                          </button>
-                        </div>
-                      ) : priceCalculation.needsQuotation 
-                        ? 'Pay and Activate — Request Quotation' 
-                        : priceCalculation.total === 0
-                          ? 'Get Started'
-                          : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
+                        <button
+                          onClick={() => {
+                            onNavigate('login');
+                          }}
+                          disabled={isProcessingPayment}
+                          className="w-full px-6 py-4 bg-[#1287ff] text-gray-900 dark:text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                          <span>Login to Pay and Activate</span>
+                        </button>
+                      ) : priceCalculation.total === 0
+                        ? 'Get Started'
+                        : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
                       }
                     </button>
                   )}
@@ -1436,14 +1634,16 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                   )}
 
                   {/* Info Messages */}
-                  {priceCalculation.needsQuotation && !isServicePurchased && !isAuthenticated && (
-                    <p className="text-xs text-[#98a0ad] text-center">
-                      Some selected options require a quotation. Please login to proceed.
+                  {priceCalculation.needsQuotation && !isServicePurchased && (
+                    <p className="text-xs text-gray-600 dark:text-[#98a0ad] text-center">
+                      {!isAuthenticated 
+                        ? 'Some selected options require a quotation. Please login to request consultation.' 
+                        : 'Some selected options require a quotation. Please request a consultation to proceed.'}
                     </p>
                   )}
-                  {!isAuthenticated && !isServicePurchased && (
-                    <p className="text-xs text-[#98a0ad] text-center">
-                      Notify our team or login to proceed with payment.
+                  {!isAuthenticated && !isServicePurchased && !priceCalculation.needsQuotation && (
+                    <p className="text-xs text-gray-600 dark:text-[#98a0ad] text-center">
+                      Please login to proceed with payment.
                     </p>
                   )}
 
@@ -1481,12 +1681,12 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                 </div>
 
                 {/* Secondary Actions */}
-                <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-[rgba(255,255,255,0.1)]">
-                  <button className="text-sm text-[#98a0ad] hover:text-[#1287ff] transition-colors">
+                <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-gray-300 dark:border-[rgba(255,255,255,0.1)]">
+                  <button className="text-sm text-gray-600 dark:text-[#98a0ad] hover:text-[#1287ff] transition-colors">
                     Save as Favourite
                   </button>
-                  <span className="text-[#98a0ad]">•</span>
-                  <button className="text-sm text-[#98a0ad] hover:text-[#1287ff] transition-colors">
+                  <span className="text-gray-600 dark:text-[#98a0ad]">•</span>
+                  <button className="text-sm text-gray-600 dark:text-[#98a0ad] hover:text-[#1287ff] transition-colors">
                     Compare
                   </button>
                 </div>
@@ -1511,19 +1711,19 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       )}
 
       {/* Mobile Bottom Sheet - Configurator */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-[rgba(11,18,32,0.98)] backdrop-blur-lg border-t border-[rgba(255,255,255,0.1)] shadow-2xl z-50">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-[rgba(11,18,32,0.98)] backdrop-blur-lg border-t border-gray-300 dark:border-[rgba(255,255,255,0.1)] shadow-2xl z-50">
         {/* Collapsed State - Always Visible */}
         {!showMobileConfigurator && (
           <div className="px-4 py-4 flex items-center justify-between">
             <div>
-              <p className="text-[#98a0ad] text-xs mb-1">Total</p>
-              <p className="text-2xl font-bold text-white" aria-live="polite">
+              <p className="text-gray-600 dark:text-[#98a0ad] text-xs mb-1">Total</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white" aria-live="polite">
                 ₹{priceCalculation.total.toLocaleString('en-IN')}
               </p>
             </div>
             <button
               onClick={() => setShowMobileConfigurator(true)}
-              className="px-6 py-3 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20"
+              className="px-6 py-3 bg-[#1287ff] text-gray-900 dark:text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20"
             >
               Configure
             </button>
@@ -1533,11 +1733,11 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
         {/* Expanded State */}
         {showMobileConfigurator && (
           <div className="max-h-[80vh] overflow-y-auto">
-            <div className="px-4 py-4 border-b border-[rgba(255,255,255,0.1)] flex items-center justify-between sticky top-0 bg-[rgba(11,18,32,0.98)] backdrop-blur-lg z-10">
-              <h3 className="text-lg font-bold text-white">Configure Your Service</h3>
+            <div className="px-4 py-4 border-b border-gray-300 dark:border-[rgba(255,255,255,0.1)] flex items-center justify-between sticky top-0 bg-[rgba(11,18,32,0.98)] backdrop-blur-lg z-10">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Configure Your Service</h3>
               <button
                 onClick={() => setShowMobileConfigurator(false)}
-                className="text-[#98a0ad] hover:text-white"
+                className="text-gray-600 dark:text-[#98a0ad] hover:text-gray-900 dark:text-white"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1549,7 +1749,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
               {/* Billing Period - Only show periods configured by Admin */}
               {subService && subService.pricingStructure && subService.pricingStructure.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-[#98a0ad] mb-3">
+                  <label className="block text-sm font-medium text-gray-600 dark:text-[#98a0ad] mb-3">
                     Billing Period
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -1564,8 +1764,8 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                           onClick={() => setSelectedPeriod(pricing.period)}
                           className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                             selectedPeriod === pricing.period
-                              ? 'bg-[#1287ff] text-white shadow-lg shadow-[#1287ff]/20'
-                              : 'bg-[rgba(255,255,255,0.05)] text-[#98a0ad] hover:bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.1)]'
+                              ? 'bg-[#1287ff] text-gray-900 dark:text-white shadow-lg shadow-[#1287ff]/20'
+                              : 'bg-gray-100 dark:bg-[rgba(255,255,255,0.05)] text-gray-600 dark:text-[#98a0ad] hover:bg-gray-200 dark:hover:bg-[rgba(255,255,255,0.08)] border border-gray-300 dark:border-[rgba(255,255,255,0.1)]'
                           }`}
                         >
                           {periodLabel}
@@ -1579,7 +1779,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
               {/* Options */}
               {subService && subService.requests && subService.requests.length > 0 && (
                 <div className="space-y-4">
-                  <label className="block text-sm font-medium text-[#98a0ad]">
+                  <label className="block text-sm font-medium text-gray-600 dark:text-[#98a0ad]">
                     Options
                   </label>
                   {subService.requests.map((request, index) => {
@@ -1588,10 +1788,10 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                     const inputType = (request.inputType || '').toLowerCase();
                     
                     return (
-                    <div key={index} className="border border-[rgba(255,255,255,0.1)] rounded-xl p-4 bg-[rgba(255,255,255,0.02)]">
+                    <div key={index} className="border border-gray-300 dark:border-[rgba(255,255,255,0.1)] rounded-xl p-4 bg-gray-50 dark:bg-[rgba(255,255,255,0.02)]">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium text-white">{request.name}</label>
+                          <label className="text-sm font-medium text-gray-900 dark:text-white">{request.name}</label>
                           {/* Input Type Badge */}
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             inputType === 'dropdown' 
@@ -1615,20 +1815,24 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                             value={selectedRequestOptions[request.name] as string || ''}
                             onChange={(e) => handleOptionChange(request.name, e.target.value, false)}
                             disabled={!request.options || request.options.length === 0}
-                            className="w-full px-4 py-3 bg-[rgba(255,255,255,0.05)] border-2 border-[rgba(255,255,255,0.1)] rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#1287ff] focus:border-[#1287ff] cursor-pointer transition-all hover:border-[rgba(255,255,255,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-3 bg-gray-100 dark:bg-[rgba(255,255,255,0.05)] border-2 border-gray-300 dark:border-[rgba(255,255,255,0.1)] rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#1287ff] focus:border-[#1287ff] cursor-pointer transition-all hover:border-gray-400 dark:hover:border-[rgba(255,255,255,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <option value="" className="bg-[#0b1220] text-[#98a0ad]">
+                            <option value="" className="bg-white dark:bg-[#0b1220] text-gray-600 dark:text-[#98a0ad]">
                               {request.options && request.options.length > 0 ? 'Select an option' : 'No options available'}
                             </option>
-                            {request.options && request.options.length > 0 && request.options.map((option, optIndex) => (
-                              <option key={optIndex} value={option.name} className="bg-[#0b1220] text-white">
-                                {option.name} {option.priceModifier !== 0 && `(${option.priceModifier > 0 ? '+' : ''}₹${option.priceModifier.toLocaleString('en-IN')})`}
-                                {option.needsQuotation && ' - Quote Required'}
-                              </option>
-                            ))}
+                            {request.options && request.options.length > 0 && request.options.map((option, optIndex) => {
+                              const periodMultiplier = BILLING_MULTIPLIERS[selectedPeriod] || 1;
+                              const adjustedPrice = option.priceModifier * periodMultiplier;
+                              return (
+                                <option key={optIndex} value={option.name} className="bg-white dark:bg-[#0b1220] text-gray-900 dark:text-white">
+                                  {option.name} {option.priceModifier !== 0 && `(${adjustedPrice > 0 ? '+' : ''}₹${adjustedPrice.toLocaleString('en-IN')})`}
+                                  {option.needsQuotation && ' - Quote Required'}
+                                </option>
+                              );
+                            })}
                           </select>
                           {selectedRequestOptions[request.name] && (
-                            <p className="text-xs text-[#98a0ad] mt-2">
+                            <p className="text-xs text-gray-600 dark:text-[#98a0ad] mt-2">
                               Selected: {selectedRequestOptions[request.name]}
                             </p>
                           )}
@@ -1654,7 +1858,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                                 className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg border transition-all ${
                                   isSelected 
                                     ? 'bg-[#1287ff]/10 border-[#1287ff]/50' 
-                                    : 'bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.05)] hover:border-[rgba(255,255,255,0.2)]'
+                                    : 'bg-white dark:bg-[rgba(255,255,255,0.03)] border-gray-300 dark:border-[rgba(255,255,255,0.1)] hover:bg-gray-100 dark:bg-[rgba(255,255,255,0.05)] hover:border-gray-400 dark:hover:border-[rgba(255,255,255,0.2)]'
                                 }`}
                               >
                                 <input
@@ -1662,18 +1866,22 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                                   name={request.name}
                                   checked={isSelected}
                                   onChange={() => handleOptionChange(request.name, option.name, request.isMultipleSelect || false)}
-                                  className="w-5 h-5 min-w-[20px] rounded border-2 border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff] flex-shrink-0"
+                                  className="w-5 h-5 min-w-[20px] rounded border-2 border-[rgba(255,255,255,0.3)] bg-gray-100 dark:bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff] flex-shrink-0"
                                 />
                                 <div className="flex-1 flex items-center justify-between min-w-0 ml-2">
                                   <div>
-                                    <span className={`text-sm font-medium block ${isSelected ? 'text-white' : 'text-[#98a0ad]'}`}>
+                                    <span className={`text-sm font-medium block ${isSelected ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-[#98a0ad]'}`}>
                                       {option.name}
                                     </span>
-                                    {option.priceModifier !== 0 && (
-                                      <span className={`text-xs mt-0.5 block ${isSelected ? 'text-[#12d6b8]' : 'text-[#98a0ad]'}`}>
-                                        {option.priceModifier > 0 ? '+' : ''}₹{option.priceModifier.toLocaleString('en-IN')}
-                                      </span>
-                                    )}
+                                    {option.priceModifier !== 0 && (() => {
+                                      const periodMultiplier = BILLING_MULTIPLIERS[selectedPeriod] || 1;
+                                      const adjustedPrice = option.priceModifier * periodMultiplier;
+                                      return (
+                                        <span className={`text-xs mt-0.5 block ${isSelected ? 'text-[#12d6b8]' : 'text-gray-600 dark:text-[#98a0ad]'}`}>
+                                          {adjustedPrice > 0 ? '+' : ''}₹{adjustedPrice.toLocaleString('en-IN')}
+                                        </span>
+                                      );
+                                    })()}
                                   </div>
                                   {option.needsQuotation && (
                                     <span className="px-2 py-1 bg-[#12d6b8]/20 text-[#12d6b8] rounded-full text-xs font-medium ml-2">
@@ -1693,7 +1901,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                           className={`flex items-center gap-3 cursor-pointer group p-3 rounded-lg border transition-all ${
                             selectedRequestOptions[request.name]
                               ? 'bg-[#1287ff]/10 border-[#1287ff]/50' 
-                              : 'bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.05)] hover:border-[rgba(255,255,255,0.2)]'
+                              : 'bg-white dark:bg-[rgba(255,255,255,0.03)] border-gray-300 dark:border-[rgba(255,255,255,0.1)] hover:bg-gray-100 dark:bg-[rgba(255,255,255,0.05)] hover:border-gray-400 dark:hover:border-[rgba(255,255,255,0.2)]'
                           }`}
                         >
                           <input
@@ -1701,18 +1909,22 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                             name={request.name}
                             checked={!!selectedRequestOptions[request.name]}
                             onChange={(e) => handleCheckboxToggle(request.name, e.target.checked)}
-                            className="w-5 h-5 min-w-[20px] rounded border-2 border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff] flex-shrink-0"
+                            className="w-5 h-5 min-w-[20px] rounded border-2 border-[rgba(255,255,255,0.3)] bg-gray-100 dark:bg-[rgba(255,255,255,0.05)] text-[#1287ff] focus:ring-2 focus:ring-[#1287ff] focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer accent-[#1287ff] flex-shrink-0"
                           />
                           <div className="flex-1 flex items-center justify-between min-w-0 ml-2">
                             <div>
-                              <span className={`text-sm font-medium block ${selectedRequestOptions[request.name] ? 'text-white' : 'text-[#98a0ad]'}`}>
+                              <span className={`text-sm font-medium block ${selectedRequestOptions[request.name] ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-[#98a0ad]'}`}>
                                 {request.name}
                               </span>
-                              {request.priceModifier !== 0 && (
-                                <span className={`text-xs mt-0.5 block ${selectedRequestOptions[request.name] ? 'text-[#12d6b8]' : 'text-[#98a0ad]'}`}>
-                                  {request.priceModifier > 0 ? '+' : ''}₹{request.priceModifier.toLocaleString('en-IN')}
-                                </span>
-                              )}
+                              {request.priceModifier !== 0 && (() => {
+                                const periodMultiplier = BILLING_MULTIPLIERS[selectedPeriod] || 1;
+                                const adjustedPrice = (request.priceModifier || 0) * periodMultiplier;
+                                return (
+                                  <span className={`text-xs mt-0.5 block ${selectedRequestOptions[request.name] ? 'text-[#12d6b8]' : 'text-gray-600 dark:text-[#98a0ad]'}`}>
+                                    {adjustedPrice > 0 ? '+' : ''}₹{adjustedPrice.toLocaleString('en-IN')}
+                                  </span>
+                                );
+                              })()}
                             </div>
                             {request.needsQuotation && (
                               <span className="px-2 py-1 bg-[#12d6b8]/20 text-[#12d6b8] rounded-full text-xs font-medium ml-2">
@@ -1729,23 +1941,23 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
               )}
 
               {/* Price Breakdown */}
-              <div className="border-t border-[rgba(255,255,255,0.1)] pt-4">
-                <h4 className="text-sm font-medium text-[#98a0ad] mb-4">Price Breakdown</h4>
+              <div className="border-t border-gray-300 dark:border-[rgba(255,255,255,0.1)] pt-4">
+                <h4 className="text-sm font-medium text-gray-600 dark:text-[#98a0ad] mb-4">Price Breakdown</h4>
                 <div className="space-y-2 mb-4">
                   {priceCalculation.breakdown.map((item, index) => (
                     <div key={index} className="flex items-center justify-between text-sm">
-                      <span className={item.type === 'base' ? 'text-white font-medium' : 'text-[#98a0ad]'}>
+                      <span className={item.type === 'base' ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-600 dark:text-[#98a0ad]'}>
                         {item.label}
                       </span>
-                      <span className={item.type === 'base' ? 'text-white font-medium' : 'text-[#98a0ad]'}>
+                      <span className={item.type === 'base' ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-600 dark:text-[#98a0ad]'}>
                         ₹{item.amount.toLocaleString('en-IN')}
                       </span>
                     </div>
                   ))}
                 </div>
-                <div className="flex items-center justify-between pt-4 border-t border-[rgba(255,255,255,0.1)]">
-                  <span className="text-lg font-bold text-white">Total</span>
-                  <span className="text-2xl font-bold text-white" aria-live="polite">
+                <div className="flex items-center justify-between pt-4 border-t border-gray-300 dark:border-[rgba(255,255,255,0.1)]">
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">Total</span>
+                  <span className="text-2xl font-bold text-gray-900 dark:text-white" aria-live="polite">
                     ₹{priceCalculation.total.toLocaleString('en-IN')}
                   </span>
                 </div>
@@ -1755,55 +1967,35 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
               <div className="mt-6 space-y-3">
                   {/* Primary CTA Button */}
                 {!isServicePurchased ? (
-                  !isAuthenticated ? (
-                    <div className="space-y-3">
-                      <button
-                        onClick={() => {
-                          setShowMobileConfigurator(false);
-                          handleNotifyTeam();
-                        }}
-                        disabled={isNotifyingTeam || isProcessingPayment}
-                        className="w-full px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      >
-                        {isNotifyingTeam ? (
-                          <>
-                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span>Notifying...</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                            <span>Notify Team</span>
-                          </>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMobileConfigurator(false);
-                          onNavigate('login');
-                        }}
-                        disabled={isNotifyingTeam || isProcessingPayment}
-                        className="w-full px-6 py-3 bg-transparent border-2 border-[#1287ff] text-[#1287ff] rounded-full font-semibold hover:bg-[#1287ff]/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                        <span>Pay Later (Login)</span>
-                      </button>
+                  hasFreeConsultation && !isPaymentActivated ? (
+                    <div className="w-full px-6 py-4 bg-gray-400 text-gray-900 dark:text-white rounded-full font-semibold text-center flex items-center justify-center gap-2 cursor-not-allowed">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Quote Pending</span>
                     </div>
-                  ) : (
+                  ) : !isAuthenticated ? (
+                    <button
+                      onClick={() => {
+                        setShowMobileConfigurator(false);
+                        onNavigate('login');
+                      }}
+                      disabled={isProcessingPayment}
+                      className="w-full px-6 py-4 bg-[#1287ff] text-gray-900 dark:text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      <span>Login to Pay and Activate</span>
+                    </button>
+                  ) : !hasFreeConsultation && !priceCalculation.needsQuotation ? (
                     <button
                       onClick={() => {
                         setShowMobileConfigurator(false);
                         handleGetQuotation();
                       }}
                       disabled={isProcessingPayment || priceCalculation.total === 0}
-                      className="w-full px-6 py-4 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full px-6 py-4 bg-[#1287ff] text-gray-900 dark:text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isProcessingPayment ? (
                         <>
@@ -1813,22 +2005,20 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                           </svg>
                           <span>Processing...</span>
                         </>
-                      ) : priceCalculation.needsQuotation 
-                        ? 'Pay and Activate — Request Quotation' 
-                        : priceCalculation.total === 0
-                          ? 'Get Started'
-                          : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
+                      ) : priceCalculation.total === 0
+                        ? 'Get Started'
+                        : `Pay and Activate — ₹${priceCalculation.total.toLocaleString('en-IN')}`
                       }
                     </button>
-                  )
-                ) : hasFreeConsultation ? (
+                  ) : null
+                ) : hasFreeConsultation && isPaymentActivated ? (
                   <button
                     onClick={() => {
                       setShowMobileConfigurator(false);
                       handlePayment();
                     }}
                     disabled={isProcessingPayment}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full px-6 py-4 bg-gradient-to-r from-[#007AFF] to-[#00C897] text-gray-900 dark:text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isProcessingPayment ? (
                       <>
@@ -1847,6 +2037,22 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                       </>
                     )}
                   </button>
+                ) : hasFreeConsultation && !isPaymentActivated ? (
+                  <div className="w-full px-6 py-4 bg-gray-400 text-gray-900 dark:text-white rounded-full font-semibold text-center flex items-center justify-center gap-2 cursor-not-allowed">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Quote Pending</span>
+                    <button
+                      onClick={() => setRefreshKey(prev => prev + 1)}
+                      className="ml-2 hover:opacity-80 transition-opacity"
+                      title="Refresh to check for price update"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                  </div>
                 ) : (
                   <div className="w-full px-6 py-4 bg-green-500/20 border-2 border-green-500/50 text-green-400 rounded-full font-semibold text-center flex items-center justify-center gap-2">
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -1896,16 +2102,25 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
 
       {/* Payment Error */}
       {paymentError && (
-        <div className="fixed bottom-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg max-w-md z-50">
+        <div className="fixed bottom-4 right-4 bg-red-500 text-gray-900 dark:text-white px-6 py-4 rounded-lg shadow-lg max-w-md z-50">
           <p className="font-semibold mb-1">Payment Error</p>
-          <p className="text-sm">{paymentError}</p>
+          <p className="text-sm break-words">{paymentError}</p>
           <button
             onClick={() => setPaymentError(null)}
-            className="mt-2 text-sm underline"
+            className="mt-2 text-sm underline hover:no-underline"
           >
             Dismiss
           </button>
         </div>
+      )}
+
+      {/* Document Upload Modal */}
+      {showDocumentUpload && subService && (
+        <ServiceDocumentUpload
+          serviceId={subService._id}
+          serviceName={subService.title}
+          onClose={() => setShowDocumentUpload(false)}
+        />
       )}
 
       {/* User Info Modal */}

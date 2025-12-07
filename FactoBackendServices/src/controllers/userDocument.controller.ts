@@ -293,3 +293,47 @@ export const fetchAllUserDocuments = bigPromise(
     }
   }
 );
+
+// Fetch document requirements for a service from master table (user-facing endpoint)
+export const fetchDocumentRequirements = bigPromise(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { serviceId } = req.params;
+
+      if (!serviceId) {
+        return next(
+          createCustomError("Service ID is required", StatusCode.BAD_REQ)
+        );
+      }
+
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(serviceId)) {
+        return next(
+          createCustomError("Invalid service ID", StatusCode.BAD_REQ)
+        );
+      }
+
+      // Fetch document requirements for this sub-service from master table
+      const requirements = await db.SubServiceRequirement.find({
+        subServiceId: serviceId
+      })
+      .sort({ createdAt: 1 }) // Sort by creation date
+      .lean(); // Use lean() for better performance
+
+      const response = sendSuccessApiResponse(
+        "Document requirements fetched successfully",
+        {
+          requirements: requirements.map(req => ({
+            _id: req._id.toString(),
+            title: req.title,
+            description: req.description || '',
+            isMandatory: req.isMandatory !== false // Default to true if not set
+          }))
+        }
+      );
+      res.status(StatusCode.OK).send(response);
+    } catch (error: any) {
+      next(createCustomError(error.message, StatusCode.INT_SER_ERR));
+    }
+  }
+);

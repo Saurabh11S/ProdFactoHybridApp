@@ -5,6 +5,7 @@ import logo from '../../assets/logo.png'
 import { LuChevronsLeft } from "react-icons/lu";
 import { LuChevronsRight } from "react-icons/lu";
 import { HiOutlineQuestionMarkCircle, HiOutlineUsers } from "react-icons/hi2";
+import { FaHandshake } from "react-icons/fa";
 import { MdOutlineMiscellaneousServices,MdOutlineLibraryBooks,MdOutlineNotificationsActive, MdOutlineEmail  } from "react-icons/md";
 import { PiReadCvLogoLight } from "react-icons/pi";
 import { GoQuestion } from "react-icons/go";
@@ -31,6 +32,7 @@ const Sidebar: React.FC = () => {
     { key: '1', label: 'Dashboard', icon: <RxDashboard size={20} />, path: '/dashboard' },
     { key: '2', label: 'Users', icon: <HiOutlineUsers size={20} />, path: '/users' },
     { key: '10', label: 'Quotations', icon: <HiOutlineQuestionMarkCircle size={20}/>, path: '/quotations' },
+    { key: '12', label: 'Consultations', icon: <FaHandshake size={20}/>, path: '/consultations' },
     {
       key: '3',
       label: 'Services',

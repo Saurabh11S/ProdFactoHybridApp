@@ -59,7 +59,7 @@ export function MobileUserProfile({ onNavigate }: MobileUserProfileProps) {
   const [userPurchases, setUserPurchases] = useState<UserPurchase[]>([]);
   const [paymentOrders, setPaymentOrders] = useState<PaymentOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedServiceForUpload, setSelectedServiceForUpload] = useState<{id: string, name: string} | null>(null);
+  const [selectedServiceForUpload, setSelectedServiceForUpload] = useState<{id: string, purchaseId?: string, name: string} | null>(null);
   const [serviceDocumentCounts, setServiceDocumentCounts] = useState<{[key: string]: number}>({});
   const [allServices, setAllServices] = useState<SubService[]>([]);
   const [courseDetailsMap, setCourseDetailsMap] = useState<{[key: string]: Course}>({});
@@ -67,6 +67,7 @@ export function MobileUserProfile({ onNavigate }: MobileUserProfileProps) {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFormData, setEditFormData] = useState({
     fullName: '',
+    email: '',
     gstNumber: ''
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -78,6 +79,7 @@ export function MobileUserProfile({ onNavigate }: MobileUserProfileProps) {
       const gstNumber = (user as any).gstProfile?.gstNumber || '';
       setEditFormData({
         fullName: user.fullName || '',
+        email: user.email || '',
         gstNumber: gstNumber
       });
     }
@@ -110,6 +112,7 @@ export function MobileUserProfile({ onNavigate }: MobileUserProfileProps) {
       const gstNumber = (user as any).gstProfile?.gstNumber || '';
       setEditFormData({
         fullName: user.fullName || '',
+        email: user.email || '',
         gstNumber: gstNumber
       });
     }
@@ -126,9 +129,19 @@ export function MobileUserProfile({ onNavigate }: MobileUserProfileProps) {
     setSaveError(null);
 
     try {
+      // Validate email format if provided
+      if (editFormData.email && !/^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(editFormData.email.trim())) {
+        setSaveError('Please enter a valid email address');
+        setIsSaving(false);
+        return;
+      }
+
       const updateData: any = {};
       if (editFormData.fullName.trim()) {
         updateData.fullName = editFormData.fullName.trim();
+      }
+      if (editFormData.email.trim()) {
+        updateData.email = editFormData.email.trim().toLowerCase();
       }
       const existingGstProfile = (user as any).gstProfile || {};
       const trimmedGstNumber = editFormData.gstNumber.trim().toUpperCase();
@@ -503,6 +516,16 @@ export function MobileUserProfile({ onNavigate }: MobileUserProfileProps) {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={editFormData.email}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    className="w-full px-4 py-3 bg-white dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#007AFF]"
+                    placeholder="Enter your email address"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">GST Number</label>
                   <input
                     type="text"
@@ -608,7 +631,7 @@ export function MobileUserProfile({ onNavigate }: MobileUserProfileProps) {
                         <span className="text-gray-900 dark:text-white">{serviceData.price}</span>
                       </div>
                       <button
-                        onClick={() => setSelectedServiceForUpload({ id: purchase._id, name: serviceData.title })}
+                        onClick={() => setSelectedServiceForUpload({ id: purchase.itemId, purchaseId: purchase._id, name: serviceData.title })}
                         className="w-full bg-[#007AFF] text-white py-2 rounded-xl text-sm font-medium"
                       >
                         {serviceDocumentCounts[purchase._id] > 0 ? 'Manage Documents' : 'Upload Documents'}

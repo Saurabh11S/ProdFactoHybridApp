@@ -12,6 +12,7 @@ router.route("/get").get(verifyToken,controllers.userDocumentController.fetchDoc
 router.route("/getDocs/:userId").get(controllers.userDocumentController.fetchDocumentsUser);
 router.route("/service/:serviceId").get(verifyToken,controllers.userDocumentController.fetchDocumentsByService);
 router.route("/all").get(verifyToken,controllers.userDocumentController.fetchAllUserDocuments);
+router.route("/requirements/service/:serviceId").get(verifyToken,controllers.userDocumentController.fetchDocumentRequirements);
 
 
 export default router;

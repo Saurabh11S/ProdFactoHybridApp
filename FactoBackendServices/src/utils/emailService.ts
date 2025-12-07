@@ -370,7 +370,6 @@ export const sendConsultationNotificationToAdmin = async (
 };
 
 /**
-<<<<<<< HEAD
  * Sends admin response email to user when admin responds to their query
  */
 export const sendQueryResponseToUser = async (
@@ -435,8 +434,174 @@ export const sendQueryResponseToUser = async (
 };
 
 /**
-=======
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
+ * Sends free consultation request confirmation email to user
+ */
+export const sendFreeConsultationRequestConfirmationToUser = async (
+  userEmail: string,
+  userName: string,
+  serviceName: string,
+  serviceId: string
+): Promise<void> => {
+  const subject = 'Free Consultation Request Received - FACTO Consultancy';
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #007AFF 0%, #00C897 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .service-box { background: white; padding: 20px; margin: 20px 0; border-left: 4px solid #007AFF; border-radius: 5px; }
+        .button { display: inline-block; padding: 12px 30px; background: #007AFF; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px; }
+        .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #666; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Thank You, ${userName}!</h1>
+        </div>
+        <div class="content">
+          <p>Dear ${userName},</p>
+          <p>We have received your <strong>Free Consultation Request</strong> for the following service:</p>
+          
+          <div class="service-box">
+            <h3 style="margin: 0 0 10px 0; color: #007AFF;">${serviceName}</h3>
+            <p style="margin: 0; color: #666;">Our expert team will review your request and contact you within 24-48 hours to discuss your requirements and provide a customized quote.</p>
+          </div>
+          
+          <p><strong>What happens next?</strong></p>
+          <ul>
+            <li>Our team will review your consultation request</li>
+            <li>We'll contact you within 24-48 hours via email or phone</li>
+            <li>We'll discuss your specific requirements</li>
+            <li>You'll receive a customized price quote</li>
+            <li>Once you approve, you can proceed with payment</li>
+          </ul>
+          
+          <p>We appreciate your interest in FACTO Consultancy services and look forward to assisting you.</p>
+          
+          <p>Best regards,<br><strong>FACTO Consultancy Team</strong></p>
+          
+          <div class="footer">
+            <p>This is an automated confirmation email. For urgent matters, please contact us directly.</p>
+            <p>Email: ${process.env.ADMIN_EMAIL || 'facto.m.consultancy@gmail.com'}</p>
+            <p>Phone: +91-800-123-4567</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  await sendEmail(userEmail, subject, html);
+};
+
+/**
+ * Sends free consultation request notification email to admin
+ */
+export const sendFreeConsultationRequestNotificationToAdmin = async (
+  adminEmail: string,
+  consultationData: {
+    userName: string;
+    userEmail: string;
+    userPhone: string;
+    serviceName: string;
+    serviceId: string;
+    selectedFeatures?: string[];
+    billingPeriod?: string;
+    specialRequirement?: string;
+    additionalRequirements?: string;
+    purchaseId: string;
+  }
+): Promise<void> => {
+  const subject = `New Free Consultation Request - ${consultationData.serviceName}`;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #007AFF 0%, #00C897 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .info-box { background: white; padding: 20px; margin: 15px 0; border-left: 4px solid #007AFF; border-radius: 5px; }
+        .label { font-weight: bold; color: #007AFF; display: inline-block; min-width: 150px; }
+        .value { color: #333; }
+        .action-box { background: #fff3cd; padding: 15px; margin: 20px 0; border-left: 4px solid #ffc107; border-radius: 5px; }
+        .button { display: inline-block; padding: 12px 30px; background: #007AFF; color: white; text-decoration: none; border-radius: 5px; margin-top: 10px; }
+        .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #666; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>🔔 New Free Consultation Request</h1>
+        </div>
+        <div class="content">
+          <p>You have received a new <strong>Free Consultation Request</strong> for a service:</p>
+          
+          <div class="info-box">
+            <h3 style="margin: 0 0 15px 0; color: #007AFF;">Service Details</h3>
+            <p><span class="label">Service Name:</span><span class="value">${consultationData.serviceName}</span></p>
+            <p><span class="label">Service ID:</span><span class="value">${consultationData.serviceId}</span></p>
+            <p><span class="label">Purchase ID:</span><span class="value">${consultationData.purchaseId}</span></p>
+            ${consultationData.billingPeriod ? `<p><span class="label">Billing Period:</span><span class="value">${consultationData.billingPeriod}</span></p>` : ''}
+            ${consultationData.selectedFeatures && consultationData.selectedFeatures.length > 0 ? `
+              <p><span class="label">Selected Features:</span></p>
+              <ul style="margin: 5px 0; padding-left: 20px;">
+                ${consultationData.selectedFeatures.map(feature => `<li>${feature}</li>`).join('')}
+              </ul>
+            ` : ''}
+          </div>
+          
+          <div class="info-box">
+            <h3 style="margin: 0 0 15px 0; color: #007AFF;">User Information</h3>
+            <p><span class="label">Name:</span><span class="value">${consultationData.userName}</span></p>
+            <p><span class="label">Email:</span><span class="value"><a href="mailto:${consultationData.userEmail}">${consultationData.userEmail}</a></span></p>
+            <p><span class="label">Phone:</span><span class="value"><a href="tel:${consultationData.userPhone}">${consultationData.userPhone}</a></span></p>
+          </div>
+          
+          ${consultationData.specialRequirement || consultationData.additionalRequirements ? `
+            <div class="info-box">
+              <h3 style="margin: 0 0 15px 0; color: #007AFF;">Additional Requirements</h3>
+              ${consultationData.specialRequirement ? `<p><strong>Special Requirement:</strong><br>${consultationData.specialRequirement}</p>` : ''}
+              ${consultationData.additionalRequirements ? `<p><strong>Additional Requirements:</strong><br>${consultationData.additionalRequirements}</p>` : ''}
+            </div>
+          ` : ''}
+          
+          <div class="action-box">
+            <p style="margin: 0 0 10px 0;"><strong>⚠️ Action Required:</strong></p>
+            <p style="margin: 0;">Please review this consultation request in the Admin Panel and:</p>
+            <ol style="margin: 10px 0; padding-left: 20px;">
+              <li>Contact the user to discuss their requirements</li>
+              <li>Provide a customized price quote</li>
+              <li>Activate the payment option once the price is finalized</li>
+            </ol>
+            <p style="margin: 10px 0 0 0;">
+              <a href="${process.env.ADMIN_PANEL_URL || process.env.FRONTEND_URL || 'https://admin.facto.org.in'}/consultations/${consultationData.purchaseId}" class="button">
+                View in Admin Panel →
+              </a>
+            </p>
+          </div>
+          
+          <p style="margin-top: 20px;">Please respond to this request within 24-48 hours.</p>
+          
+          <div class="footer">
+            <p>This is an automated notification from FACTO Consultancy Admin System.</p>
+            <p>&copy; ${new Date().getFullYear()} FACTO Consultancy. All rights reserved.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  await sendEmail(adminEmail, subject, html);
+};
+
+/**
  * Sends newsletter update email to all active subscribers
  */
 export const sendNewsletterUpdate = async (

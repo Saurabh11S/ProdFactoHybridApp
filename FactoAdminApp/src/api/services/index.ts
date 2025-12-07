@@ -111,6 +111,20 @@ export const SERVICES = {
 
     return response.data;
   },
+  GetAllUserDocuments: async (userId: string, cancel = false) => {
+    const response = await api.request({
+      url: `/admin/users/${userId}/documents`,
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ` + localStorage.getItem('token'),
+      },
+      signal: cancel
+        ? cancelApiObject.GetById.handleRequestCancellation().signal
+        : undefined,
+    });
+
+    return response.data;
+  },
   GetServiceConsultations: async (serviceId: string, cancel = false) => {
     const response = await api.request({
       url: `/admin/services/${serviceId}/consultations`,

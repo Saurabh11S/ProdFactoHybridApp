@@ -57,25 +57,39 @@ export function RecentQuery({ isOpen, onClose, query,fetchData }: RecentQueryPro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setLoading(true);
 
-    if (!queryData?.query) {
-      showError("Query is missing.");
+    if (!queryData?._id && !query?._id) {
+      showError("Query ID is missing.");
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.comment || !formData.comment.trim()) {
+      showError("Comment cannot be empty.");
       setLoading(false);
       return;
     }
 
     try {
+      const queryId = queryData._id || query._id;
       const response = await QUERIES.Update({
-        _id: query._id,
-        comment: formData.comment,
+        _id: queryId,
+        comment: formData.comment.trim(),
       });
 
       if (response.success) {
-        handleCloseModal();
-        fetchData?.();
-        showSucccess(response.message || "Query updated successfully");
+        // Show success message first
+        showSucccess(response.message || "Query updated successfully. Email notification will be sent to the user.");
+        
+        // Wait a moment before closing to ensure backend processes the email
+        setTimeout(() => {
+          handleCloseModal();
+          fetchData?.();
+        }, 500);
       } else {
+        setLoading(false);
         showError(response.message || "Failed to update query");
       }
     } catch (error: any) {
@@ -159,6 +173,7 @@ export function RecentQuery({ isOpen, onClose, query,fetchData }: RecentQueryPro
           </div>
           <div className="flex justify-between m-auto">
             <Button
+              type="button"
               variant="outline"
               onClick={handleCloseModal}
               className="w-full mx-1 text-black border"
@@ -169,7 +184,7 @@ export function RecentQuery({ isOpen, onClose, query,fetchData }: RecentQueryPro
             <Button
               type="submit"
               className="w-full mx-1 text-white hover:bg-[#3449b4]"
-              disabled={loading}
+              disabled={loading || !formData.comment.trim()}
             >
               {loading ? "Processing..." : isEdit ? "Edit" : "Add Comment"}
             </Button>

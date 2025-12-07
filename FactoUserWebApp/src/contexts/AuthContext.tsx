@@ -132,8 +132,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       async (error) => {
         if (error.response?.status === 401) {
           // Only logout for specific endpoints that indicate token expiration
+          // Exclude payment, query, and document endpoints to prevent logout on errors
           const url = error.config?.url || '';
-          const isAuthEndpoint = url.includes('/auth/') || url.includes('/login') || url.includes('/user/');
+          const isAuthEndpoint = (url.includes('/auth/') || url.includes('/login') || url.includes('/user/profile')) && 
+                                !url.includes('/payment/') && 
+                                !url.includes('/query/') &&
+                                !url.includes('/document/');
           
           if (isAuthEndpoint) {
             console.log('401 Unauthorized on auth endpoint - token may be expired, logging out');
@@ -145,7 +149,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             await Storage.remove('user');
             delete axios.defaults.headers.common['Authorization'];
           } else {
-            console.log('401 Unauthorized on non-auth endpoint - not logging out automatically');
+            console.log('401 Unauthorized on non-auth endpoint (payment/query/document) - not logging out automatically');
+            // For payment/query/document endpoints, don't log out - let the component handle the error
           }
         }
         return Promise.reject(error);
@@ -271,7 +276,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setSessionWarning({ show: false, timeLeft: 0 });
   };
 
-  // Auto-logout when token expires
+  // Auto-logout when token expires and session management
   useEffect(() => {
     if (!token) return;
 
@@ -282,6 +287,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     if (timeUntilExpiry <= 0) {
       // Token already expired - clear auth state directly
+      console.log('❌ Token already expired, logging out');
       setUser(null);
       setToken(null);
       setError(null);
@@ -293,14 +299,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Show warning 5 minutes before expiry
     const warningTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+    let warningTimeout: NodeJS.Timeout | null = null;
+    
     if (timeUntilExpiry > warningTime) {
-      const warningTimeout = setTimeout(() => {
+      warningTimeout = setTimeout(() => {
         setSessionWarning({ show: true, timeLeft: warningTime / 1000 });
       }, timeUntilExpiry - warningTime);
-
-      // Cleanup warning timeout
-      const cleanupWarning = () => clearTimeout(warningTimeout);
-      return cleanupWarning;
     } else {
       // Show warning immediately if less than 5 minutes left
       setSessionWarning({ show: true, timeLeft: timeUntilExpiry / 1000 });
@@ -308,7 +312,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Set timeout to logout when token expires
     const timeoutId = setTimeout(() => {
-      console.log('Token expired, logging out user');
+      console.log('⏰ Token expired, logging out user');
       // Clear auth state directly instead of calling logout to avoid stale closure
       setUser(null);
       setToken(null);
@@ -318,34 +322,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       delete axios.defaults.headers.common['Authorization'];
     }, timeUntilExpiry);
 
-    // Cleanup timeout on unmount or token change
-    return () => clearTimeout(timeoutId);
+    // Cleanup timeouts on unmount or token change
+    return () => {
+      clearTimeout(timeoutId);
+      if (warningTimeout) clearTimeout(warningTimeout);
+    };
   }, [token]);
 
-  // Clear session on browser close/tab close (web only)
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      console.log('🔄 Browser closing, clearing session...');
-      Storage.remove('authToken');
-      Storage.remove('user');
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        console.log('🔄 Tab hidden, clearing session...');
-        Storage.remove('authToken');
-        Storage.remove('user');
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
+  // Note: Session is now managed by token expiration only
+  // Removed beforeunload and visibilitychange handlers to allow session persistence across page refreshes
 
   // Login with email and password
   const login = async (email: string, password: string) => {
@@ -630,9 +615,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(newUser);
         setToken(authToken);
         
-        // Store in localStorage
-        localStorage.setItem('authToken', authToken);
-        localStorage.setItem('user', JSON.stringify(newUser));
+        // Store in storage (works for both web and mobile)
+        await Storage.set('authToken', authToken);
+        await Storage.set('user', JSON.stringify(newUser));
         
         // Set axios default header
         axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;

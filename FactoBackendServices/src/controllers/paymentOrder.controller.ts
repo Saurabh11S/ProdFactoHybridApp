@@ -147,6 +147,72 @@ export const initiatePayment = bigPromise(
   }
 );
 
+// Initiate payment for consultation (uses existing PaymentOrder)
+export const initiateConsultationPayment = bigPromise(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { paymentOrderId } = req.body;
+      const userId = req.user?._id;
+
+      if (!paymentOrderId) {
+        return next(createCustomError("Payment order ID is required", StatusCode.BAD_REQ));
+      }
+
+      if (!userId) {
+        return next(createCustomError("User not authenticated", StatusCode.UNAUTHORIZED));
+      }
+
+      // Find the existing PaymentOrder
+      const paymentOrder = await db.PaymentOrder.findById(paymentOrderId);
+
+      if (!paymentOrder) {
+        return next(createCustomError("Payment order not found", StatusCode.NOT_FOUND));
+      }
+
+      // Verify it belongs to the user
+      if (paymentOrder.userId.toString() !== userId.toString()) {
+        return next(createCustomError("Unauthorized access to payment order", StatusCode.UNAUTHORIZED));
+      }
+
+      // Verify it's a consultation payment that's been activated
+      if (!paymentOrder.isConsultationPayment || !paymentOrder.paymentActivatedByAdmin) {
+        return next(createCustomError("This is not an activated consultation payment", StatusCode.BAD_REQ));
+      }
+
+      // Verify status is pending (ready for payment)
+      if (paymentOrder.status !== 'pending') {
+        return next(createCustomError("Payment order is not in pending status", StatusCode.BAD_REQ));
+      }
+
+      // Use the consultation price
+      const amountInRupees = paymentOrder.consultationPrice || paymentOrder.amount;
+      const amount = amountInRupees * 100; // Convert to paise for Razorpay
+
+      // Create Razorpay order
+      const razorpayOrder = await createOrder(amount, paymentOrder.currency || 'INR', userId.toString());
+
+      // Update the existing PaymentOrder with Razorpay transaction ID
+      paymentOrder.transactionId = razorpayOrder.id;
+      paymentOrder.paymentMethod = 'razorpay';
+      await paymentOrder.save();
+
+      const response = sendSuccessApiResponse("Consultation payment initiated successfully", {
+        orderId: razorpayOrder.id,
+        amount: amountInRupees,
+        currency: paymentOrder.currency || 'INR',
+        paymentOrderId: paymentOrder._id,
+        razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+        isDevelopmentMode: false,
+      }, 200);
+
+      res.send(response);
+    } catch (error: any) {
+      console.error("Error initiating consultation payment:", error);
+      next(createCustomError(error.message || "Failed to initiate consultation payment", StatusCode.INT_SER_ERR));
+    }
+  }
+);
+
 export const verifyPayment = bigPromise(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -246,7 +312,8 @@ export const verifyPayment = bigPromise(
       console.log('📋 UserPurchase IDs:', userPurchases.map(p => p._id));
       
       // Get service details for the response
-      const serviceDetails = await db.SubService.findOne({ serviceCode: paymentOrder.items[0]?.itemId })
+      // itemId is the _id of the SubService, not the serviceCode
+      const serviceDetails = await db.SubService.findById(paymentOrder.items[0]?.itemId)
         .populate('serviceId', 'title')
         .select('title description price');
 

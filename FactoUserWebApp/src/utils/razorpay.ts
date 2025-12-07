@@ -129,11 +129,7 @@ export async function initializeRazorpayPayment(options: {
         })
       },
       theme: {
-<<<<<<< HEAD
         color: '#00E6B8'
-=======
-        color: '#007AFF'
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
       }
     };
 

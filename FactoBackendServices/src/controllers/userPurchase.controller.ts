@@ -68,7 +68,7 @@ export const getUserPurchases = bigPromise(async (req: AuthRequest, res: Respons
   }
 
   const purchases = await UserPurchase.find({ userId })
-    .populate('paymentOrderId', 'amount currency status transactionId createdAt')
+    .populate('paymentOrderId', 'amount currency status transactionId createdAt paymentActivatedByAdmin isConsultationPayment consultationPrice activatedAt')
     .sort({ createdAt: -1 });
 
   res.status(200).json({
