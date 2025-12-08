@@ -10,12 +10,8 @@
     }
   ],
   "env": {
-<<<<<<< HEAD
     "VITE_API_URL": "https://facto-backend-api.onrender.com/api/v1",
     "VITE_WHATSAPP_NUMBER": "+918800772257"
-=======
-    "VITE_API_URL": "https://facto-backend-api.onrender.com/api/v1"
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9
   }
 }
 
