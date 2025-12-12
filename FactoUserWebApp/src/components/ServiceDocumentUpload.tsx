@@ -492,8 +492,8 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100000] p-4" style={{ zIndex: 100000 }}>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" style={{ zIndex: 100001, marginTop: 'max(env(safe-area-inset-top, 0px) + 4rem, 4rem)', marginBottom: 'max(env(safe-area-inset-bottom, 0px) + 4rem, 4rem)' }}>
         {/* Header */}
         <div className="bg-gradient-to-r from-[#007AFF] to-[#00C897] p-6 text-white">
           <div className="flex items-center justify-between">

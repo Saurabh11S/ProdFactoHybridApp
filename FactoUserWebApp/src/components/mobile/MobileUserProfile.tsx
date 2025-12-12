@@ -355,7 +355,7 @@ export function MobileUserProfile({ onNavigate }: MobileUserProfileProps) {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0a1628] pb-20 pt-16">
+    <div className="min-h-screen bg-white dark:bg-[#0a1628] pb-2 pt-16">
       {/* Welcome Section */}
       <div className="px-4 pt-4 pb-4">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
@@ -554,7 +554,7 @@ export function MobileUserProfile({ onNavigate }: MobileUserProfileProps) {
                   <button
                     onClick={handleCancelEdit}
                     disabled={isSaving}
-                    className="flex-1 border border-white/20 text-white py-3 px-4 rounded-xl font-medium disabled:opacity-50"
+                    className="flex-1 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 py-3 px-4 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
                   >
                     Cancel
                   </button>
@@ -718,7 +718,7 @@ export function MobileUserProfile({ onNavigate }: MobileUserProfileProps) {
       </div>
 
       {/* User Info Card at Bottom */}
-      <div className="px-4 pb-4">
+      <div className="px-4 pb-2">
         <div className="bg-gradient-to-r from-[#007AFF] to-[#00C897] rounded-2xl p-6">
           <div className="flex items-center">
             <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mr-4">

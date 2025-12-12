@@ -79,10 +79,24 @@ export function Footer({ onNavigate }: FooterProps = {}) {
           {/* Brand Section */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center group">
-              <div className="w-12 h-12 bg-gradient-to-br from-[#007AFF] to-[#0056CC] rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                <span className="text-white font-bold text-xl">F</span>
+              <img 
+                src="/logo/NewLOGO.png" 
+                alt="Facto Logo" 
+                className="w-20 h-20 object-contain transition-all duration-300 group-hover:scale-105"
+                style={{ 
+                  display: 'block', 
+                  flexShrink: 0
+                }}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const fallback = target.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'flex';
+                }}
+              />
+              <div className="w-20 h-20 bg-gradient-to-br from-[#007AFF] to-[#0056CC] rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105 hidden">
+                <span className="text-white font-bold text-3xl">F</span>
               </div>
-              <span className="ml-3 text-2xl font-bold">Facto</span>
             </div>
             
             <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} leading-relaxed`}>

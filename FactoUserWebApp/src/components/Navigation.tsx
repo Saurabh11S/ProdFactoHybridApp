@@ -283,16 +283,18 @@ export function Navigation({ currentPage, onNavigate, isShortsPage = false }: Na
             >
               {/* Logo Image */}
               <img 
-                src="/logo/NavLogo.png" 
+                src="/logo/NewLOGO.png" 
                 alt="Facto Logo" 
-                className={`${isMobile ? 'h-8 w-8' : (isWebApp ? 'h-9 w-9' : 'h-8 w-8')} object-contain transition-all duration-200 group-hover:scale-105`}
+                className={`${isMobile ? 'h-10 w-10' : (isWebApp ? 'h-16 w-16' : 'h-10 w-10')} object-contain transition-all duration-200 group-hover:scale-105`}
                 style={{ 
                   display: 'block', 
                   flexShrink: 0,
                   visibility: 'visible',
                   opacity: 1,
                   zIndex: 100000,
-                  filter: isHomePage && isMobile ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' : 'none'
+                  filter: isDarkMode 
+                    ? 'brightness(1.1) drop-shadow(0 2px 4px rgba(255,255,255,0.1))' 
+                    : (isHomePage && isMobile ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))')
                 }}
                 onError={(e) => {
                   // Fallback to default if logo not found
@@ -303,29 +305,9 @@ export function Navigation({ currentPage, onNavigate, isShortsPage = false }: Na
                 }}
               />
               {/* Fallback to default logo if image not found */}
-              <div className={`${isMobile ? 'w-8 h-8' : (isWebApp ? 'w-9 h-9' : 'w-8 h-8')} bg-gradient-to-br from-[#007AFF] to-[#0056CC] rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105 hidden`}>
-                <span className="text-white font-bold text-base">F</span>
+              <div className={`${isMobile ? 'w-10 h-10' : (isWebApp ? 'w-16 h-16' : 'w-10 h-10')} bg-gradient-to-br from-[#007AFF] to-[#0056CC] rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105 hidden`}>
+                <span className={`text-white font-bold ${isMobile ? 'text-lg' : 'text-2xl'}`}>F</span>
               </div>
-              {/* Enhanced FACTO Text - Always visible with proper contrast */}
-              <span className={`${isMobile ? 'ml-2' : (isWebApp ? 'ml-3' : 'ml-2')} relative inline-block`}>
-                <span className={`relative z-10 ${isMobile ? 'text-lg' : (isWebApp ? 'text-xl' : 'text-xl')} ${isWebApp ? 'font-bold' : 'font-extrabold'} tracking-tight ${
-                  isShortsPage
-                    ? isDarkMode 
-                      ? 'text-[#60A5FA]' // Bright blue for dark mode
-                      : 'text-[#007AFF]' // Blue for light mode on Shorts
-                    : isDarkMode 
-                      ? 'text-white' // White text for dark mode
-                      : 'bg-gradient-to-r from-[#007AFF] via-[#00C897] to-[#007AFF] bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-x group-hover:from-[#00C897] group-hover:via-[#007AFF] group-hover:to-[#00C897] transition-all duration-500'
-                }`}>
-                  FACTO
-                </span>
-                {/* Subtle glow effect on hover - only for light mode and non-Shorts */}
-                {!isDarkMode && !isShortsPage && (
-                  <span className={`absolute inset-0 ${isMobile ? 'text-lg' : 'text-2xl'} font-extrabold bg-gradient-to-r from-[#007AFF] via-[#00C897] to-[#007AFF] bg-clip-text text-transparent opacity-0 group-hover:opacity-30 blur-sm transition-opacity duration-500 pointer-events-none`}>
-                    FACTO
-                  </span>
-                )}
-              </span>
             </div>
             
             {/* WhatsApp Button - Mobile Only */}

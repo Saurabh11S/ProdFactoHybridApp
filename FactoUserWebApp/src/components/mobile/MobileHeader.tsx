@@ -462,14 +462,17 @@ export function MobileHeader({ currentPage, onNavigate }: MobileHeaderProps) {
           }}
         >
           <img 
-            src="/logo/NavLogo.png" 
+            src="/logo/NewLOGO.png" 
             alt="Facto Logo" 
-            className="h-12 w-12 object-contain transition-all duration-200 group-hover:scale-105"
+            className="h-16 w-16 object-contain transition-all duration-200 group-hover:scale-105"
             style={{ 
               display: 'block', 
               flexShrink: 0,
               visibility: 'visible',
-              opacity: 1
+              opacity: 1,
+              filter: isDarkMode 
+                ? 'brightness(1.15) drop-shadow(0 2px 6px rgba(255,255,255,0.15))' 
+                : 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
             }}
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -479,8 +482,8 @@ export function MobileHeader({ currentPage, onNavigate }: MobileHeaderProps) {
             }}
           />
           {/* Fallback to default logo if image not found */}
-          <div className="w-12 h-12 bg-gradient-to-br from-[#007AFF] to-[#0056CC] rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105 hidden">
-            <span className="text-white font-bold text-lg">F</span>
+          <div className="w-16 h-16 bg-gradient-to-br from-[#007AFF] to-[#0056CC] rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105 hidden">
+            <span className="text-white font-bold text-2xl">F</span>
           </div>
         </div>
 

@@ -1723,7 +1723,7 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
             </div>
             <button
               onClick={() => setShowMobileConfigurator(true)}
-              className="px-6 py-3 bg-[#1287ff] text-gray-900 dark:text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20"
+              className="px-6 py-3 bg-[#1287ff] text-white rounded-full font-semibold hover:bg-[#0f6fd6] transition-all shadow-lg shadow-[#1287ff]/20"
             >
               Configure
             </button>

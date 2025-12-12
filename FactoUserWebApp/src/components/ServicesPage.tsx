@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import axios from 'axios';
 import { fetchAllSubServices, fetchServices, SubService, Service } from '../api/services';
 import { API_BASE_URL } from '../config/apiConfig';
+import { ConsultationModal } from './ConsultationModal';
 
 type PageType = 'home' | 'services' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile';
 
@@ -111,6 +112,7 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
   // Mobile accordion state
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
+  const [showConsultationModal, setShowConsultationModal] = useState(false);
   
   // Detect mobile
   const isMobile = Capacitor.isNativePlatform() || (typeof window !== 'undefined' && window.innerWidth < 768);
@@ -1065,7 +1067,7 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button 
-              onClick={() => isAuthenticated ? window.open('tel:+91-9876543210', '_self') : onNavigate('login')}
+              onClick={() => isAuthenticated ? setShowConsultationModal(true) : onNavigate('login')}
               disabled={!isAuthenticated}
               className={`px-8 py-3 rounded-lg font-medium transition-colors ${
                 isAuthenticated 
@@ -1089,6 +1091,13 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
           </div>
         </div>
       </div>
+
+      {/* Consultation Modal */}
+      <ConsultationModal
+        isOpen={showConsultationModal}
+        onClose={() => setShowConsultationModal(false)}
+        category="service"
+      />
     </div>
   );
 }
