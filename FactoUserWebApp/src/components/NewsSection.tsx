@@ -70,7 +70,7 @@ export function NewsSection({ onNavigate }: NewsSectionProps) {
       id: blog._id,
       title: blog.title,
       excerpt: blog.content.length > 150 ? blog.content.substring(0, 150) + '...' : blog.content,
-      image: blog.contentType === 'image' ? blog.contentUrl : 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=250&fit=crop',
+      image: blog.contentType === 'image' ? blog.contentUrl : `https://via.placeholder.com/400x250/007AFF/FFFFFF?text=${encodeURIComponent(blog.title.substring(0, 30))}`,
       category: category,
       readTime: `${readTime} min read`,
       publishDate: publishDateText,

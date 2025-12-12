@@ -36,7 +36,6 @@ dist-ssr
 keystore.properties
 android/keystore.properties
 android/app/keystore.properties
-<<<<<<< HEAD
 
 # Android build artifacts
 android/app/build/
@@ -45,13 +44,7 @@ android/.gradle/
 android/capacitor-cordova-android-plugins/build/
 android/local.properties
 
-# Documentation files (optional - remove if needed)
-HOW_TO_UPGRADE_RENDER_PLAN.md
-RENDER_PLAN_RECOMMENDATIONS.md
-
 # Temporary files
 *.tmp
 *.temp
 .cache/
-=======
->>>>>>> 5f5c8b06feb0902b4f528e0151338f5ac63be3c9

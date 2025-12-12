@@ -8,6 +8,8 @@ interface MobileSignupPageProps {
 }
 
 export function MobileSignupPage({ onNavigate }: MobileSignupPageProps) {
+  // Dark mode is handled via CSS dark: classes
+  // const { isDarkMode } = useDarkMode();
   const { signup, verifyOTP, sendOTP, isLoading, error, clearError } = useAuth();
   
   const [signupMethod, setSignupMethod] = useState<'email' | 'phone'>('email');
@@ -220,24 +222,15 @@ export function MobileSignupPage({ onNavigate }: MobileSignupPageProps) {
   const displayError = error || localError;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md">
-        {/* Back to Home Button - Safe Area */}
-        <button
-          onClick={() => onNavigate('home')}
-          className="fixed top-4 left-4 pt-safe-top flex items-center gap-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg text-[#007AFF] hover:text-[#0056CC] active:opacity-70 transition-opacity z-50 border border-gray-200 dark:border-gray-700"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span className="text-sm font-medium">Back</span>
-        </button>
-
+    <div 
+      className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4 py-8"
+      style={{
+        paddingTop: 'calc(4rem + max(env(safe-area-inset-top, 24px), 24px) + 2rem)' // Header height + safe area + extra space
+      }}
+    >
+      <div className="w-full max-w-md relative">
         {/* Logo and Title */}
         <div className="text-center mb-8 animate-in" style={{ animationDelay: '0.1s' }}>
-          <div className="w-20 h-20 bg-gradient-to-br from-[#007AFF] to-[#0056CC] rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <span className="text-white font-bold text-2xl">F</span>
-          </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Create Account</h1>
           <p className="text-gray-600 dark:text-gray-400">Join us to get started</p>
         </div>
@@ -510,6 +503,19 @@ export function MobileSignupPage({ onNavigate }: MobileSignupPageProps) {
               Sign In
             </button>
           </p>
+        </div>
+
+        {/* Back to Home Button - Positioned at bottom with clear visibility */}
+        <div className="text-center mt-6 mb-4 animate-in" style={{ animationDelay: '0.5s' }}>
+          <button
+            onClick={() => onNavigate('home')}
+            className="flex items-center justify-center gap-2 bg-[#007AFF] text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:bg-[#0056CC] active:scale-95 transition-all mx-auto"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="text-base font-medium">Back to Home</span>
+          </button>
         </div>
       </div>
     </div>

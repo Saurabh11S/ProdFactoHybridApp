@@ -3,7 +3,10 @@ import { Capacitor } from '@capacitor/core';
 import { ArrowRight } from 'lucide-react';
 import { fetchServices, Service, fetchAllSubServices, SubService } from '../../api/services';
 import { MobileServiceCard } from './MobileServiceCard';
+import { AnimatedPromoBannerCarousel } from './AnimatedPromoBannerCarousel';
+import { getActiveBanners } from '../../config/promoBanners';
 import { useAuth } from '../../contexts/AuthContext';
+import { useDarkMode } from '../DarkModeContext';
 import { needsWakeUp, getWakeUpWaitTime, getRetryDelays } from '../../config/renderPlanConfig';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config/apiConfig';
@@ -16,6 +19,7 @@ interface MobileHomeScreenProps {
 
 export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
   const { isAuthenticated, token, user } = useAuth();
+  const { isDarkMode } = useDarkMode();
   const [services, setServices] = useState<Service[]>([]);
   const [userServices, setUserServices] = useState<SubService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -239,135 +243,38 @@ export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
   // };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] via-white to-[#F0F9FF] dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 relative overflow-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
-      {/* Animated Background Elements with Color Changes */}
+    <div className={`min-h-screen pb-24 relative overflow-hidden ${
+      isDarkMode 
+        ? 'bg-gray-900' 
+        : 'bg-white'
+    }`} style={{ WebkitOverflowScrolling: 'touch' }}>
+      {/* Simplified Background Elements - No Color Shifts */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Animated Gradient Background - Color Changing */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#007AFF]/10 via-[#00C897]/10 to-[#FFD166]/10 dark:from-[#007AFF]/20 dark:via-[#00C897]/20 dark:to-[#FFD166]/20 animate-gradient-shift"></div>
+        {/* Static Subtle Gradient Background - No Animation */}
+        <div className={`absolute inset-0 ${
+          isDarkMode 
+            ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900' 
+            : 'bg-gradient-to-br from-[#F9FAFB] via-white to-[#F0F9FF]'
+        }`}></div>
         
-        {/* Floating Orbs with Movement - Reduced for performance */}
-        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-gradient-to-br from-[#007AFF]/20 to-[#00C897]/20 rounded-full blur-3xl animate-float-orb-1" style={{ willChange: 'transform' }}></div>
-        <div className="absolute top-1/3 right-1/4 w-48 h-48 bg-gradient-to-br from-[#FFD166]/20 to-[#007AFF]/20 rounded-full blur-3xl animate-float-orb-2" style={{ willChange: 'transform' }}></div>
-        <div className="absolute bottom-1/4 left-1/3 w-40 h-40 bg-gradient-to-br from-[#00C897]/20 to-[#FFD166]/20 rounded-full blur-3xl animate-float-orb-3" style={{ willChange: 'transform' }}></div>
-        
-        {/* Glassmorphism Cards with Movement - Optimized */}
-        <div className="absolute top-20 right-10 w-20 h-20 bg-white/10 dark:bg-white/5 backdrop-blur-lg rounded-2xl border border-white/20 dark:border-white/10 shadow-lg animate-float-card-1" style={{ willChange: 'transform' }}>
-          <div className="w-full h-full flex items-center justify-center text-2xl">📊</div>
-        </div>
-        <div className="absolute bottom-32 left-10 w-16 h-16 bg-white/10 dark:bg-white/5 backdrop-blur-lg rounded-2xl border border-white/20 dark:border-white/10 shadow-lg animate-float-card-2" style={{ willChange: 'transform' }}>
-          <div className="w-full h-full flex items-center justify-center text-xl">💼</div>
-        </div>
-        
-        {/* Animated Gradient Mesh */}
-        <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-bl from-blue-50/30 dark:from-blue-900/20 to-transparent rounded-full blur-3xl transform rotate-12 animate-gradient-mesh-1"></div>
-        <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-gradient-to-tr from-green-50/20 dark:from-green-900/20 to-transparent rounded-full blur-3xl transform -rotate-12 animate-gradient-mesh-2"></div>
-        <div className="absolute top-1/2 left-1/2 w-full h-full bg-gradient-to-br from-purple-50/15 dark:from-purple-900/15 to-transparent rounded-full blur-3xl transform rotate-45 animate-gradient-mesh-3"></div>
+        {/* Subtle Static Orbs - Reduced Opacity */}
+        <div className={`absolute top-1/4 left-1/4 w-32 h-32 rounded-full blur-3xl ${
+          isDarkMode 
+            ? 'bg-[#007AFF]/5' 
+            : 'bg-[#007AFF]/5'
+        }`}></div>
+        <div className={`absolute top-1/3 right-1/4 w-48 h-48 rounded-full blur-3xl ${
+          isDarkMode 
+            ? 'bg-[#00C897]/5' 
+            : 'bg-[#00C897]/5'
+        }`}></div>
+        <div className={`absolute bottom-1/4 left-1/3 w-40 h-40 rounded-full blur-3xl ${
+          isDarkMode 
+            ? 'bg-[#FFD166]/5' 
+            : 'bg-[#FFD166]/5'
+        }`}></div>
       </div>
       
-      {/* CSS Animations */}
-      <style>{`
-        @keyframes gradient-shift {
-          0%, 100% {
-            background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(0, 200, 151, 0.1), rgba(255, 209, 102, 0.1));
-          }
-          33% {
-            background: linear-gradient(135deg, rgba(0, 200, 151, 0.1), rgba(255, 209, 102, 0.1), rgba(0, 122, 255, 0.1));
-          }
-          66% {
-            background: linear-gradient(135deg, rgba(255, 209, 102, 0.1), rgba(0, 122, 255, 0.1), rgba(0, 200, 151, 0.1));
-          }
-        }
-        .animate-gradient-shift {
-          animation: gradient-shift 8s ease-in-out infinite;
-        }
-        
-        @keyframes float-orb-1 {
-          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
-          50% { transform: translate(30px, -40px) scale(1.2); opacity: 0.8; }
-        }
-        .animate-float-orb-1 {
-          animation: float-orb-1 6s ease-in-out infinite;
-        }
-        
-        @keyframes float-orb-2 {
-          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
-          50% { transform: translate(-40px, 30px) scale(1.15); opacity: 0.7; }
-        }
-        .animate-float-orb-2 {
-          animation: float-orb-2 8s ease-in-out infinite;
-          animation-delay: 1s;
-        }
-        
-        @keyframes float-orb-3 {
-          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
-          50% { transform: translate(20px, 50px) scale(1.1); opacity: 0.8; }
-        }
-        .animate-float-orb-3 {
-          animation: float-orb-3 7s ease-in-out infinite;
-          animation-delay: 2s;
-        }
-        
-        @keyframes float-orb-4 {
-          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
-          50% { transform: translate(-30px, -20px) scale(1.25); opacity: 0.6; }
-        }
-        .animate-float-orb-4 {
-          animation: float-orb-4 9s ease-in-out infinite;
-          animation-delay: 0.5s;
-        }
-        
-        @keyframes float-orb-5 {
-          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
-          50% { transform: translate(50px, -30px) scale(1.18); opacity: 0.7; }
-        }
-        .animate-float-orb-5 {
-          animation: float-orb-5 10s ease-in-out infinite;
-          animation-delay: 1.5s;
-        }
-        
-        @keyframes float-card-1 {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          50% { transform: translate(15px, -20px) rotate(5deg); }
-        }
-        .animate-float-card-1 {
-          animation: float-card-1 4s ease-in-out infinite;
-        }
-        
-        @keyframes float-card-2 {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          50% { transform: translate(-20px, 15px) rotate(-5deg); }
-        }
-        .animate-float-card-2 {
-          animation: float-card-2 5s ease-in-out infinite;
-          animation-delay: 1s;
-        }
-        
-        @keyframes gradient-mesh-1 {
-          0%, 100% { transform: rotate(12deg) translate(0, 0); opacity: 0.3; }
-          50% { transform: rotate(15deg) translate(20px, -20px); opacity: 0.5; }
-        }
-        .animate-gradient-mesh-1 {
-          animation: gradient-mesh-1 12s ease-in-out infinite;
-        }
-        
-        @keyframes gradient-mesh-2 {
-          0%, 100% { transform: rotate(-12deg) translate(0, 0); opacity: 0.2; }
-          50% { transform: rotate(-15deg) translate(-20px, 20px); opacity: 0.4; }
-        }
-        .animate-gradient-mesh-2 {
-          animation: gradient-mesh-2 15s ease-in-out infinite;
-          animation-delay: 2s;
-        }
-        
-        @keyframes gradient-mesh-3 {
-          0%, 100% { transform: rotate(45deg) translate(0, 0); opacity: 0.15; }
-          50% { transform: rotate(50deg) translate(30px, 30px); opacity: 0.3; }
-        }
-        .animate-gradient-mesh-3 {
-          animation: gradient-mesh-3 18s ease-in-out infinite;
-          animation-delay: 1s;
-        }
-      `}</style>
 
       {/* Pull to Refresh Indicator */}
       {_refreshing && (
@@ -379,12 +286,32 @@ export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
         </div>
       )}
 
-      {/* Header Section */}
-      <div className="relative bg-gradient-to-b from-[#0a1628] via-[#0f1b2e] to-[#152238] text-white px-4 pt-20 pb-8 rounded-b-3xl animate-in z-10">
+      {/* Header Section - Respects safe area, content starts below status bar */}
+      {/* Background extends behind navigation bar, but content has proper safe area padding */}
+      <div className={`relative px-4 pb-8 rounded-b-3xl animate-in z-[1] ${
+        isDarkMode 
+          ? 'bg-gradient-to-b from-[#0a1628] via-[#0f1b2e] to-[#152238] text-white' 
+          : 'bg-gradient-to-b from-[#007AFF] via-[#0056CC] to-[#004299] text-white'
+      }`} style={{
+        // Only extend background behind navigation bar (4rem), NOT behind status bar
+        // This ensures the background goes behind the transparent nav bar but content stays below status bar
+        marginTop: `-4rem`,
+        // Content padding: navigation bar (4rem) + safe area + content spacing (1.5rem)
+        // This matches the wrapper's padding-top calculation to ensure content starts below status bar
+        paddingTop: Capacitor.isNativePlatform()
+          ? `calc(4rem + max(env(safe-area-inset-top, 40px), 40px) + 1.5rem)`
+          : `calc(4rem + 1.5rem)`
+      }}>
         {/* Trust Indicator Banner */}
         <div className="flex justify-center mb-6">
-          <div className="bg-[#0a1628] px-4 py-1.5 rounded-full border border-[#1a2a3a]">
-            <p className="text-sm text-[#60A5FA] font-medium">Trusted by 50.000+ Indians</p>
+          <div className={`px-4 py-1.5 rounded-full border ${
+            isDarkMode 
+              ? 'bg-[#0a1628] border-[#1a2a3a]' 
+              : 'bg-white/20 border-white/30'
+          }`}>
+            <p className={`text-sm font-medium ${
+              isDarkMode ? 'text-[#60A5FA]' : 'text-white'
+            }`}>Trusted by 50.000+ Indians</p>
           </div>
         </div>
 
@@ -406,14 +333,14 @@ export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
         <div className="flex gap-3 mt-6 mb-6">
           <button
             onClick={() => onNavigate('services', undefined, undefined, 'itr')}
-            className="flex-1 bg-[#007AFF] text-white py-3.5 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-98 transition-transform shadow-lg"
+            className="flex-1 bg-white text-[#007AFF] py-3.5 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-98 transition-transform shadow-lg"
           >
             <span>File ITR Now</span>
             <ArrowRight className="w-4 h-4" />
           </button>
           <button
             onClick={() => onNavigate('services', undefined, undefined, 'gst')}
-            className="flex-1 bg-transparent border-2 border-white text-white py-3.5 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-98 transition-transform"
+            className="flex-1 bg-black/40 backdrop-blur-sm border border-white/20 text-white py-3.5 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-98 transition-transform shadow-lg"
           >
             <span>Start GST Filing</span>
             <ArrowRight className="w-4 h-4" />
@@ -421,7 +348,9 @@ export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
         </div>
 
         {/* Statistics Section */}
-        <div className="flex items-center justify-between mt-6 pt-6 border-t border-white/10">
+        <div className={`flex items-center justify-between mt-6 pt-6 border-t ${
+          isDarkMode ? 'border-white/10' : 'border-white/20'
+        }`}>
           {/* Success Rate */}
           <div className="flex items-center gap-2">
             <span className="text-2xl">⭐</span>
@@ -450,6 +379,17 @@ export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
           </div>
         </div>
       </div>
+
+
+      {/* Promotional Banner - Single Static Banner */}
+      {getActiveBanners().length > 0 && (
+        <div className="relative z-20 -mt-4 mb-4">
+          <AnimatedPromoBannerCarousel
+            banners={getActiveBanners()}
+            onCTAClick={onNavigate}
+          />
+        </div>
+      )}
 
       {/* My Services Section (if authenticated) */}
       {isAuthenticated && (

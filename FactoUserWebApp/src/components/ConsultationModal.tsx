@@ -150,8 +150,20 @@ export function ConsultationModal({ isOpen, onClose, onSuccess, category = 'serv
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 z-[100000] flex items-center justify-center bg-black bg-opacity-50 p-4" 
+      style={{ 
+        zIndex: 100000,
+        paddingTop: 'calc(70px + 1rem)', // Navigation bar height (70px) + padding
+        paddingBottom: '1rem',
+        paddingLeft: '1rem',
+        paddingRight: '1rem'
+      }}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[calc(100vh-70px-2rem)] overflow-y-auto" 
+        style={{ position: 'relative', zIndex: 100001 }}
+      >
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-[#007AFF] to-[#00C897] text-white p-6 rounded-t-2xl flex items-center justify-between">
           <h2 className="text-2xl font-bold">Schedule Free Consultation</h2>

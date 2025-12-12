@@ -54,6 +54,8 @@ interface PaymentOrder {
 }
 
 export function MobileUserProfile({ onNavigate }: MobileUserProfileProps) {
+  // Dark mode is handled via CSS dark: classes
+  // const { isDarkMode } = useDarkMode();
   const { user, token, isAuthenticated, refreshUser, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'services' | 'courses' | 'payments'>('profile');
   const [userPurchases, setUserPurchases] = useState<UserPurchase[]>([]);

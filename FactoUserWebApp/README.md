@@ -253,8 +253,6 @@ docker run -p 80:80 facto-web-app
 
 **Quick Sync:** Use `npm run build:mobile` to build and sync in one command.
 
-For detailed Android sync instructions, see [SYNC_TO_ANDROID.md](./SYNC_TO_ANDROID.md).
-
 ## Project Structure
 
 ```

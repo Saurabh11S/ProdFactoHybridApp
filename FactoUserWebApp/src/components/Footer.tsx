@@ -1,3 +1,5 @@
+import { useDarkMode } from './DarkModeContext';
+
 type PageType = 'home' | 'services' | 'learning' | 'shorts' | 'updates' | 'login' | 'signup' | 'service-details' | 'documents' | 'payment' | 'profile' | 'course-payment' | 'course-details' | 'terms' | 'privacy';
 
 interface FooterProps {
@@ -5,6 +7,7 @@ interface FooterProps {
 }
 
 export function Footer({ onNavigate }: FooterProps = {}) {
+  const { isDarkMode } = useDarkMode();
   const currentYear = new Date().getFullYear();
 
   const footerSections = {
@@ -63,7 +66,7 @@ export function Footer({ onNavigate }: FooterProps = {}) {
   };
 
   return (
-    <footer className="bg-[#1F2937] dark:bg-gray-950 text-white relative overflow-hidden">
+    <footer className={`${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} ${isDarkMode ? 'text-white' : 'text-gray-900'} relative overflow-hidden`}>
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-[#007AFF] to-[#00C897] rounded-full blur-3xl"></div>
@@ -82,7 +85,7 @@ export function Footer({ onNavigate }: FooterProps = {}) {
               <span className="ml-3 text-2xl font-bold">Facto</span>
             </div>
             
-            <p className="text-gray-300 leading-relaxed">
+            <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} leading-relaxed`}>
               Your trusted partner for comprehensive financial services in India. 
               From tax filing to business registration, we make finance simple and accessible for everyone.
             </p>
@@ -95,7 +98,7 @@ export function Footer({ onNavigate }: FooterProps = {}) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                 </div>
-                <span className="text-gray-300 group-hover:text-white transition-colors duration-300">+91-800-123-4567</span>
+                <span className={`${isDarkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors duration-300`}>+91-800-123-4567</span>
               </div>
               <div className="flex items-center group cursor-pointer">
                 <div className="w-10 h-10 bg-[#00C897]/20 rounded-lg flex items-center justify-center mr-3 group-hover:bg-[#00C897]/30 transition-colors duration-300">
@@ -103,7 +106,7 @@ export function Footer({ onNavigate }: FooterProps = {}) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <span className="text-gray-300 group-hover:text-white transition-colors duration-300">support@facto.in</span>
+                <span className={`${isDarkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors duration-300`}>support@facto.in</span>
               </div>
               <div className="flex items-center group cursor-pointer">
                 <div className="w-10 h-10 bg-[#FFD166]/20 rounded-lg flex items-center justify-center mr-3 group-hover:bg-[#FFD166]/30 transition-colors duration-300">
@@ -112,7 +115,7 @@ export function Footer({ onNavigate }: FooterProps = {}) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
-                <span className="text-gray-300 group-hover:text-white transition-colors duration-300">Bangalore, Karnataka, India</span>
+                <span className={`${isDarkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-gray-900'} transition-colors duration-300`}>Bangalore, Karnataka, India</span>
               </div>
             </div>
 
@@ -127,7 +130,7 @@ export function Footer({ onNavigate }: FooterProps = {}) {
                 <a
                   key={social.name}
                   href="#"
-                  className={`group w-12 h-12 bg-gray-700/50 hover:bg-gray-600/50 backdrop-blur-lg rounded-xl flex items-center justify-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-gray-600/50 hover:border-gray-500/50 ${social.color}`}
+                  className={`group w-12 h-12 ${isDarkMode ? 'bg-gray-700/50 hover:bg-gray-600/50 border-gray-600/50 hover:border-gray-500/50' : 'bg-gray-200 hover:bg-gray-300 border-gray-300 hover:border-gray-400'} backdrop-blur-lg rounded-xl flex items-center justify-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border ${social.color}`}
                   aria-label={social.name}
                 >
                   <svg className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
@@ -141,13 +144,13 @@ export function Footer({ onNavigate }: FooterProps = {}) {
           {/* Links Sections */}
           {Object.entries(footerSections).map(([key, section]) => (
             <div key={key} className="space-y-4">
-              <h4 className="font-bold text-lg text-white">{section.title}</h4>
+              <h4 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{section.title}</h4>
               <ul className="space-y-3">
                 {section.links.map((link, index) => (
                   <li key={index}>
                     <a
                       href="#"
-                      className="text-gray-300 hover:text-[#007AFF] transition-all duration-200 text-sm group flex items-center"
+                      className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} hover:text-[#007AFF] transition-all duration-200 text-sm group flex items-center`}
                     >
                       <span className="transform group-hover:translate-x-1 transition-transform duration-200">{link}</span>
                       <svg className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -163,7 +166,7 @@ export function Footer({ onNavigate }: FooterProps = {}) {
       </div>
 
       {/* Trust Badges Section */}
-      <div className="border-t border-gray-700/50 bg-gray-800/30 backdrop-blur-lg">
+      <div className={`border-t ${isDarkMode ? 'border-gray-700/50 bg-gray-800/30' : 'border-gray-200 bg-gray-100/50'} backdrop-blur-lg`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center">
             <div className="flex items-center justify-center space-x-3 group cursor-pointer">
@@ -173,8 +176,8 @@ export function Footer({ onNavigate }: FooterProps = {}) {
                 </svg>
               </div>
               <div>
-                <div className="text-white font-medium text-sm">SSL Secured</div>
-                <div className="text-gray-400 text-xs">256-bit encryption</div>
+                <div className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-medium text-sm`}>SSL Secured</div>
+                <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-xs`}>256-bit encryption</div>
               </div>
             </div>
             <div className="flex items-center justify-center space-x-3 group cursor-pointer">
@@ -184,8 +187,8 @@ export function Footer({ onNavigate }: FooterProps = {}) {
                 </svg>
               </div>
               <div>
-                <div className="text-white font-medium text-sm">Verified CA Partners</div>
-                <div className="text-gray-400 text-xs">Certified professionals</div>
+                <div className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-medium text-sm`}>Verified CA Partners</div>
+                <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-xs`}>Certified professionals</div>
               </div>
             </div>
             <div className="flex items-center justify-center space-x-3 group cursor-pointer">
@@ -195,8 +198,8 @@ export function Footer({ onNavigate }: FooterProps = {}) {
                 </svg>
               </div>
               <div>
-                <div className="text-white font-medium text-sm">ISO 27001 Certified</div>
-                <div className="text-gray-400 text-xs">International standard</div>
+                <div className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-medium text-sm`}>ISO 27001 Certified</div>
+                <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-xs`}>International standard</div>
               </div>
             </div>
             <div className="flex items-center justify-center space-x-3 group cursor-pointer">
@@ -206,8 +209,8 @@ export function Footer({ onNavigate }: FooterProps = {}) {
                 </svg>
               </div>
               <div>
-                <div className="text-white font-medium text-sm">24/7 Support</div>
-                <div className="text-gray-400 text-xs">Always available</div>
+                <div className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-medium text-sm`}>24/7 Support</div>
+                <div className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-xs`}>Always available</div>
               </div>
             </div>
           </div>
@@ -215,10 +218,10 @@ export function Footer({ onNavigate }: FooterProps = {}) {
       </div>
 
       {/* Bottom Footer */}
-      <div className="border-t border-gray-700/50 bg-gray-900/50 backdrop-blur-lg">
+      <div className={`border-t ${isDarkMode ? 'border-gray-700/50 bg-gray-900/50' : 'border-gray-200 bg-gray-100'} backdrop-blur-lg`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="md:flex md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center justify-center md:justify-start space-x-6 text-sm text-gray-300">
+            <div className={`flex flex-wrap items-center justify-center md:justify-start space-x-6 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
               <a 
                 href="#" 
                 onClick={(e) => {
@@ -244,10 +247,10 @@ export function Footer({ onNavigate }: FooterProps = {}) {
               <a href="#" className="hover:text-[#007AFF] transition-colors duration-200 hover:underline">Disclaimer</a>
             </div>
             <div className="mt-4 md:mt-0 text-center md:text-right">
-              <p className="text-sm text-gray-300">
+              <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                 © {currentYear} Facto Financial Services. All rights reserved.
               </p>
-              <p className="text-xs text-gray-400 mt-1 flex items-center justify-center md:justify-end">
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-1 flex items-center justify-center md:justify-end`}>
                 Made with <span className="text-red-500 mx-1 animate-pulse">❤️</span> in India | CIN: U74999KA2020PTC123456
               </p>
             </div>

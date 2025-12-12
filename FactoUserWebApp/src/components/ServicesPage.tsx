@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { Capacitor } from '@capacitor/core';
 import axios from 'axios';
 import { fetchAllSubServices, fetchServices, SubService, Service } from '../api/services';
 import { API_BASE_URL } from '../config/apiConfig';
@@ -24,6 +25,79 @@ interface ServicesPageProps {
   initialFilter?: string;
 }
 
+// Helper function to get service icon based on title
+const getServiceIcon = (title: string): string => {
+  const titleLower = title.toLowerCase();
+  if (titleLower.includes('itr') || titleLower.includes('income tax')) return '📊';
+  if (titleLower.includes('gst')) return '🏢';
+  if (titleLower.includes('investment')) return '📈';
+  if (titleLower.includes('tax') || titleLower.includes('consultancy')) return '💡';
+  if (titleLower.includes('notice') || titleLower.includes('scrutiny')) return '📋';
+  if (titleLower.includes('registration')) return '🏆';
+  if (titleLower.includes('outsourcing')) return '💼';
+  return '📄';
+};
+
+// Helper function to get service color scheme based on title
+const getServiceColorScheme = (title: string) => {
+  const titleLower = title.toLowerCase();
+  if (titleLower.includes('itr') || titleLower.includes('income tax')) {
+    return {
+      color: 'from-blue-500 to-blue-600',
+      bgColor: 'bg-gradient-to-br from-blue-500 to-blue-600',
+      textColor: 'text-blue-600 dark:text-blue-400',
+      borderColor: 'border-blue-200 dark:border-blue-700',
+    };
+  }
+  if (titleLower.includes('gst')) {
+    return {
+      color: 'from-green-500 to-green-600',
+      bgColor: 'bg-gradient-to-br from-green-500 to-green-600',
+      textColor: 'text-green-600 dark:text-green-400',
+      borderColor: 'border-green-200 dark:border-green-700',
+    };
+  }
+  if (titleLower.includes('investment')) {
+    return {
+      color: 'from-purple-500 to-purple-600',
+      bgColor: 'bg-gradient-to-br from-purple-500 to-purple-600',
+      textColor: 'text-purple-600 dark:text-purple-400',
+      borderColor: 'border-purple-200 dark:border-purple-700',
+    };
+  }
+  if (titleLower.includes('tax') || titleLower.includes('consultancy')) {
+    return {
+      color: 'from-orange-500 to-orange-600',
+      bgColor: 'bg-gradient-to-br from-orange-500 to-orange-600',
+      textColor: 'text-orange-600 dark:text-orange-400',
+      borderColor: 'border-orange-200 dark:border-orange-700',
+    };
+  }
+  if (titleLower.includes('notice') || titleLower.includes('scrutiny')) {
+    return {
+      color: 'from-red-500 to-red-600',
+      bgColor: 'bg-gradient-to-br from-red-500 to-red-600',
+      textColor: 'text-red-600 dark:text-red-400',
+      borderColor: 'border-red-200 dark:border-red-700',
+    };
+  }
+  if (titleLower.includes('registration')) {
+    return {
+      color: 'from-indigo-500 to-indigo-600',
+      bgColor: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
+      textColor: 'text-indigo-600 dark:text-indigo-400',
+      borderColor: 'border-indigo-200 dark:border-indigo-700',
+    };
+  }
+  // Default color scheme
+  return {
+    color: 'from-teal-500 to-teal-600',
+    bgColor: 'bg-gradient-to-br from-teal-500 to-teal-600',
+    textColor: 'text-teal-600 dark:text-teal-400',
+    borderColor: 'border-teal-200 dark:border-teal-700',
+  };
+};
+
 export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
   const { isAuthenticated, user, token } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState(initialFilter || 'all');
@@ -33,6 +107,22 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
   const [servicesLoading, setServicesLoading] = useState(true);
   const [_loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Mobile accordion state
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
+  
+  // Detect mobile
+  const isMobile = Capacitor.isNativePlatform() || (typeof window !== 'undefined' && window.innerWidth < 768);
+  
+  // Expand first category by default on mobile
+  useEffect(() => {
+    if (isMobile && services.length > 0 && expandedCategories.size === 0) {
+      const firstCategory = getCategoryFromServiceId(services[0].serviceId, services[0]);
+      const firstCategoryId = firstCategory.toLowerCase().replace(/\s+/g, '-');
+      setExpandedCategories(new Set([firstCategoryId]));
+    }
+  }, [isMobile, services, expandedCategories.size]);
 
   // Update selectedCategory when initialFilter changes
   useEffect(() => {
@@ -575,7 +665,9 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 pt-16">
+    <div className={`min-h-screen bg-gradient-to-br from-[#F9FAFB] to-white dark:from-gray-900 dark:to-gray-800 pt-16 ${
+      isMobile ? 'pb-24' : ''
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="text-center mb-12">
@@ -604,7 +696,214 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
           ))}
         </div>
 
-        {/* Services Grid */}
+        {/* Mobile Accordion View */}
+        {isMobile && !servicesLoading && filteredServices.length > 0 ? (
+          <div className="space-y-3 mb-8">
+            {/* Group services by category */}
+            {Array.from(new Set(filteredServices.map(s => getCategoryFromServiceId(s.serviceId, s)))).map((category) => {
+              const categoryServices = filteredServices.filter(s => getCategoryFromServiceId(s.serviceId, s) === category);
+              const categoryId = category.toLowerCase().replace(/\s+/g, '-');
+              const isCategoryExpanded = expandedCategories.has(categoryId);
+              
+              return (
+                <div
+                  key={categoryId}
+                  className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
+                >
+                  {/* Category Header */}
+                  <button
+                    onClick={() => {
+                      const newExpanded = new Set(expandedCategories);
+                      if (isCategoryExpanded) {
+                        newExpanded.delete(categoryId);
+                        // Also collapse all services in this category
+                        const newExpandedServices = new Set(expandedServices);
+                        categoryServices.forEach(s => newExpandedServices.delete(s._id));
+                        setExpandedServices(newExpandedServices);
+                      } else {
+                        newExpanded.add(categoryId);
+                      }
+                      setExpandedCategories(newExpanded);
+                    }}
+                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#007AFF] to-[#00C897] flex items-center justify-center text-white font-bold text-sm">
+                        {category.charAt(0)}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900 dark:text-white text-base">
+                          {category}
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {categoryServices.length} service{categoryServices.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <svg
+                      className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform duration-300 ${
+                        isCategoryExpanded ? 'rotate-180' : ''
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {/* Category Services - Accordion */}
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      isCategoryExpanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
+                    }`}
+                  >
+                    <div className="px-4 pb-4 space-y-2">
+                      {categoryServices.map((service) => {
+                        const isServiceExpanded = expandedServices.has(service._id);
+                        const colorScheme = getServiceColorScheme(service.title);
+                        const icon = getServiceIcon(service.title);
+                        
+                        return (
+                          <div
+                            key={service._id}
+                            className="bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+                          >
+                            {/* Service Header */}
+                            <button
+                              onClick={() => {
+                                const newExpanded = new Set(expandedServices);
+                                if (isServiceExpanded) {
+                                  newExpanded.delete(service._id);
+                                } else {
+                                  newExpanded.add(service._id);
+                                }
+                                setExpandedServices(newExpanded);
+                              }}
+                              className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br ${colorScheme.bgColor} flex items-center justify-center text-lg shadow-sm`}>
+                                  {icon}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm truncate">
+                                    {service.title}
+                                  </h4>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+                                    {service.description}
+                                  </p>
+                                </div>
+                              </div>
+                              <svg
+                                className={`flex-shrink-0 w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform duration-200 ml-2 ${
+                                  isServiceExpanded ? 'rotate-180' : ''
+                                }`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                            
+                            {/* Service Details - Accordion */}
+                            <div
+                              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                                isServiceExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
+                              }`}
+                            >
+                              <div className="px-3 pb-3 space-y-3 border-t border-gray-200 dark:border-gray-700">
+                                {/* Description */}
+                                <p className="text-sm text-gray-600 dark:text-gray-400 pt-3">
+                                  {service.description}
+                                </p>
+                                
+                                {/* Features */}
+                                {service.features && service.features.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                      Features:
+                                    </p>
+                                    <ul className="space-y-1.5">
+                                      {service.features.map((feature, idx) => (
+                                        <li key={idx} className="flex items-start text-xs text-gray-600 dark:text-gray-400">
+                                          <svg className="w-3.5 h-3.5 text-[#00C897] mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                          </svg>
+                                          <span className="flex-1">{feature}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                
+                                {/* Service Info */}
+                                <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                                  <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                                    <div className="flex items-center gap-1">
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      {service.period}
+                                    </div>
+                                    {service.price > 0 ? (
+                                      <div className="font-semibold text-[#007AFF]">
+                                        ₹{service.price}
+                                      </div>
+                                    ) : (
+                                      <div className="text-gray-400">Contact for pricing</div>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {/* Action Buttons */}
+                                <div className="grid grid-cols-2 gap-2 pt-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onNavigate('service-details', service._id);
+                                    }}
+                                    className="py-2 px-3 rounded-lg text-xs font-medium border border-[#007AFF] text-[#007AFF] hover:bg-[#007AFF] hover:text-white transition-colors"
+                                  >
+                                    View Details
+                                  </button>
+                                  {isServicePurchased(service._id) ? (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onNavigate('profile');
+                                      }}
+                                      className="py-2 px-3 rounded-lg text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                    >
+                                      View Profile
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        isAuthenticated ? onNavigate('service-details', service._id) : onNavigate('login');
+                                      }}
+                                      className="py-2 px-3 rounded-lg text-xs font-medium bg-gradient-to-r from-[#007AFF] to-[#0056CC] text-white hover:shadow-lg transition-all"
+                                    >
+                                      {isAuthenticated ? 'Get Quote' : 'Login'}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {/* Services Grid - Desktop View */}
         {servicesLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {Array.from({ length: 6 }).map((_, index) => (
@@ -645,7 +944,7 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
               </div>
             </div>
           </div>
-        ) : (
+        ) : !isMobile ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredServices.map((service) => (
               <div
@@ -754,7 +1053,7 @@ export function ServicesPage({ onNavigate, initialFilter }: ServicesPageProps) {
               </div>
             ))}
           </div>
-        )}
+        ) : null}
 
         {/* Bottom CTA Section */}
         <div className="mt-16 text-center bg-gradient-to-r from-[#007AFF]/10 to-[#00C897]/10 dark:from-[#007AFF]/20 dark:to-[#00C897]/20 rounded-2xl p-8 border border-[#007AFF]/20 dark:border-[#007AFF]/30">

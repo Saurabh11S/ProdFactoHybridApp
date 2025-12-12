@@ -2,11 +2,20 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <!-- Status bar configuration - Capacitor StatusBar plugin will handle runtime changes -->
+        <!-- Set status bar to transparent to allow JavaScript control -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <!-- Default to light status bar icons (will be overridden by JavaScript for light theme) -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:fitsSystemWindows">false</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
     </style>
 
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
@@ -14,12 +23,28 @@
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
-        <item name="android:windowTranslucentStatus">true</item>
+        <!-- Status bar configuration - Capacitor StatusBar plugin will handle runtime changes -->
+        <!-- Set status bar to NOT overlay content (overlay: false) to ensure system UI is visible -->
+        <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <!-- Set status bar to transparent to allow JavaScript control -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <!-- Default to light status bar icons (will be overridden by JavaScript for light theme) -->
+        <item name="android:windowLightStatusBar">false</item>
+        <!-- Allow content to draw behind status bar -->
+        <item name="android:fitsSystemWindows">false</item>
     </style>
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <!-- Status bar configuration for splash screen -->
+        <!-- Set status bar to NOT overlay content to ensure system UI is visible -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <!-- Default to light status bar icons for splash (dark background) -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:fitsSystemWindows">false</item>
     </style>
 </resources>

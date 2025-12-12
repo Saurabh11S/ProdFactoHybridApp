@@ -10,6 +10,8 @@ interface MobileLearningProps {
 }
 
 export function MobileLearning({ onNavigate }: MobileLearningProps) {
+  // Dark mode is handled via CSS dark: classes
+  // const { isDarkMode } = useDarkMode();
   const [courses, setCourses] = useState<Course[]>([]);
   const [myCourses, setMyCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,8 +122,8 @@ export function MobileLearning({ onNavigate }: MobileLearningProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 pb-20 pt-16">
-        <div className="px-4 py-6">
+      <div className="min-h-screen bg-white dark:bg-gray-900 pb-24 pt-4">
+        <div className="px-4 py-3">
           <div className="animate-pulse space-y-4">
             {[1, 2].map((i) => (
               <div key={i} className="bg-gray-200 dark:bg-gray-800 rounded-2xl h-64"></div>
@@ -133,14 +135,14 @@ export function MobileLearning({ onNavigate }: MobileLearningProps) {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 pb-20 pt-20">
+    <div className="min-h-screen bg-white dark:bg-gray-900 pb-24 pt-4" style={{ position: 'relative', zIndex: 1 }}>
       {/* Header */}
-      <div className="px-4 py-6 border-b border-gray-200 dark:border-gray-800">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Academy</h1>
       </div>
 
       {/* Courses List */}
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 py-2 space-y-4">
         {error ? (
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 text-center border border-red-200 dark:border-red-800">
             <div className="mb-4">

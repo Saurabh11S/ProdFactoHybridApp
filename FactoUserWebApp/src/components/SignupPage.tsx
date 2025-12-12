@@ -225,11 +225,6 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
 
         {/* Header */}
         <div className="text-center">
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#007AFF] to-[#0056CC] rounded-2xl flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-2xl">F</span>
-            </div>
-          </div>
           <h2 className="text-3xl font-bold text-[#1F2937] dark:text-white mb-2">
             Create Your Account
           </h2>

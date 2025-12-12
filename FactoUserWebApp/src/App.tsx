@@ -28,6 +28,7 @@ import { SessionWarning } from './components/SessionWarning';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { useAppState } from './hooks/useAppState';
 import { BottomTabBar } from './components/mobile/BottomTabBar';
+import { MobileHeader } from './components/mobile/MobileHeader';
 import { MobileHomeScreen } from './components/mobile/MobileHomeScreen';
 import { MobileShorts } from './components/mobile/MobileShorts';
 import { MobileLandingPage } from './components/mobile/MobileLandingPage';
@@ -45,7 +46,20 @@ function AppContent() {
   const [selectedServiceId, setSelectedServiceId] = useState<string>('itr-1');
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [servicesFilter, setServicesFilter] = useState<string | undefined>(undefined);
-  const [isMobile, setIsMobile] = useState(false);
+  // Initialize isMobile immediately to ensure navigation bar shows on native platform
+  const [isMobile, setIsMobile] = useState(() => {
+    try {
+      const isNative = Capacitor.isNativePlatform();
+      const isMobileWidth = typeof window !== 'undefined' && window.innerWidth < 768;
+      const result = isNative || isMobileWidth;
+      console.log('App.tsx: Initial isMobile state:', { isNative, isMobileWidth, result });
+      return result;
+    } catch (e) {
+      console.error('App.tsx: Error checking mobile:', e);
+      // Fallback if Capacitor not initialized yet
+      return typeof window !== 'undefined' && window.innerWidth < 768;
+    }
+  });
   const [showLanding, setShowLanding] = useState(false);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
@@ -277,14 +291,32 @@ function AppContent() {
   // Detect mobile platform and check if landing page should be shown
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(Capacitor.isNativePlatform() || window.innerWidth < 768);
+      try {
+        const isNative = Capacitor.isNativePlatform();
+        const isMobileWidth = typeof window !== 'undefined' && window.innerWidth < 768;
+        const result = isNative || isMobileWidth;
+        console.log('App.tsx: checkMobile useEffect:', { isNative, isMobileWidth, result, windowWidth: typeof window !== 'undefined' ? window.innerWidth : 'N/A' });
+        setIsMobile(result);
+      } catch (e) {
+        console.error('App.tsx: Error in checkMobile:', e);
+        // Fallback if Capacitor not initialized yet
+        const fallback = typeof window !== 'undefined' && window.innerWidth < 768;
+        console.log('App.tsx: Using fallback isMobile:', fallback);
+        setIsMobile(fallback);
+      }
     };
+    
+    // Update on mount and resize
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
     // Check if landing page has been shown before
-    if (isMobile && !localStorage.getItem('landingShown')) {
-      setShowLanding(true);
+    try {
+      if (isMobile && typeof localStorage !== 'undefined' && !localStorage.getItem('landingShown')) {
+        setShowLanding(true);
+      }
+    } catch (e) {
+      console.error('Error checking landing page:', e);
     }
     
     return () => window.removeEventListener('resize', checkMobile);
@@ -359,47 +391,93 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen relative bg-background text-foreground">
-      {/* Offline Indicator */}
-      <OfflineIndicator />
+    <>
+      {/* Top Navigation - Fixed at top, completely outside content flow */}
+      {/* Show Navigation on web, MobileHeader on native platforms */}
+      {(() => {
+        const isNative = Capacitor.isNativePlatform();
+        console.log('App.tsx: Rendering header', { isNative, currentPage, platform: Capacitor.getPlatform() });
+        return isNative ? (
+          <MobileHeader 
+            currentPage={currentPage}
+            onNavigate={handleNavigation}
+          />
+        ) : (
+          <Navigation 
+            currentPage={currentPage}
+            onNavigate={handleNavigation}
+            isShortsPage={currentPage === 'shorts'}
+          />
+        );
+      })()}
       
-      {/* Session Warning */}
-      <SessionWarning />
-      
-      {/* Top Navigation - Minimal on mobile, full on desktop */}
-      <Navigation 
-        currentPage={currentPage}
-        onNavigate={handleNavigation}
-        isShortsPage={currentPage === 'shorts'}
-      />
+      <div style={{ position: 'relative', minHeight: '100vh', overflowX: 'hidden', backgroundColor: 'transparent' }}>
+        <div className="min-h-screen relative bg-background text-foreground" style={{ overflowX: 'hidden', position: 'relative', backgroundColor: 'transparent' }}>
+        {/* Offline Indicator */}
+        <OfflineIndicator />
+        
+        {/* Session Warning */}
+        <SessionWarning />
 
-      {/* Page Content - Optimized for smooth transitions */}
-      <div 
-        className={`w-full ${currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'shorts' ? (isMobile ? 'pt-16 pb-20' : 'pt-16 md:pt-16') : currentPage === 'shorts' ? '' : ''}`}
-        style={{ 
-          willChange: currentPage !== 'shorts' ? 'contents' : 'auto',
-          WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-y pinch-zoom' // Allow vertical scrolling and pinch zoom, but let horizontal swipes be handled
-        }}
-      >
-        {renderPage()}
+        {/* Page Content - Optimized for smooth transitions */}
+        <div 
+          className={`w-full ${
+            currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'shorts' 
+              ? (Capacitor.isNativePlatform()
+                  ? `pt-[calc(4rem+max(env(safe-area-inset-top,24px),24px))]` // Header height (4rem) + safe area padding on native
+                  : isMobile 
+                    ? `pt-[calc(4rem+max(env(safe-area-inset-top,40px),40px))]` 
+                    : 'pt-16 md:pt-16') 
+              : currentPage === 'shorts' 
+                ? '' 
+                : ''
+          }`}
+          style={{ 
+            willChange: currentPage !== 'shorts' ? 'contents' : 'auto',
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-y pinch-zoom', // Allow vertical scrolling and pinch zoom, but let horizontal swipes be handled
+            paddingTop: isMobile && currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'shorts' && currentPage !== 'terms' && currentPage !== 'privacy'
+              ? `calc(4rem + max(env(safe-area-inset-top, 40px), 40px))` // 64px (h-16) + safe area top (min 40px for Android with notch)
+              : undefined,
+            paddingBottom: isMobile && currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'shorts' && currentPage !== 'terms' && currentPage !== 'privacy'
+              ? 'calc(4rem + env(safe-area-inset-bottom, 0px))' // 64px (h-16) + safe area bottom
+              : undefined,
+            position: 'relative',
+            zIndex: 1
+          }}
+        >
+          {renderPage()}
+        </div>
       </div>
 
-      {/* Bottom Tab Bar - Mobile only */}
-      {isMobile && currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'terms' && currentPage !== 'privacy' && (
-        <BottomTabBar 
-          currentPage={currentPage}
-          onNavigate={handleNavigation}
-        />
-      )}
+        {/* Bottom Tab Bar - Mobile only - Fixed to viewport */}
+        {(() => {
+          // Always show on native platform, or if isMobile is true
+          const isNative = Capacitor.isNativePlatform();
+          const shouldShowNav = (isNative || isMobile) && currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'terms' && currentPage !== 'privacy';
+          console.log('App.tsx: BottomTabBar render check:', { 
+            isMobile, 
+            isNative,
+            currentPage, 
+            shouldShowNav,
+            windowWidth: typeof window !== 'undefined' ? window.innerWidth : 'N/A'
+          });
+          return shouldShowNav ? (
+            <BottomTabBar 
+              currentPage={currentPage}
+              onNavigate={handleNavigation}
+            />
+          ) : null;
+        })()}
 
-      {/* WhatsApp Chat Button - Desktop only (mobile shows in nav) */}
-      {!isMobile && currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'terms' && currentPage !== 'privacy' && (
-        <WhatsAppChatButton 
-          isMobile={false}
-        />
-      )}
-    </div>
+        {/* WhatsApp Chat Button - Desktop only (mobile shows in nav) */}
+        {!isMobile && currentPage !== 'login' && currentPage !== 'signup' && currentPage !== 'terms' && currentPage !== 'privacy' && (
+          <WhatsAppChatButton 
+            isMobile={false}
+          />
+        )}
+      </div>
+    </>
   );
 }
 

@@ -2,6 +2,104 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CRITICAL: Ensure top navigation bar is always visible - Highest Priority */
+#top-navigation-bar {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: 100vw !important;
+  z-index: 99999 !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  pointer-events: auto !important;
+  overflow: visible !important;
+  margin: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* CRITICAL: Ensure mobile header is always visible and fixed during scroll - Highest Priority */
+#mobile-header,
+header#mobile-header,
+header[id="mobile-header"] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: 100vw !important;
+  z-index: 99999 !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  will-change: transform !important;
+  isolation: isolate !important;
+  pointer-events: auto !important;
+  overflow: visible !important;
+  margin: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  clip-path: none !important;
+  clip: auto !important;
+  -webkit-clip-path: none !important;
+}
+
+/* Prevent parent containers from affecting mobile header */
+body > #mobile-header,
+body > header#mobile-header {
+  position: fixed !important;
+  top: 0 !important;
+  z-index: 99999 !important;
+}
+
+/* Ensure no parent transforms affect the header */
+* {
+  /* Don't create containing blocks for fixed elements */
+}
+
+/* Override any transforms on parent elements that might affect fixed positioning */
+html,
+body {
+  transform: none !important;
+  -webkit-transform: none !important;
+}
+
+/* Ensure mobile header stays visible even when scrolling - Additional safeguards */
+header[data-mobile-header="true"],
+header#mobile-header[data-mobile-header="true"] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 99999 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: block !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+}
+
+/* Prevent any scroll-based hiding */
+@media (max-width: 768px) {
+  #mobile-header {
+    position: fixed !important;
+    top: 0 !important;
+    transform: translateY(0) !important;
+    -webkit-transform: translateY(0) translateZ(0) !important;
+  }
+}
+
+
 /* Performance Optimizations for Mobile */
 * {
   -webkit-tap-highlight-color: transparent;
@@ -12,6 +110,7 @@ html {
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
   overscroll-behavior: contain;
+  /* DO NOT use transform here - it creates a containing block for fixed positioning */
 }
 
 body {
@@ -19,6 +118,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* DO NOT use transform here - it creates a containing block for fixed positioning */
 }
 
 /* Smooth Scrolling for Mobile */
@@ -32,9 +132,21 @@ body {
     will-change: transform, opacity;
   }
   
-  /* Optimize scrolling containers */
-  [class*="overflow"] {
+  /* Optimize scrolling containers - only when actively scrolling */
+  .scrolling {
     will-change: scroll-position;
+  }
+  
+  /* Remove will-change after scrolling stops */
+  .scrolling:not(:hover) {
+    will-change: auto;
+  }
+  
+  /* Content visibility for better rendering performance */
+  [class*="overflow-y-auto"],
+  [class*="overflow-x-auto"] {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 500px;
   }
   
   /* Reduce motion for better performance */
@@ -310,6 +422,55 @@ html {
   }
 }
 
+/* Mobile home screen header - extends to top with safe area padding */
+/* The header uses inline styles for margin and padding, this class is for additional styling if needed */
+.mobile-header-safe {
+  /* Styles applied via inline styles in component */
+}
+
+/* Ensure navigation bar is transparent on home page to show header background */
+@media (max-width: 768px) {
+  #top-navigation-bar.bg-transparent,
+  #top-navigation-bar[style*="background-color: transparent"],
+  nav#top-navigation-bar.bg-transparent {
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  
+  /* Ensure no white background shows through in dark mode on home page */
+  .dark #top-navigation-bar.bg-transparent,
+  .dark nav#top-navigation-bar.bg-transparent {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+}
+
+/* Prevent white backgrounds in dark mode */
+.dark body,
+.dark html {
+  background-color: oklch(0.145 0 0) !important;
+}
+
+/* Ensure page wrapper doesn't show white in dark mode */
+.dark .bg-background {
+  background-color: oklch(0.145 0 0) !important;
+}
+
+/* Spacer for fixed header to prevent content overlap */
+/* Header height: safe area + ~350px content */
+.mobile-header-spacer {
+  height: calc(max(env(safe-area-inset-top, 40px), 40px) + 22rem);
+  min-height: calc(40px + 22rem);
+}
+
+@supports (padding: max(0px)) {
+  .mobile-header-spacer {
+    height: calc(max(env(safe-area-inset-top, 40px), 40px) + 22rem);
+    min-height: calc(40px + 22rem);
+  }
+}
+
 /* Mobile-specific optimizations */
 @media (max-width: 768px) {
   /* Improve touch targets */
@@ -339,6 +500,115 @@ html {
 .touch-manipulation {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure top navigation bar stays fixed and visible - HIGHEST PRIORITY */
+#top-navigation-bar,
+nav#top-navigation-bar,
+nav[id="top-navigation-bar"] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: 100vw !important;
+  z-index: 99999 !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  will-change: transform !important;
+  isolation: isolate !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-bottom: 0 !important;
+  pointer-events: auto !important;
+  overflow: visible !important;
+}
+
+
+/* Fallback for any nav with fixed top-0 */
+nav[class*="fixed"][class*="top-0"]:not([class*="bottom-0"]) {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 99999 !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Prevent any parent container from affecting navigation positioning */
+body,
+html {
+  overflow-x: hidden !important;
+}
+
+body > #root {
+  position: relative !important;
+  overflow-x: hidden !important;
+  transform: none !important;
+}
+
+/* Ensure no parent creates a containing block for fixed nav */
+body > #root > nav#top-navigation-bar {
+  position: fixed !important;
+  top: 0 !important;
+}
+
+/* Ensure bottom navigation bar stays fixed to viewport */
+#bottom-navigation-bar,
+nav[class*="fixed"][class*="bottom-0"],
+nav[id="bottom-navigation-bar"] {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100vw !important;
+  max-width: 100% !important;
+  z-index: 9999 !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  will-change: transform !important;
+  isolation: isolate !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Ensure page content doesn't overflow and hide navigation */
+@media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden;
+    position: relative;
+  }
+  
+  /* Ensure body doesn't create positioning context */
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Prevent any container from creating overflow that hides nav */
+  [class*="min-h-screen"] {
+    position: relative;
+  }
+  
+  /* Ensure root container doesn't affect fixed positioning */
+  #root {
+    position: relative;
+  }
 }
 
 .active\:scale-98:active {

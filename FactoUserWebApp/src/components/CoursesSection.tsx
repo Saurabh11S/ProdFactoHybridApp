@@ -259,7 +259,7 @@ export function CoursesSection({ onNavigate }: CoursesSectionProps) {
                   {/* Course Thumbnail */}
                   <div className="relative overflow-hidden">
                     <ImageWithFallback
-                      src={`https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=300&h=200&fit=crop&ixlib=rb-4.0.3&ixid=${index}`}
+                      src={`https://via.placeholder.com/300x200/007AFF/FFFFFF?text=${encodeURIComponent(course.title.substring(0, 20))}`}
                       alt={course.title}
                       className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
                     />

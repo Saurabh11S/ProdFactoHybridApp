@@ -54,7 +54,7 @@ export function MobileLandingPage({ onNavigate }: MobileLandingPageProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-black via-gray-900 to-gray-800 z-50 overflow-hidden">
+    <div className="fixed inset-0 bg-gradient-to-br from-black via-gray-900 to-gray-800 overflow-hidden" style={{ zIndex: 999999 }}>
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-20">
         <div className="absolute inset-0" style={{
@@ -68,7 +68,7 @@ export function MobileLandingPage({ onNavigate }: MobileLandingPageProps) {
         {/* Skip Button */}
         <button
           onClick={handleSkip}
-          className="absolute top-12 right-6 text-white text-sm font-medium active:opacity-70 transition-opacity drop-shadow-md"
+          className="absolute top-12 right-6 text-white text-sm font-medium active:opacity-70 transition-opacity drop-shadow-md z-10"
         >
           Skip
         </button>

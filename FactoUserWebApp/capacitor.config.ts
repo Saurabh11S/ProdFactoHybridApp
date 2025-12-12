@@ -32,6 +32,9 @@ const config: CapacitorConfig = {
         enabled: true,
         schemes: ['facto', 'factoapp']
       }
+    },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert']
     }
   }
 };

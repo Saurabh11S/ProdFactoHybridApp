@@ -11,7 +11,7 @@ export function TestimonialsSection() {
       name: 'Priya Sharma',
       role: 'Software Engineer',
       company: 'Tech Mahindra',
-      image: 'https://images.unsplash.com/photo-1494790108755-2616b612b586?w=100&h=100&fit=crop&crop=face',
+      image: 'https://ui-avatars.com/api/?name=Priya+Sharma&size=100&background=007AFF&color=fff&bold=true',
       content: 'Facto made my ITR filing so simple! Their team guided me through every step and I got my refund within 2 weeks. Highly recommended for tech professionals.',
       rating: 5,
       location: 'Bangalore'
@@ -20,7 +20,7 @@ export function TestimonialsSection() {
       name: 'Rajesh Kumar',
       role: 'Small Business Owner',
       company: 'Kumar Enterprises',
-      image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
+      image: 'https://ui-avatars.com/api/?name=Rajesh+Kumar&size=100&background=00C897&color=fff&bold=true',
       content: 'As a small business owner, GST compliance was always stressful. Facto\'s team handles everything professionally and their pricing is very reasonable.',
       rating: 5,
       location: 'Delhi'
@@ -29,7 +29,7 @@ export function TestimonialsSection() {
       name: 'Anita Patel',
       role: 'Freelance Designer',
       company: 'Independent',
-      image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
+      image: 'https://ui-avatars.com/api/?name=Anita+Patel&size=100&background=FFD166&color=000&bold=true',
       content: 'Being a freelancer, my income sources are diverse. Facto\'s experts understood my unique situation and filed my returns perfectly. Great service!',
       rating: 5,
       location: 'Mumbai'
@@ -38,7 +38,7 @@ export function TestimonialsSection() {
       name: 'Vikram Singh',
       role: 'CA Firm Partner',
       company: 'Singh & Associates',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
+      image: 'https://ui-avatars.com/api/?name=Vikram+Singh&size=100&background=007AFF&color=fff&bold=true',
       content: 'We partnered with Facto for our clients\' compliance needs. Their technology platform and expert team make the entire process seamless.',
       rating: 5,
       location: 'Pune'
@@ -47,7 +47,7 @@ export function TestimonialsSection() {
       name: 'Meera Reddy',
       role: 'HR Manager',
       company: 'Infosys',
-      image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
+      image: 'https://ui-avatars.com/api/?name=Meera+Reddy&size=100&background=00C897&color=fff&bold=true',
       content: 'Facto\'s support team is incredibly responsive. They answered all my queries patiently and made sure I understood every aspect of my tax filing.',
       rating: 5,
       location: 'Hyderabad'

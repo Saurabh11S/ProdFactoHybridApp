@@ -250,8 +250,22 @@ export function Updates({ onNavigate: _onNavigate }: UpdatesProps) {
 
         {/* Blog Detail Modal */}
         {selectedBlog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedBlog(null)}>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100000] p-4" 
+            style={{ 
+              zIndex: 100000,
+              paddingTop: 'calc(70px + 1rem)', // Navigation bar height (70px) + padding
+              paddingBottom: '1rem',
+              paddingLeft: '1rem',
+              paddingRight: '1rem'
+            }}
+            onClick={() => setSelectedBlog(null)}
+          >
+            <div 
+              className="bg-white dark:bg-gray-800 rounded-2xl max-w-4xl w-full max-h-[calc(100vh-70px-2rem)] overflow-hidden" 
+              style={{ position: 'relative', zIndex: 100001 }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-[#007AFF] to-[#00C897] rounded-full flex items-center justify-center text-white font-bold">
