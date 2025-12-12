@@ -1,0 +1,10 @@
+{
+    "components": [
+      {"name":"GlassCard","variants":["collapsed","expanded"],"tokens":["radii.card","glass","shadows.card"]},
+      {"name":"PillChip","variants":["active","inactive"],"height":40,"radius":28},
+      {"name":"PrimaryButton","height":56,"radius":24,"gradient":["accentStart","accentEnd"]},
+      {"name":"BottomNav","variants":["default","selected"],"height":72},
+      {"name":"ShortsPlayer","variants":["default"], "controls":["shareButton","channelPill","progressBar"]}
+    ]
+  }
+  

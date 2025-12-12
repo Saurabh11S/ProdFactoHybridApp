@@ -874,6 +874,24 @@ export const addNotification = bigPromise(
 
       const notification = await db.Notification.create({ title, content });
 
+      // Send push notification to all users with registered push tokens
+      // Import dynamically to avoid circular dependencies
+      const { sendPushNotificationToAllUsers } = await import('@/services/fcmService');
+      
+      try {
+        await sendPushNotificationToAllUsers(title, content, {
+          notificationId: notification._id.toString(),
+          type: 'notification',
+          title: title,
+          body: content,
+        });
+        console.log('✅ Push notifications sent successfully');
+      } catch (pushError: any) {
+        // Log error but don't fail the request
+        console.error('⚠️ Error sending push notifications:', pushError.message);
+        // Continue with the response even if push notification fails
+      }
+
       const response = sendSuccessApiResponse(
         "Notification created successfully",
         { notification }

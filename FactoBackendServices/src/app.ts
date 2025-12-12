@@ -14,6 +14,7 @@ import errorHandlerMiddleware from "@/middlewares/errorHandler";
 
 // } from "./middlewares/commonMiddleware.js";
 import { connectDB } from "@/config/db";
+import { initializeFirebase } from "@/services/fcmService";
 import notFound from "@/errors/notFound";
 import {
   generateRequestId,
@@ -102,6 +103,11 @@ try {
 const app: Express = express();
 
 connectDB();
+
+// Initialize Firebase Admin SDK for push notifications
+// Firebase will be initialized if FIREBASE_SERVICE_ACCOUNT_KEY env var is set
+// or if service account key file is provided
+initializeFirebase();
 
 // Express configuration
 app.set("port", process.env.PORT || 8080);

@@ -171,6 +171,11 @@ const UserSchema = new mongoose.Schema<IUser, UserModel>(
     },
     password: {
       type:String,
+    },
+    pushToken: {
+      type: String,
+      sparse: true, // Allows multiple documents to have undefined/null values
+      index: true,
     }
   },
   {

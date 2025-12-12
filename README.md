@@ -299,7 +299,6 @@ For issues, questions, or deployment help:
 - [Backend Deployment Guide](./FactoBackendServices/README.md)
 - [Admin App Guide](./FactoAdminApp/README.md)
 - [User Web App Guide](./FactoUserWebApp/README.md)
-- [Environment Setup Guide](./FactoBackendServices/ENVIRONMENT_SETUP.md)
 
 ---
 

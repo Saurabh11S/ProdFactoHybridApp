@@ -44,6 +44,7 @@ interface IUser extends mongoose.Document {
   role: "user" | "admin" | "employee";
   registrationDate: Date;
   lastLogin?: Date;
+  pushToken?: string;
 
   // GST Profile
   gstProfile?: IGSTProfile;
