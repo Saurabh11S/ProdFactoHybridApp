@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../config/apiConfig';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -491,9 +492,43 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
     );
   }
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100000] p-4" style={{ zIndex: 100000 }}>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" style={{ zIndex: 100001, marginTop: 'max(env(safe-area-inset-top, 0px) + 4rem, 4rem)', marginBottom: 'max(env(safe-area-inset-bottom, 0px) + 4rem, 4rem)' }}>
+  // Calculate header height including safe area
+  const headerHeight = Capacitor.isNativePlatform()
+    ? `calc(4rem + max(env(safe-area-inset-top, 24px), 24px))`
+    : '4rem';
+  
+  const bottomBarHeight = '4rem';
+  const gap = '0.5rem';
+  
+  const modalContent = (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 z-[999999]" 
+      style={{ 
+        zIndex: 999999,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: `calc(${headerHeight} + ${gap})`,
+        paddingBottom: `calc(${bottomBarHeight} + ${gap})`,
+        paddingLeft: '0.75rem',
+        paddingRight: '0.75rem'
+      }}
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col" 
+        style={{ 
+          zIndex: 999999,
+          maxHeight: `calc(100vh - ${headerHeight} - ${bottomBarHeight} - ${gap} - ${gap})`,
+          height: 'auto',
+          position: 'relative'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="bg-gradient-to-r from-[#007AFF] to-[#00C897] p-6 text-white">
           <div className="flex items-center justify-between">
@@ -512,7 +547,7 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
           </div>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        <div className="p-6 overflow-y-auto flex-1" style={{ WebkitOverflowScrolling: 'touch', minHeight: 0 }}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column - Available Documents Checklist */}
             <div className="space-y-6">
@@ -852,4 +887,9 @@ export function ServiceDocumentUpload({ serviceId, serviceName, onClose }: Servi
       </div>
     </div>
   );
+  
+  // Render modal using portal to ensure it's above all other elements
+  return typeof document !== 'undefined' 
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }

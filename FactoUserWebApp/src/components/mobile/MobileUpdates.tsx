@@ -351,10 +351,10 @@ export function MobileUpdates({ onNavigate: _onNavigate }: MobileUpdatesProps) {
           className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[100000]" 
           style={{ 
             zIndex: 100000,
-            paddingTop: 'max(calc(env(safe-area-inset-top, 0px) + 4rem + 1rem), calc(70px + 1rem))', // Use 70px for web navigation bar height
-            paddingBottom: 'max(calc(env(safe-area-inset-bottom, 0px) + 1rem), 1rem)',
-            paddingLeft: '0.5rem',
-            paddingRight: '0.5rem'
+            paddingTop: 'max(calc(env(safe-area-inset-top, 0px) + 4rem + 0.5rem), calc(64px + 0.5rem))', // Header height + small gap
+            paddingBottom: 'max(calc(env(safe-area-inset-bottom, 0px) + 4rem + 0.5rem), calc(64px + 0.5rem))', // Bottom tab bar height + small gap
+            paddingLeft: '0.75rem',
+            paddingRight: '0.75rem'
           }}
           onClick={() => {
             setSelectedBlog(null);
@@ -362,10 +362,12 @@ export function MobileUpdates({ onNavigate: _onNavigate }: MobileUpdatesProps) {
           }}
         >
           <div 
-            className="bg-gray-900 dark:bg-gray-800 backdrop-blur-xl rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden border-2 border-white/30 shadow-2xl relative" 
+            className="bg-gray-900 dark:bg-gray-800 backdrop-blur-xl rounded-2xl w-full max-w-2xl overflow-hidden border-2 border-white/30 shadow-2xl relative flex flex-col" 
             onClick={(e) => e.stopPropagation()}
             style={{
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+              maxHeight: 'calc(100vh - 8rem - 1rem)', // Account for header (4rem) + bottom bar (4rem) + gaps (1rem)
+              height: 'auto'
             }}
           >
             {/* Sticky Header with Clear Close Button */}
@@ -402,7 +404,7 @@ export function MobileUpdates({ onNavigate: _onNavigate }: MobileUpdatesProps) {
               </button>
             </div>
             
-            <div className="p-4 overflow-y-auto max-h-[calc(90vh-140px)]" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="p-4 overflow-y-auto flex-1" style={{ WebkitOverflowScrolling: 'touch', minHeight: 0 }}>
               {selectedBlog.contentType === 'image' && selectedBlog.contentUrl && (
                 <img
                   src={selectedBlog.contentUrl}

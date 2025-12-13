@@ -36,11 +36,11 @@ export const promoBanners: PromoBannerConfig[] = [
   {
     id: 'mega-discount',
     enabled: true,
-    title: '🎉 Mega Sale - 50% OFF!',
-    description: 'Get massive 50% discount on all tax filing services including ITR, GST, Tax Planning & more',
-    discount: '50% OFF',
+    title: 'Mega Tax Filing Sale',
+    description: 'On ITR, GST & Compliance Services',
+    discount: 'Flat 50% OFF',
     offerText: '⚡ Limited time offer - Don\'t miss this amazing deal!',
-    ctaText: 'Claim 50% Discount Now',
+    ctaText: 'Claim Discount',
     ctaPage: 'services',
     variant: 'discount',
     dismissible: true,
@@ -94,21 +94,34 @@ export const promoBanners: PromoBannerConfig[] = [
 export const getActiveBanners = (): PromoBannerConfig[] => {
   const now = new Date();
   
-  return promoBanners.filter(banner => {
-    if (!banner.enabled) return false;
+  const activeBanners = promoBanners.filter(banner => {
+    if (!banner.enabled) {
+      console.log(`[Banner Config] Banner "${banner.id}" is disabled`);
+      return false;
+    }
     
     // Check date range if specified
     if (banner.startDate) {
       const startDate = new Date(banner.startDate);
-      if (now < startDate) return false;
+      if (now < startDate) {
+        console.log(`[Banner Config] Banner "${banner.id}" start date not reached:`, startDate);
+        return false;
+      }
     }
     
     if (banner.endDate) {
       const endDate = new Date(banner.endDate);
-      if (now > endDate) return false;
+      if (now > endDate) {
+        console.log(`[Banner Config] Banner "${banner.id}" end date passed:`, endDate);
+        return false;
+      }
     }
     
+    console.log(`[Banner Config] ✓ Banner "${banner.id}" is active`);
     return true;
   });
+  
+  console.log(`[Banner Config] Total active banners: ${activeBanners.length} out of ${promoBanners.length}`);
+  return activeBanners;
 };
 

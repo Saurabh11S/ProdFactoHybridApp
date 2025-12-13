@@ -462,7 +462,7 @@ export function MobileHeader({ currentPage, onNavigate }: MobileHeaderProps) {
           }}
         >
           <img 
-            src="/logo/NewLOGO.png" 
+            src={isDarkMode ? "/logo/NewLOGO.png" : "/logo/WhiteLogo.png"} 
             alt="Facto Logo" 
             className="h-16 w-16 object-contain transition-all duration-200 group-hover:scale-105"
             style={{ 

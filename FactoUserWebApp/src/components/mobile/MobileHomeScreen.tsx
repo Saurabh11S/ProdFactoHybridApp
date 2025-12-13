@@ -4,7 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import { fetchServices, Service, fetchAllSubServices, SubService } from '../../api/services';
 import { MobileServiceCard } from './MobileServiceCard';
 import { AnimatedPromoBannerCarousel } from './AnimatedPromoBannerCarousel';
-import { getActiveBanners } from '../../config/promoBanners';
+import { getActiveBanners, promoBanners } from '../../config/promoBanners';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDarkMode } from '../DarkModeContext';
 import { needsWakeUp, getWakeUpWaitTime, getRetryDelays } from '../../config/renderPlanConfig';
@@ -296,24 +296,58 @@ export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
         // Only extend background behind navigation bar (4rem), NOT behind status bar
         // This ensures the background goes behind the transparent nav bar but content stays below status bar
         marginTop: `-4rem`,
-        // Content padding: navigation bar (4rem) + safe area + content spacing (1.5rem)
+        // Content padding: navigation bar (4rem) + safe area + minimal content spacing (0.5rem)
         // This matches the wrapper's padding-top calculation to ensure content starts below status bar
         paddingTop: Capacitor.isNativePlatform()
-          ? `calc(4rem + max(env(safe-area-inset-top, 40px), 40px) + 1.5rem)`
-          : `calc(4rem + 1.5rem)`
+          ? `calc(4rem + max(env(safe-area-inset-top, 40px), 40px) + 0.5rem)`
+          : `calc(4rem + 0.5rem)`
       }}>
-        {/* Trust Indicator Banner */}
-        <div className="flex justify-center mb-6">
-          <div className={`px-4 py-1.5 rounded-full border ${
-            isDarkMode 
-              ? 'bg-[#0a1628] border-[#1a2a3a]' 
-              : 'bg-white/20 border-white/30'
-          }`}>
-            <p className={`text-sm font-medium ${
-              isDarkMode ? 'text-[#60A5FA]' : 'text-white'
-            }`}>Trusted by 50.000+ Indians</p>
-          </div>
-        </div>
+        {/* Promotional Banner - First content element below header */}
+        {(() => {
+          const activeBanners = getActiveBanners();
+          console.log('[MobileHomeScreen] ===== BANNER RENDERING CHECK =====');
+          console.log('[MobileHomeScreen] Active banners count:', activeBanners.length);
+          if (activeBanners.length > 0) {
+            console.log('[MobileHomeScreen] Banner IDs:', activeBanners.map(b => b.id));
+            console.log('[MobileHomeScreen] Banner details:', activeBanners.map(b => ({ 
+              id: b.id, 
+              enabled: b.enabled, 
+              title: b.title 
+            })));
+          } else {
+            console.log('[MobileHomeScreen] ✗ No active banners found!');
+            console.log('[MobileHomeScreen] All banners:', promoBanners.map(b => ({ 
+              id: b.id, 
+              enabled: b.enabled 
+            })));
+          }
+          console.log('[MobileHomeScreen] ====================================');
+          
+          // Always render container if we have banners (even if dismissed, component will handle it)
+          if (activeBanners.length > 0) {
+            return (
+              <div 
+                className="relative z-20 mb-6 w-full"
+                style={{
+                  display: 'block',
+                  visibility: 'visible',
+                  opacity: 1,
+                  minHeight: '100px', // Ensure container has height
+                  backgroundColor: 'transparent'
+                }}
+                data-banner-container="true"
+              >
+                <AnimatedPromoBannerCarousel
+                  banners={activeBanners}
+                  onCTAClick={onNavigate}
+                />
+              </div>
+            );
+          } else {
+            console.log('[MobileHomeScreen] ✗ Not rendering banner container - no active banners');
+            return null;
+          }
+        })()}
 
         {/* Main Headline */}
         <div className="mb-4">
@@ -379,17 +413,6 @@ export function MobileHomeScreen({ onNavigate }: MobileHomeScreenProps) {
           </div>
         </div>
       </div>
-
-
-      {/* Promotional Banner - Single Static Banner */}
-      {getActiveBanners().length > 0 && (
-        <div className="relative z-20 -mt-4 mb-4">
-          <AnimatedPromoBannerCarousel
-            banners={getActiveBanners()}
-            onCTAClick={onNavigate}
-          />
-        </div>
-      )}
 
       {/* My Services Section (if authenticated) */}
       {isAuthenticated && (

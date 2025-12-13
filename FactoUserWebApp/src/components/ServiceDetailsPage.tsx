@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useDarkMode } from './DarkModeContext';
 import axios from 'axios';
 import SuccessPopup from './SuccessPopup';
 import { UserInfoModal } from './UserInfoModal';
 import { API_BASE_URL } from '../config/apiConfig';
 import { fetchSubServiceById, fetchAllSubServices, SubService } from '../api/services';
-import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { Storage } from '../utils/storage';
 import { initializeRazorpayPayment } from '../utils/razorpay';
@@ -33,6 +33,7 @@ interface UserPurchase {
 
 export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceDetailsPageProps) {
   const { isAuthenticated, user, token, refreshUser } = useAuth();
+  const { isDarkMode } = useDarkMode();
   const [subService, setSubService] = useState<SubService | null>(null);
   const [loadingService, setLoadingService] = useState(true);
   const [serviceError, setServiceError] = useState<string | null>(null);
@@ -788,34 +789,21 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
         return;
       }
       
-      if (Capacitor.isNativePlatform()) {
-        // Mobile: Open Razorpay in in-app browser
-        const paymentUrl = `https://razorpay.com/payment-button/pl_${orderId}`;
-        await Browser.open({ 
-          url: paymentUrl,
-          toolbarColor: '#007AFF'
-        });
-        
-        // Note: You may need to implement deep linking or polling to detect payment completion
-        // For now, we'll show a message to the user
-        setPaymentError('Payment opened in browser. Please complete the payment and return to the app.');
-        setIsProcessingPayment(false);
-      } else {
-        // Web: Use Razorpay utility for proper script loading
-        try {
-          await initializeRazorpayPayment({
-            key: razorpayKey,
-            amount: amount,
-            currency: currency,
-            name: 'Facto Services',
-            description: `Payment for ${displayService.title}`,
-            order_id: orderId,
-            prefill: {
-              name: user.fullName || '',
-              email: user.email || '',
-              contact: user.phoneNumber || ''
-            },
-            handler: async function (response: any) {
+      // Use Razorpay web checkout for both web and mobile (works in Capacitor WebView)
+      try {
+        await initializeRazorpayPayment({
+          key: razorpayKey,
+          amount: amount,
+          currency: currency,
+          name: 'Facto Services',
+          description: `Payment for ${displayService.title}`,
+          order_id: orderId,
+          prefill: {
+            name: user.fullName || '',
+            email: user.email || '',
+            contact: user.phoneNumber || ''
+          },
+          handler: async function (response: any) {
               try {
                 // Use token from context first, fallback to storage
                 const verifyToken = token || await Storage.get('authToken');
@@ -882,11 +870,10 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
               setIsProcessingPayment(false);
             }
           });
-        } catch (error: any) {
-          console.error('Razorpay initialization error:', error);
-          setPaymentError(error.message || 'Failed to initialize payment gateway. Please refresh the page and try again.');
-          setIsProcessingPayment(false);
-        }
+      } catch (error: any) {
+        console.error('Razorpay initialization error:', error);
+        setPaymentError(error.message || 'Failed to initialize payment gateway. Please refresh the page and try again.');
+        setIsProcessingPayment(false);
       }
     } catch (error: any) {
       console.error('Payment initiation failed:', error);
@@ -1019,14 +1006,14 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
   const category = parentService?.category || 'Services';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-[#0b1220] dark:via-[#0f1729] dark:to-[#121826] pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-[#0b1220] dark:via-[#0f1729] dark:to-[#121826] pt-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Mobile-Friendly Navigation */}
         {Capacitor.isNativePlatform() || (typeof window !== 'undefined' && window.innerWidth < 768) ? (
-          <div className="mb-6">
+          <div className="mb-4">
             <button
               onClick={() => onNavigate('services')}
-              className="flex items-center gap-2 text-[#1287ff] mb-4 active:opacity-70 transition-opacity"
+              className="flex items-center gap-2 text-[#1287ff] mb-2 active:opacity-70 transition-opacity"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -1711,13 +1698,21 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
       )}
 
       {/* Mobile Bottom Sheet - Configurator */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-[rgba(11,18,32,0.98)] backdrop-blur-lg border-t border-gray-300 dark:border-[rgba(255,255,255,0.1)] shadow-2xl z-50">
+      <div className={`lg:hidden fixed bottom-0 left-0 right-0 backdrop-blur-lg border-t shadow-2xl z-50 ${
+        isDarkMode 
+          ? 'bg-[rgba(11,18,32,0.98)] border-gray-300 dark:border-[rgba(255,255,255,0.1)]' 
+          : 'bg-white border-gray-200'
+      }`}>
         {/* Collapsed State - Always Visible */}
         {!showMobileConfigurator && (
           <div className="px-4 py-4 flex items-center justify-between">
             <div>
-              <p className="text-gray-600 dark:text-[#98a0ad] text-xs mb-1">Total</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white" aria-live="polite">
+              <p className={`text-xs mb-1 ${
+                isDarkMode ? 'text-white' : 'text-gray-600'
+              }`}>Total</p>
+              <p className={`text-2xl font-bold ${
+                isDarkMode ? 'text-white' : 'text-gray-900'
+              }`} aria-live="polite">
                 ₹{priceCalculation.total.toLocaleString('en-IN')}
               </p>
             </div>
@@ -1732,12 +1727,24 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
 
         {/* Expanded State */}
         {showMobileConfigurator && (
-          <div className="max-h-[80vh] overflow-y-auto">
-            <div className="px-4 py-4 border-b border-gray-300 dark:border-[rgba(255,255,255,0.1)] flex items-center justify-between sticky top-0 bg-[rgba(11,18,32,0.98)] backdrop-blur-lg z-10">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Configure Your Service</h3>
+          <div className={`max-h-[80vh] overflow-y-auto ${
+            isDarkMode ? 'bg-[rgba(11,18,32,0.98)]' : 'bg-white'
+          }`}>
+            <div className={`px-4 py-4 border-b flex items-center justify-between sticky top-0 backdrop-blur-lg z-10 ${
+              isDarkMode 
+                ? 'bg-[rgba(11,18,32,0.98)] border-gray-300 dark:border-[rgba(255,255,255,0.1)]' 
+                : 'bg-white border-gray-200'
+            }`}>
+              <h3 className={`text-lg font-bold ${
+                isDarkMode ? 'text-white' : 'text-gray-900'
+              }`}>Configure Your Service</h3>
               <button
                 onClick={() => setShowMobileConfigurator(false)}
-                className="text-gray-600 dark:text-[#98a0ad] hover:text-gray-900 dark:text-white"
+                className={`${
+                  isDarkMode 
+                    ? 'text-[#98a0ad] hover:text-white' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1968,7 +1975,11 @@ export function ServiceDetailsPage({ onNavigate, serviceId = 'itr-1' }: ServiceD
                   {/* Primary CTA Button */}
                 {!isServicePurchased ? (
                   hasFreeConsultation && !isPaymentActivated ? (
-                    <div className="w-full px-6 py-4 bg-gray-400 text-gray-900 dark:text-white rounded-full font-semibold text-center flex items-center justify-center gap-2 cursor-not-allowed">
+                    <div className={`w-full px-6 py-4 rounded-full font-semibold text-center flex items-center justify-center gap-2 cursor-not-allowed ${
+                      isDarkMode 
+                        ? 'bg-gray-400 text-gray-900' 
+                        : 'bg-gray-300 text-gray-700'
+                    }`}>
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>

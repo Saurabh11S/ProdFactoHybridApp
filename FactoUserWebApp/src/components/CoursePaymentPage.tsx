@@ -4,8 +4,6 @@ import { fetchCourseById, Course } from '../api/courses';
 import { API_BASE_URL } from '../config/apiConfig';
 import axios from 'axios';
 import { Storage } from '../utils/storage';
-import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
 import { UserInfoModal } from './UserInfoModal';
 import { initializeRazorpayPayment } from '../utils/razorpay';
 
@@ -178,32 +176,21 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
         return;
       }
       
-      if (Capacitor.isNativePlatform()) {
-        // Mobile: Open Razorpay in in-app browser
-        const paymentUrl = `https://razorpay.com/payment-button/pl_${orderId}`;
-        await Browser.open({ 
-          url: paymentUrl,
-          toolbarColor: '#007AFF'
-        });
-        
-        setPaymentError('Payment opened in browser. Please complete the payment and return to the app.');
-        setIsProcessingPayment(false);
-      } else {
-        // Web: Use Razorpay utility for proper script loading
-        try {
-          await initializeRazorpayPayment({
-            key: razorpayKey,
-            amount: amount * 100, // Convert to paise
-            currency: currency,
-            name: 'FACTO',
-            description: `Payment for ${course.title}`,
-            order_id: orderId,
-            prefill: {
-              name: user.fullName || '',
-              email: user.email || '',
-              contact: user.phoneNumber || ''
-            },
-            handler: async function (response: any) {
+      // Use Razorpay web checkout for both web and mobile (works in Capacitor WebView)
+      try {
+        await initializeRazorpayPayment({
+          key: razorpayKey,
+          amount: amount * 100, // Convert to paise
+          currency: currency,
+          name: 'FACTO',
+          description: `Payment for ${course.title}`,
+          order_id: orderId,
+          prefill: {
+            name: user.fullName || '',
+            email: user.email || '',
+            contact: user.phoneNumber || ''
+          },
+          handler: async function (response: any) {
               try {
                 const token = await Storage.get('authToken');
                 await axios.post(`${API_BASE_URL}/payment/verify-payment`, {
@@ -229,11 +216,10 @@ export function CoursePaymentPage({ onNavigate, courseId }: CoursePaymentPagePro
               setIsProcessingPayment(false);
             }
           });
-        } catch (error: any) {
-          console.error('Razorpay initialization error:', error);
-          setPaymentError(error.message || 'Failed to initialize payment gateway. Please refresh the page and try again.');
-          setIsProcessingPayment(false);
-        }
+      } catch (error: any) {
+        console.error('Razorpay initialization error:', error);
+        setPaymentError(error.message || 'Failed to initialize payment gateway. Please refresh the page and try again.');
+        setIsProcessingPayment(false);
       }
     } catch (error: any) {
       console.error('Payment initiation failed:', error);
