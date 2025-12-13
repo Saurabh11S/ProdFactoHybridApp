@@ -31,11 +31,11 @@ import { BottomTabBar } from './components/mobile/BottomTabBar';
 import { MobileHeader } from './components/mobile/MobileHeader';
 import { MobileHomeScreen } from './components/mobile/MobileHomeScreen';
 import { MobileShorts } from './components/mobile/MobileShorts';
-import { MobileLandingPage } from './components/mobile/MobileLandingPage';
 import { MobileLoginPage } from './components/mobile/MobileLoginPage';
 import { MobileSignupPage } from './components/mobile/MobileSignupPage';
 import { MobileUpdates } from './components/mobile/MobileUpdates';
 import { MobileUserProfile } from './components/mobile/MobileUserProfile';
+import { WelcomeScreen } from './components/mobile/WelcomeScreen';
 import { TermsAndConditions } from './components/TermsAndConditions';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 
@@ -60,7 +60,7 @@ function AppContent() {
       return typeof window !== 'undefined' && window.innerWidth < 768;
     }
   });
-  const [showLanding, setShowLanding] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
   const isNavigating = useRef(false);
@@ -310,13 +310,34 @@ function AppContent() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
-    // Check if landing page has been shown before
+    // Check if welcome screen should be shown (every app launch)
+    // For native apps, always show on mount (sessionStorage is cleared when app goes to background)
+    // For web, check sessionStorage
     try {
-      if (isMobile && typeof localStorage !== 'undefined' && !localStorage.getItem('landingShown')) {
-        setShowLanding(true);
+      if (isMobile) {
+        const isNative = Capacitor.isNativePlatform();
+        let shouldShowWelcome = false;
+        
+        if (isNative) {
+          // For native apps, always show welcome screen on app launch
+          // The useAppState hook will clear the flag when app goes to background
+          const welcomeShown = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('welcomeShown') : null;
+          shouldShowWelcome = !welcomeShown;
+          console.log('[App.tsx] Native app - Welcome screen check:', { welcomeShown, shouldShowWelcome });
+        } else {
+          // For web, use sessionStorage check
+          const welcomeShown = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('welcomeShown') : null;
+          shouldShowWelcome = !welcomeShown;
+          console.log('[App.tsx] Web - Welcome screen check:', { welcomeShown, shouldShowWelcome });
+        }
+        
+        if (shouldShowWelcome) {
+          console.log('[App.tsx] Setting showWelcome to true');
+          setShowWelcome(true);
+        }
       }
     } catch (e) {
-      console.error('Error checking landing page:', e);
+      console.error('[App.tsx] Error checking welcome screen:', e);
     }
     
     return () => window.removeEventListener('resize', checkMobile);
@@ -377,13 +398,14 @@ function AppContent() {
     }
   };
 
-  // Show landing page on first launch (mobile only)
-  if (showLanding && isMobile) {
+  // Show welcome screen on app launch (mobile only, once per session)
+  if (showWelcome && isMobile) {
+    console.log('[App.tsx] Rendering WelcomeScreen');
     return (
-      <MobileLandingPage 
+      <WelcomeScreen 
         onNavigate={(page) => {
-          setShowLanding(false);
-          localStorage.setItem('landingShown', 'true');
+          console.log('[App.tsx] WelcomeScreen navigation callback:', page);
+          setShowWelcome(false);
           setCurrentPage(page);
         }} 
       />

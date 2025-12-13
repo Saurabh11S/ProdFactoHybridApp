@@ -16,6 +16,11 @@ export const useAppState = () => {
           // Refresh data, check auth status, etc.
         } else {
           console.log('App is now in background');
+          // Clear welcome screen flag so it shows again on next launch
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.removeItem('welcomeShown');
+            console.log('[useAppState] Cleared welcomeShown flag for next launch');
+          }
           // Save state, pause timers, etc.
         }
       });
